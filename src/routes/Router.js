@@ -19,6 +19,7 @@ import Home from "../pages/patient/Home";
 import LoginForm from "../pages/auth/login";
 import RegisterForm from "../pages/auth/register";
 import BookingTabs from "../pages/patient/BookingTabs";
+import NutritionTabs from "../pages/patient/NutritionTabs";
 import ResetPassword from "../pages/auth/ResetPassword";
 import OverviewTab from "../pages/doctor/OverviewTab";
 import InformationTab from "../pages/doctor/InformationTab";
@@ -73,6 +74,7 @@ const PatientTabs = ({ route }) => {
                 ? "chatbubble-ellipses"
                 : "chatbubble-ellipses-outline",
               "Sức khỏe": focused ? "id-card" : "id-card-outline",
+              "Dinh dưỡng": focused ? "nutrition" : "nutrition-outline",
               "Đặt lịch": focused ? "sparkles" : "sparkles-outline",
               "Hồ sơ": focused ? "person" : "person-outline",
             };
@@ -84,6 +86,7 @@ const PatientTabs = ({ route }) => {
       >
         <Tab.Screen name="Trang chủ" component={Home} />
         <Tab.Screen name="Sức khỏe" component={HealthTabs} />
+        <Tab.Screen name="Dinh dưỡng" component={NutritionTabs} />
         <Tab.Screen name="Đặt lịch" component={BookingTabs} />
         <Tab.Screen name="Hồ sơ" component={PersonalTabs} />
       </Tab.Navigator>
@@ -110,20 +113,20 @@ export default function Router() {
     <NavigationContainer>
       <SafeAreaView style={{ flex: 1 }}>
         <Stack.Navigator>
-          {isLoggedIn ? (
+          {/* {isLoggedIn ? ( */}
             <>
-              <Stack.Screen
+              {/* <Stack.Screen
                 name="DoctorTab"
                 component={DoctorTab}
                 options={{ headerShown: false }}
-              />
+              /> */}
               <Stack.Screen
                 name="PatientTabs"
                 component={PatientTabs}
                 options={{ headerShown: false }}
               />
             </>
-          ) : (
+          {/* ) : ( */}
             <>
               <Stack.Screen
                 name="Login"
@@ -141,7 +144,7 @@ export default function Router() {
                 options={{ headerShown: false }}
               />
             </>
-          )}
+          {/* )} */}
         </Stack.Navigator>
       </SafeAreaView>
     </NavigationContainer>

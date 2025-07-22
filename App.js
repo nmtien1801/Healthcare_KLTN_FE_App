@@ -11,11 +11,15 @@ import {
 import { Provider, useSelector, useDispatch } from "react-redux";
 import { store } from "./src/redux/store";
 import Router from "./src/routes/Router";
+import Header from "./src/routes/Header";
 
 export default function App() {
   return (
     <Provider store={store}>
-      <Router />
+      <Header />
+      <View style={{ flex: 1, marginTop: 63 }}>
+        <Router />
+      </View>
     </Provider>
   );
 }
