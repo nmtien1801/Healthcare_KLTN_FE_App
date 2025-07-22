@@ -21,8 +21,8 @@ const initialState = {
 // action -> export
 export const handleLogin = createAsyncThunk(
   "auth/handleLogin",
-  async ({ phoneNumber, password }, thunkAPI) => {
-    const response = await handleLoginApi(phoneNumber, password);
+  async ({ email, password }, thunkAPI) => {
+    const response = await handleLoginApi(email, password);
     return response;
   }
 );
