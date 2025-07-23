@@ -32,6 +32,7 @@ export default function LoginForm() {
 
   const handleSubmit = async () => {
     let res = await dispatch(handleLogin(formData));
+    console.log("Login response:", res);
     
     if (res.payload.EC === 0) {
       if (res.payload.DT.role === "doctor") {

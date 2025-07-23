@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import customizeAxios from "../components/customizeAxios";
 
 const handleLoginApi = (email, password) => {
@@ -35,14 +35,15 @@ const changePasswordService = (phone, currentPassword, newPassword) => {
   });
 };
 
-
-
 const verifyEmailService = (email) => {
   return customizeAxios.post("/verifyEmail", { email });
 };
 
-const logoutUserService = () => {
-  return customizeAxios.post("/logout");
+const logoutUserService = async () => {
+  const refreshToken = await AsyncStorage.getItem("refresh_Token");
+  return customizeAxios.post("/logout", {
+    refresh_Token: refreshToken,
+  });
 };
 
 const verifyQRLoginService = (qrToken, userId) => {
@@ -50,7 +51,7 @@ const verifyQRLoginService = (qrToken, userId) => {
   console.log("User ID:", userId);
   return customizeAxios.post("/verify-qr-login", {
     qrToken,
-    userId
+    userId,
   });
 };
 
@@ -63,5 +64,5 @@ export {
   changePasswordService,
   verifyEmailService,
   logoutUserService,
-  verifyQRLoginService
+  verifyQRLoginService,
 };

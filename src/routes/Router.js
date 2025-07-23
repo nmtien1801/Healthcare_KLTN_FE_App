@@ -26,6 +26,7 @@ import InformationTab from "../pages/doctor/InformationTab";
 import AppointmentTab from "../pages/doctor/AppointmentTab";
 import PatientTab from "../pages/doctor/PatientTab";
 import SettingTabs from "../pages/doctor/SettingTabs";
+import Header from "../routes/Header";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -112,21 +113,23 @@ export default function Router() {
   return (
     <NavigationContainer>
       <SafeAreaView style={{ flex: 1 }}>
+        {isLoggedIn && <Header />}
+
         <Stack.Navigator>
-          {/* {isLoggedIn ? ( */}
+          {isLoggedIn ? (
             <>
-              {/* <Stack.Screen
+              <Stack.Screen
                 name="DoctorTab"
                 component={DoctorTab}
                 options={{ headerShown: false }}
-              /> */}
+              />
               <Stack.Screen
                 name="PatientTabs"
                 component={PatientTabs}
                 options={{ headerShown: false }}
               />
             </>
-          {/* ) : ( */}
+          ) : (
             <>
               <Stack.Screen
                 name="Login"
@@ -144,7 +147,7 @@ export default function Router() {
                 options={{ headerShown: false }}
               />
             </>
-          {/* )} */}
+          )}
         </Stack.Navigator>
       </SafeAreaView>
     </NavigationContainer>
