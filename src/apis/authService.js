@@ -1,8 +1,8 @@
 import { Platform } from "react-native";
 import customizeAxios from "../components/customizeAxios";
 
-const handleLoginApi = (phoneNumber, password) => {
-  return customizeAxios.post(`/login`, { phoneNumber, password });
+const handleLoginApi = (email, password) => {
+  return customizeAxios.post(`/login`, { email, password });
 };
 
 const doGetAccountService = () => {

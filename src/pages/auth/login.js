@@ -18,7 +18,7 @@ export default function LoginForm() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    phoneNumber: "",
+    email: "",
     password: "",
     captcha: "",
   });
@@ -32,8 +32,13 @@ export default function LoginForm() {
 
   const handleSubmit = async () => {
     let res = await dispatch(handleLogin(formData));
+    
     if (res.payload.EC === 0) {
-      navigation.navigate("MainTabs");
+      if (res.payload.DT.role === "doctor") {
+        navigation.navigate("DoctorTab");
+      } else if (res.payload.DT.role === "patient") {
+        navigation.navigate("PatientTabs");
+      }
       await AsyncStorage.setItem("access_Token", res.payload.DT.access_Token);
       await AsyncStorage.setItem("refresh_Token", res.payload.DT.refresh_Token);
     }
@@ -42,16 +47,16 @@ export default function LoginForm() {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Zata</Text>
+        <Text style={styles.title}>DeaTech</Text>
         <Text style={styles.subtitle}>Đăng nhập với mật khẩu</Text>
 
-        {/* Phone Number Input */}
+        {/* Email Input */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Số tài khoản"
-            value={formData.phoneNumber}
-            onChangeText={(text) => handleChange("phoneNumber", text)}
+            placeholder="Email"
+            value={formData.email}
+            onChangeText={(text) => handleChange("email", text)}
           />
         </View>
 
@@ -98,7 +103,7 @@ export default function LoginForm() {
           style={styles.button}
           onPress={handleSubmit}
         >
-          <Text style={{color:'white'}}>Đăng nhập</Text>
+          <Text style={{ color: "white" }}>Đăng nhập</Text>
         </TouchableOpacity>
 
         {/* Links */}
@@ -171,8 +176,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginVertical: 10,
     backgroundColor: "#2962ff",
-    alignItems: 'center',       // Căn giữa ngang
-    justifyContent: 'center',   // Căn giữa dọc
+    alignItems: "center", // Căn giữa ngang
+    justifyContent: "center", // Căn giữa dọc
   },
   linkText: {
     color: "#2962ff",
