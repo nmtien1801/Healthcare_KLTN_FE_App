@@ -10,11 +10,14 @@ import {
   Pressable,
 } from "react-native";
 import { useDispatch } from "react-redux";
-import { logoutUser } from "../redux/authSlice";
+import { logout } from "../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/FontAwesome";
+import { getAuth, signOut } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Header = () => {
+  const auth = getAuth();
   const [notifications, setNotifications] = useState(5);
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -32,14 +35,13 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      const response = await dispatch(logoutUser());
-      
-      if (response.EC === 2) {
-        Alert.alert("Thông báo", "Đăng xuất thành công!");
-        navigation.navigate("Login");
-      } else {
-        Alert.alert("Lỗi", response.EM || "Đăng xuất thất bại!");
-      }
+      await signOut(auth); // Firebase sign out
+      await dispatch(logout()); // Xóa Redux user
+
+      AsyncStorage.removeItem("access_Token");
+      // AsyncStorage.removeItem("refresh_Token");
+
+      navigation.navigate("Login");
     } catch (error) {
       console.error("Lỗi khi logout:", error);
       Alert.alert("Lỗi", "Đã xảy ra lỗi khi đăng xuất.");

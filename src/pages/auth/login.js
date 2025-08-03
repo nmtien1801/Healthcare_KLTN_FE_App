@@ -5,12 +5,15 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Image,
 } from "react-native";
 import { Eye, EyeOff, RefreshCw } from "lucide-react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { handleLogin } from "../../redux/authSlice";
+import { Login } from "../../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
+import { auth, provider } from "../../../firebase";
 
 export default function LoginForm() {
   const dispatch = useDispatch();
@@ -30,18 +33,63 @@ export default function LoginForm() {
     }));
   };
 
-  const handleSubmit = async () => {
-    let res = await dispatch(handleLogin(formData));
-    console.log("Login response:", res);
-    
-    if (res.payload.EC === 0) {
-      if (res.payload.DT.role === "doctor") {
-        navigation.navigate("DoctorTab");
-      } else if (res.payload.DT.role === "patient") {
-        navigation.navigate("PatientTabs");
+  const handleEmailAndPasswordLogin = async (e) => {
+    e.preventDefault();
+    try {
+      let result = await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      let user = result.user;
+      if (user) {
+        let res = await dispatch(Login({ user }));
+        if (res.payload.EC === 0) {
+          if (res.payload.DT.role === "doctor") {
+            navigation.navigate("DoctorTab");
+          } else if (res.payload.DT.role === "patient") {
+            navigation.navigate("PatientTabs");
+          }
+          // await AsyncStorage.setItem("access_Token", res.payload.DT.access_Token);
+          // await AsyncStorage.setItem("refresh_Token", res.payload.DT.refresh_Token);
+        }
       }
-      await AsyncStorage.setItem("access_Token", res.payload.DT.access_Token);
-      await AsyncStorage.setItem("refresh_Token", res.payload.DT.refresh_Token);
+    } catch (error) {
+      console.error(`Đăng nhập thất bại: ${error.code} - ${error.message}`);
+      // Xử lý lỗi cụ thể
+      switch (error.code) {
+        case "auth/invalid-credential":
+          alert(
+            "Email này đã được đăng ký với google. Vui lòng đăng nhập bằng Google!"
+          );
+          break;
+
+        default:
+          alert(`Lỗi không xác định: ${error.message}`);
+      }
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      let result = await signInWithPopup(auth, provider);
+
+      let user = result.user;
+      if (user) {
+        let res = await dispatch(Login({ user }));
+        if (res.payload.EC === 0) {
+          if (res.payload.DT.role === "doctor") {
+            navigation.navigate("DoctorTab");
+          } else if (res.payload.DT.role === "patient") {
+            navigation.navigate("PatientTabs");
+          }
+          // await AsyncStorage.setItem("access_Token", res.payload.DT.access_Token);
+          // await AsyncStorage.setItem("refresh_Token", res.payload.DT.refresh_Token);
+        }
+      }
+    } catch (error) {
+      console.error("Login error:", error);
     }
   };
 
@@ -102,9 +150,20 @@ export default function LoginForm() {
         <TouchableOpacity
           mode="contained"
           style={styles.button}
-          onPress={handleSubmit}
+          onPress={handleEmailAndPasswordLogin}
         >
           <Text style={{ color: "white" }}>Đăng nhập</Text>
+        </TouchableOpacity>
+
+        {/* Google Login Button  */}
+        <TouchableOpacity style={styles.buttonGG} onPress={handleGoogleLogin}>
+          <Image
+            source={{
+              uri: "https://developers.google.com/identity/images/g-logo.png",
+            }}
+            style={styles.logo}
+          />
+          <Text style={styles.buttonText}>Đăng nhập với Google</Text>
         </TouchableOpacity>
 
         {/* Links */}
@@ -173,16 +232,42 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   button: {
-    width: "100%",
-    paddingVertical: 8,
-    marginVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#2962ff",
-    alignItems: "center", // Căn giữa ngang
-    justifyContent: "center", // Căn giữa dọc
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    width: "100%",
+    justifyContent: "center",
+    marginBottom: 15,
   },
   linkText: {
     color: "#2962ff",
     marginTop: 8,
     fontSize: 14,
+  },
+
+  buttonGG: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#DB4437",
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    width: "100%",
+    justifyContent: "center",
+  },
+  logo: {
+    width: 20,
+    height: 20,
+    marginRight: 10,
+  },
+  buttonText: {
+    color: "#DB4437",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });

@@ -1,15 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   handleLoginApi,
-  doGetAccountService,
   registerService,
   sendCodeService,
   resetPasswordService,
   changePasswordService,
   verifyEmailService,
-  logoutUserService,
 } from "../apis/authService";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const initialState = {
   user: {}, // user info nào login(hs - teacher)
@@ -19,18 +16,10 @@ const initialState = {
 };
 
 // action -> export
-export const handleLogin = createAsyncThunk(
-  "auth/handleLogin",
-  async ({ email, password }, thunkAPI) => {
-    const response = await handleLoginApi(email, password);
-    return response;
-  }
-);
-
-export const doGetAccount = createAsyncThunk(
-  "auth/doGetAccount",
-  async (thunkAPI) => {
-    const response = await doGetAccountService();
+export const Login = createAsyncThunk(
+  "auth/Login",
+  async ({ user }, thunkAPI) => {
+    const response = await handleLoginApi(user);
     return response;
   }
 );
@@ -82,56 +71,41 @@ export const verifyEmail = createAsyncThunk(
   }
 );
 
-export const logoutUser = createAsyncThunk(
-  "auth/logoutUser",
-  async (thunkAPI) => {
-    const response = await logoutUserService();
-    return response;
-  }
-);
-
 // đây là reducer
 const authSlice = createSlice({
   name: "auth",
   initialState,
 
+  reducers: {
+    logout: (state) => {
+      state.user = null; // Xóa thông tin người dùng
+      state.isLoggedIn = false; // Đặt trạng thái đăng xuất
+    },
+    setUser: (state, action) => {
+      state.user = action.payload;
+    },
+    clearUser: (state) => {
+      state.user = null;
+    },
+  },
+
   // dùng api mới sử dụng extraReducers
   // 3 trạng thái của api: pending, fulfilled, rejected
   extraReducers: (builder) => {
-    // handleLogin
+    // Login
     builder
-      .addCase(handleLogin.pending, (state) => {
+      .addCase(Login.pending, (state) => {
         state.isLoading = true; // Bắt đầu loading
       })
-      .addCase(handleLogin.fulfilled, (state, action) => {
+      .addCase(Login.fulfilled, (state, action) => {
         if (action.payload.EC === 0) {
-          state.user = action.payload.DT || {};
-          state.isLoggedIn = true;
-          state.isLoading = false; // Kết thúc loading
-        } else {
-          alert(action.payload.EM);
-        }
-      })
-      .addCase(handleLogin.rejected, (state, action) => {
-        state.isLoggedIn = false;
-        state.isLoading = false; // Kết thúc loading
-        alert("Đăng nhập không thành công");
-      });
-
-    // doGetAccount
-    builder
-      .addCase(doGetAccount.pending, (state) => {
-        state.isLoading = true; // Bắt đầu loading
-      })
-      .addCase(doGetAccount.fulfilled, (state, action) => {
-        if (action.payload.EC === 0) {
-          state.user = action.payload.DT || {};
+          state.userInfo = action.payload.DT || {};
 
           state.isLoggedIn = true;
           state.isLoading = false; // Kết thúc loading
         }
       })
-      .addCase(doGetAccount.rejected, (state, action) => {
+      .addCase(Login.rejected, (state, action) => {
         state.isLoggedIn = false;
         state.isLoading = false; // Kết thúc loading
       });
@@ -165,21 +139,10 @@ const authSlice = createSlice({
       .addCase(verifyEmail.pending, (state) => {})
       .addCase(verifyEmail.fulfilled, (state, action) => {})
       .addCase(verifyEmail.rejected, (state, action) => {});
-
-    // logoutUser
-    builder
-      .addCase(logoutUser.pending, (state) => {})
-      .addCase(logoutUser.fulfilled, (state, action) => {
-        if (action.payload.EC === 2) {
-          (state.user = {}), (state.isLoggedIn = false);
-          AsyncStorage.removeItem("access_Token");
-          AsyncStorage.removeItem("refresh_Token");
-        }
-      })
-      .addCase(logoutUser.rejected, (state, action) => {});
   },
 });
 
-export const {} = authSlice.actions; // đây là action -> chỉ dùng khi trong reducer có reducers:{}
+// Export actions
+export const { setUser, clearUser, logout } = authSlice.actions;
 
 export default authSlice.reducer;

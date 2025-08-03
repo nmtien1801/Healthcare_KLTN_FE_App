@@ -12,7 +12,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useSelector, useDispatch } from "react-redux";
-import { doGetAccount } from "../redux/authSlice";
+import { setUser, clearUser } from "../redux/authSlice";
 import HealthTabs from "../pages/patient/HealthTabs";
 import PersonalTabs from "../pages/patient/PersonalTabs";
 import Home from "../pages/patient/Home";
@@ -27,6 +27,7 @@ import AppointmentTab from "../pages/doctor/AppointmentTab";
 import PatientTab from "../pages/doctor/PatientTab";
 import SettingTabs from "../pages/doctor/SettingTabs";
 import Header from "../routes/Header";
+import { getAuth } from 'firebase/auth';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -97,26 +98,36 @@ const PatientTabs = ({ route }) => {
 
 export default function Router() {
   const dispatch = useDispatch();
-  let isLoggedIn = useSelector((state) => state.auth.isLoggedIn);
   const user = useSelector((state) => state.auth.user);
 
-  const fetchDataAccount = async () => {
-    if (!user || !user?.access_Token) {
-      await dispatch(doGetAccount());
-    }
-  };
+  const auth = getAuth();
 
+  // authContext -> duy trì trạng thái đăng nhập của người dùng
   useEffect(() => {
-    fetchDataAccount();
-  }, [dispatch, user?.access_Token]);
+    const unsubscribe = auth.onIdTokenChanged((user) => {
+      if (user) {
+        dispatch(setUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+        }));
+        // AsyncStorage.setItem("access_Token", user.accessToken);
+      } else {
+        dispatch(clearUser());
+      }
+    });
+
+    return () => unsubscribe();
+  }, [auth, dispatch]);
 
   return (
     <NavigationContainer>
       <SafeAreaView style={{ flex: 1 }}>
-        {isLoggedIn && <Header />}
+        {user && <Header />}
 
         <Stack.Navigator>
-          {isLoggedIn ? (
+          {user ? (
             <>
               <Stack.Screen
                 name="DoctorTab"
