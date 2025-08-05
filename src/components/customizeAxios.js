@@ -18,16 +18,15 @@ const instance = axios.create({
   withCredentials: true, // để FE có thể nhận cookie từ BE
 });
 
-console.log("Base URL:", baseUrl);
 
 // Cài đặt header mặc định
 instance.defaults.headers.common[
   "Authorization"
-] = `Bearer ${AsyncStorage.getItem("access_Token")}`;
+] = `Bearer ${AsyncStorage.getItem("accessToken")}`;
 
 // Interceptor cho request
 const getToken = async () => {
-  return await AsyncStorage.getItem("access_Token");
+  return await AsyncStorage.getItem("accessToken");
 };
 
 instance.interceptors.request.use(
@@ -44,46 +43,6 @@ instance.interceptors.request.use(
   }
 );
 
-const refreshAccessToken = async () => {
-  try {
-    const refreshToken = await AsyncStorage.getItem("refresh_Token");
-    if (!refreshToken) throw new Error("No refresh token available");
-
-    const response = await axios.post(`${baseUrl}/refreshToken`, {
-      refresh_Token: refreshToken,
-    });
-
-    const access_Token = response.data.DT.newAccessToken;
-    const refresh_Token = response.data.DT.newRefreshToken;
-
-    // Cập nhật token mới vào AsyncStorage
-    await AsyncStorage.setItem("access_Token", access_Token);
-    await AsyncStorage.setItem("refresh_Token", refresh_Token);
-
-    return access_Token;
-  } catch (error) {
-    console.error("Refresh token failed:", error);
-    AsyncStorage.removeItem("access_Token");
-    AsyncStorage.removeItem("refresh_Token");
-    return null;
-  }
-};
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-
-  failedQueue = [];
-};
-
-let isRefreshing = false;
-let failedQueue = [];
-
 instance.interceptors.response.use(
   (response) => (response && response.data ? response.data : response),
   async (error) => {
@@ -98,46 +57,6 @@ instance.interceptors.response.use(
         if (["Login", "Register", "ResetPassword"].includes(currentRoute)) {
           console.warn("401 on auth page, skip refresh");
           return Promise.reject(error);
-        }
-
-        if (!originalRequest._retry) {
-          if (isRefreshing) {
-            return new Promise((resolve, reject) => {
-              failedQueue.push({ resolve, reject });
-            })
-              .then((token) => {
-                originalRequest.headers["Authorization"] = "Bearer " + token;
-                return instance(originalRequest);
-              })
-              .catch((err) => Promise.reject(err));
-          }
-        }
-
-        originalRequest._retry = true;
-        isRefreshing = true;
-
-        try {
-          let newAccessToken = await refreshAccessToken();
-
-          if (!newAccessToken) {
-            navigation.navigate("Login");
-            return Promise.reject(error);
-          }
-
-          instance.defaults.headers["Authorization"] =
-            "Bearer " + newAccessToken;
-          processQueue(null, newAccessToken);
-
-          return instance(originalRequest);
-        } catch (err) {
-          processQueue(err, null);
-          // handle logout
-          AsyncStorage.removeItem("access_Token");
-          AsyncStorage.removeItem("refresh_Token");
-          navigation.navigate("Login");
-          return Promise.reject(err);
-        } finally {
-          isRefreshing = false;
         }
       }
 

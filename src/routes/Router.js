@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Text,
   Platform,
+  ActivityIndicator
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { NavigationContainer } from "@react-navigation/native";
@@ -27,7 +28,8 @@ import AppointmentTab from "../pages/doctor/AppointmentTab";
 import PatientTab from "../pages/doctor/PatientTab";
 import SettingTabs from "../pages/doctor/SettingTabs";
 import Header from "../routes/Header";
-import { getAuth } from 'firebase/auth';
+import { getAuth } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -99,6 +101,7 @@ const PatientTabs = ({ route }) => {
 export default function Router() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
+  const [isLoading, setIsLoading] = useState(true);
 
   const auth = getAuth();
 
@@ -106,20 +109,39 @@ export default function Router() {
   useEffect(() => {
     const unsubscribe = auth.onIdTokenChanged((user) => {
       if (user) {
-        dispatch(setUser({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-        }));
-        // AsyncStorage.setItem("access_Token", user.accessToken);
+        dispatch(
+          setUser({
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+          })
+        );
+        if (user.accessToken !== localStorage.getItem("accessToken")) {
+          AsyncStorage.setItem("access_Token", user.accessToken);
+          // window.location.reload();
+        }
+        setIsLoading(false);
+        return;
       } else {
-        dispatch(clearUser());
+        // reset user info
+        console.log("reset");
+        setIsLoading(false);
+        dispatch(setUser(null));
+        localStorage.clear();
       }
     });
 
     return () => unsubscribe();
   }, [auth, dispatch]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
@@ -180,4 +202,11 @@ const styles = StyleSheet.create({
     width: "90%",
     maxHeight: "80%",
   },
+
+  loadingContainer: {
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "#fff",
+},
 });

@@ -51,8 +51,7 @@ export default function LoginForm() {
           } else if (res.payload.DT.role === "patient") {
             navigation.navigate("PatientTabs");
           }
-          // await AsyncStorage.setItem("access_Token", res.payload.DT.access_Token);
-          // await AsyncStorage.setItem("refresh_Token", res.payload.DT.refresh_Token);
+          await AsyncStorage.setItem("access_Token", user.accessToken);
         }
       }
     } catch (error) {
@@ -84,8 +83,7 @@ export default function LoginForm() {
           } else if (res.payload.DT.role === "patient") {
             navigation.navigate("PatientTabs");
           }
-          // await AsyncStorage.setItem("access_Token", res.payload.DT.access_Token);
-          // await AsyncStorage.setItem("refresh_Token", res.payload.DT.refresh_Token);
+          await AsyncStorage.setItem("access_Token", user.accessToken);
         }
       }
     } catch (error) {
