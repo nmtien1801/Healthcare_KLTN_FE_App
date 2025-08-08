@@ -60,10 +60,15 @@ export default function LoginForm() {
       switch (error.code) {
         case "auth/invalid-credential":
           alert(
-            "Email này đã được đăng ký với google. Vui lòng đăng nhập bằng Google!"
+            'Email hoặc mật khẩu không đúng, hoặc tài khoản này đã bị xoá mật khẩu. Nếu trước đây bạn đăng nhập Google, hãy dùng nút "Đăng nhập Google" hoặc đặt lại mật khẩu.'
           );
           break;
-
+        case "auth/user-not-found":
+          alert("Không tìm thấy tài khoản. Vui lòng đăng ký.");
+          break;
+        case "auth/wrong-password":
+          alert("Sai mật khẩu.");
+          break;
         default:
           alert(`Lỗi không xác định: ${error.message}`);
       }

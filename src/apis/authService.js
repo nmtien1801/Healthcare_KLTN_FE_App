@@ -35,15 +35,6 @@ const verifyEmailService = (email) => {
   return customizeAxios.post("/verifyEmail", { email });
 };
 
-const verifyQRLoginService = (qrToken, userId) => {
-  console.log("QR Token:", qrToken);
-  console.log("User ID:", userId);
-  return customizeAxios.post("/verify-qr-login", {
-    qrToken,
-    userId,
-  });
-};
-
 export {
   handleLoginApi,
   registerService,
@@ -51,5 +42,4 @@ export {
   resetPasswordService,
   changePasswordService,
   verifyEmailService,
-  verifyQRLoginService,
 };

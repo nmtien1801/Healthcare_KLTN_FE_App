@@ -10,6 +10,8 @@ import { Eye, EyeOff, RefreshCw } from "lucide-react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { register, verifyEmail } from "../../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
+import { auth, provider } from "../../../firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginForm() {
   const dispatch = useDispatch();
@@ -25,6 +27,7 @@ export default function LoginForm() {
     username: "",
     email: "",
     phoneNumber: "",
+    address: "",
     password: "",
     confirmPassword: "",
     captcha: "",
@@ -73,8 +76,8 @@ export default function LoginForm() {
     }
 
     // kiểm tra password
-    if (!formData.password) {
-      setErrorMessage("password không được để trống");
+    if (!formData.password || formData.password.length < 6) {
+      setErrorMessage("Mật khẩu phải có ít nhất 6 ký tự!");
       return;
     }
 
@@ -98,9 +101,15 @@ export default function LoginForm() {
     } else if (+formData.captcha !== +code.code) {
       setErrorMessage("❌ Mã không đúng");
     } else {
-      // Gửi thông tin đăng ký đi
+      // Gửi thông tin đăng ký đi mongo
       let res = await dispatch(register(formData));
       if (res.payload.EC === 0) {
+        // Gửi thông tin đăng ký đi firebase
+        await createUserWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
+        );
         navigation.navigate("Login"); // Điều hướng đến màn hình Login
       } else {
         setErrorMessage(res.payload.EM);
@@ -122,7 +131,7 @@ export default function LoginForm() {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Zata</Text>
+        <Text style={styles.title}>DiaTech</Text>
         <Text style={styles.subtitle}>Đăng ký với mật khẩu</Text>
 
         {/* Username Input */}
@@ -150,9 +159,19 @@ export default function LoginForm() {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Số tài khoản"
+            placeholder="Số điện thoại"
             value={formData.phoneNumber}
             onChangeText={(text) => handleChange("phoneNumber", text)}
+          />
+        </View>
+
+        {/* Username Input */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Đia chỉ"
+            value={formData.address}
+            onChangeText={(text) => handleChange("address", text)}
           />
         </View>
 
@@ -246,8 +265,12 @@ export default function LoginForm() {
         )}
 
         {/* Submit Button */}
-        <TouchableOpacity mode="contained" style={styles.button} onPress={handleSubmit}>
-          <Text style={{color:'white'}}>Đăng ký</Text>
+        <TouchableOpacity
+          mode="contained"
+          style={styles.button}
+          onPress={handleSubmit}
+        >
+          <Text style={{ color: "white" }}>Đăng ký</Text>
         </TouchableOpacity>
 
         {/* Links */}
@@ -309,8 +332,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginVertical: 10,
     backgroundColor: "#2962ff",
-    alignItems: 'center',       // Căn giữa ngang
-    justifyContent: 'center',   // Căn giữa dọc
+    alignItems: "center", // Căn giữa ngang
+    justifyContent: "center", // Căn giữa dọc
   },
   linkText: {
     color: "#2962ff",
