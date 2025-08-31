@@ -22,6 +22,7 @@ export default function LoginForm() {
   const [errorMessage, setErrorMessage] = useState("");
   const [countdown, setCountdown] = useState(0); // đếm ngược 60s
   const [code, setCode] = useState({}); // mã xác thực trong 60s
+  const [startTime, setStartTime] = useState(null); // thời điểm bắt đầu đếm ngược
 
   const [formData, setFormData] = useState({
     username: "",
@@ -46,13 +47,19 @@ export default function LoginForm() {
 
   useEffect(() => {
     let timer;
-    if (countdown > 0) {
+    if (startTime && countdown > 0) {
       timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const remaining = Math.max(0, 60 - elapsed);
+        setCountdown(remaining);
+
+        if (remaining === 0) {
+          setStartTime(null);
+        }
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [countdown]);
+  }, [startTime, countdown]);
 
   const handleSubmit = async () => {
     setErrorMessage("");
@@ -126,6 +133,7 @@ export default function LoginForm() {
 
     // Bắt đầu đếm ngược
     setCountdown(60);
+    setStartTime(Date.now());
   };
 
   return (
@@ -251,8 +259,8 @@ export default function LoginForm() {
         {/* dob Input */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
-            placeholder="Dob"
+            style={styles.Date}
+            placeholder="Ngày sinh"
             value={formData.dob}
             onChangeText={(text) => handleChange("dob", text)}
           />
