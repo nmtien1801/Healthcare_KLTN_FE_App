@@ -6,10 +6,9 @@ import {
   TouchableOpacity,
   Text,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useSelector, useDispatch } from "react-redux";
@@ -107,18 +106,26 @@ export default function Router() {
 
   // authContext -> duy trì trạng thái đăng nhập của người dùng
   useEffect(() => {
-    const unsubscribe = auth.onIdTokenChanged((user) => {
-      if (user) {
+    const unsubscribe = auth.onIdTokenChanged(async (firebaseUser) => {
+      let userInfoString = await AsyncStorage.getItem("userInfo"); // Đợi lấy chuỗi
+      let userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+      
+      if (firebaseUser && userInfo) {
         dispatch(
           setUser({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            role: userInfo.role,
+            address: userInfo.address,
+            phone: userInfo.phone,
+            dob: userInfo.dob,
+            gender: userInfo.gender,
           })
         );
-        if (user.accessToken !== localStorage.getItem("accessToken")) {
-          AsyncStorage.setItem("access_Token", user.accessToken);
+        if (firebaseUser.accessToken !== await AsyncStorage.getItem("access_Token")) {
+          await AsyncStorage.setItem("access_Token", firebaseUser.accessToken);
           // window.location.reload();
         }
         setIsLoading(false);
@@ -128,12 +135,14 @@ export default function Router() {
         console.log("reset");
         setIsLoading(false);
         dispatch(setUser(null));
-        localStorage.clear();
+        await AsyncStorage.clear();
       }
     });
 
     return () => unsubscribe();
   }, [auth, dispatch]);
+
+  console.log("user ", user);
 
   if (isLoading) {
     return (
@@ -144,46 +153,44 @@ export default function Router() {
   }
 
   return (
-    <NavigationContainer>
-      <SafeAreaView style={{ flex: 1 }}>
-        {user && <Header />}
+    <SafeAreaView style={{ flex: 1 }}>
+      {user && <Header />}
 
-        <Stack.Navigator>
-          {user ? (
-            <>
-              <Stack.Screen
-                name="DoctorTab"
-                component={DoctorTab}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="PatientTabs"
-                component={PatientTabs}
-                options={{ headerShown: false }}
-              />
-            </>
-          ) : (
-            <>
-              <Stack.Screen
-                name="Login"
-                component={LoginForm}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Register"
-                component={RegisterForm}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ResetPassword"
-                component={ResetPassword}
-                options={{ headerShown: false }}
-              />
-            </>
-          )}
-        </Stack.Navigator>
-      </SafeAreaView>
-    </NavigationContainer>
+      <Stack.Navigator>
+        {user ? (
+          <>
+            <Stack.Screen
+              name="DoctorTab"
+              component={DoctorTab}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="PatientTabs"
+              component={PatientTabs}
+              options={{ headerShown: false }}
+            />
+          </>
+        ) : (
+          <>
+            <Stack.Screen
+              name="Login"
+              component={LoginForm}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Register"
+              component={RegisterForm}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPassword}
+              options={{ headerShown: false }}
+            />
+          </>
+        )}
+      </Stack.Navigator>
+    </SafeAreaView>
   );
 }
 
@@ -204,9 +211,9 @@ const styles = StyleSheet.create({
   },
 
   loadingContainer: {
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "#fff",
-},
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
 });

@@ -9,7 +9,7 @@ import {
 } from "../apis/authService";
 
 const initialState = {
-  user: {}, // user info nào login(hs - teacher)
+  user: null, // user info nào login(hs - teacher)
   isLoggedIn: false, // kiểm tra xem đã login chưa -> chặn nếu chưa login
   isLoading: false,
   isError: false,

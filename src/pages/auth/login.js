@@ -46,12 +46,13 @@ export default function LoginForm() {
       if (user) {
         let res = await dispatch(Login({ user }));
         if (res.payload.EC === 0) {
+          await AsyncStorage.setItem("access_Token", user.accessToken);
+          await AsyncStorage.setItem("userInfo", JSON.stringify(res.payload.DT));
           if (res.payload.DT.role === "doctor") {
             navigation.navigate("DoctorTab");
           } else if (res.payload.DT.role === "patient") {
             navigation.navigate("PatientTabs");
           }
-          await AsyncStorage.setItem("access_Token", user.accessToken);
         }
       }
     } catch (error) {
@@ -83,12 +84,13 @@ export default function LoginForm() {
       if (user) {
         let res = await dispatch(Login({ user }));
         if (res.payload.EC === 0) {
+          await AsyncStorage.setItem("access_Token", user.accessToken);
+          await AsyncStorage.setItem("userInfo", JSON.stringify(res.payload.DT));
           if (res.payload.DT.role === "doctor") {
             navigation.navigate("DoctorTab");
           } else if (res.payload.DT.role === "patient") {
             navigation.navigate("PatientTabs");
           }
-          await AsyncStorage.setItem("access_Token", user.accessToken);
         }
       }
     } catch (error) {

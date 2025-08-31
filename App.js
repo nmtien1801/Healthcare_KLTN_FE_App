@@ -11,12 +11,15 @@ import {
 import { Provider, useSelector, useDispatch } from "react-redux";
 import { store } from "./src/redux/store";
 import Router from "./src/routes/Router";
+import { NavigationContainer } from "@react-navigation/native";
 
 export default function App() {
   return (
     <Provider store={store}>
       <View style={{ flex: 1 }}>
-        <Router />
+        <NavigationContainer>
+          <Router />
+        </NavigationContainer>
       </View>
     </Provider>
   );
