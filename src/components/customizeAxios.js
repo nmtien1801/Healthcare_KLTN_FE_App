@@ -5,7 +5,7 @@ import { useNavigation } from "@react-navigation/native";
 //SEARCH: axios npm github
 
 const URL_ANDROID = "http://172.28.32.218:8080/api";
-URL_WEB = "http://localhost:8080/api";
+const URL_WEB = "http://localhost:8080/api";
 
 const baseUrl =
   Platform.OS === "android" || Platform.OS === "ios"

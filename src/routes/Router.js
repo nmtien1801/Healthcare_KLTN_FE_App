@@ -131,8 +131,8 @@ export default function Router() {
         setIsLoading(false);
         return;
       } else {
-        // reset user info
-        console.log("reset");
+        // User đã đăng xuất
+        console.log("User logged out");
         setIsLoading(false);
         dispatch(setUser(null));
         await AsyncStorage.clear();
@@ -158,18 +158,19 @@ export default function Router() {
 
       <Stack.Navigator>
         {user ? (
-          <>
+          user.role === 'doctor' ? (
             <Stack.Screen
               name="DoctorTab"
               component={DoctorTab}
               options={{ headerShown: false }}
             />
+          ) : (
             <Stack.Screen
               name="PatientTabs"
               component={PatientTabs}
               options={{ headerShown: false }}
             />
-          </>
+          )
         ) : (
           <>
             <Stack.Screen
