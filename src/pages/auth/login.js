@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Eye, EyeOff, RefreshCw } from "lucide-react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { Login } from "../../redux/authSlice";
+import { Login, setUser } from "../../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
@@ -46,8 +46,24 @@ export default function LoginForm() {
       if (user) {
         let res = await dispatch(Login({ user }));
         if (res.payload.EC === 0) {
+          // Lưu thông tin user vào AsyncStorage trước
           await AsyncStorage.setItem("access_Token", user.accessToken);
           await AsyncStorage.setItem("userInfo", JSON.stringify(res.payload.DT));
+          
+          // Cập nhật Redux state trực tiếp để Router.js nhận được ngay
+          dispatch(
+            setUser({
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL,
+              role: res.payload.DT.role,
+              address: res.payload.DT.address,
+              phone: res.payload.DT.phone,
+              dob: res.payload.DT.dob,
+              gender: res.payload.DT.gender,
+            })
+          );
         }
       }
     } catch (error) {
@@ -79,8 +95,24 @@ export default function LoginForm() {
       if (user) {
         let res = await dispatch(Login({ user }));
         if (res.payload.EC === 0) {
+          // Lưu thông tin user vào AsyncStorage trước
           await AsyncStorage.setItem("access_Token", user.accessToken);
           await AsyncStorage.setItem("userInfo", JSON.stringify(res.payload.DT));
+          
+          // Cập nhật Redux state trực tiếp để Router.js nhận được ngay
+          dispatch(
+            setUser({
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL,
+              role: res.payload.DT.role,
+              address: res.payload.DT.address,
+              phone: res.payload.DT.phone,
+              dob: res.payload.DT.dob,
+              gender: res.payload.DT.gender,
+            })
+          );
         }
       }
     } catch (error) {

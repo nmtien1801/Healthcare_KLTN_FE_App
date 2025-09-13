@@ -107,29 +107,36 @@ export default function Router() {
   // authContext -> duy trì trạng thái đăng nhập của người dùng
   useEffect(() => {
     const unsubscribe = auth.onIdTokenChanged(async (firebaseUser) => {
-      let userInfoString = await AsyncStorage.getItem("userInfo"); // Đợi lấy chuỗi
-      let userInfo = userInfoString ? JSON.parse(userInfoString) : null;
-      
-      if (firebaseUser && userInfo) {
-        dispatch(
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-            role: userInfo.role,
-            address: userInfo.address,
-            phone: userInfo.phone,
-            dob: userInfo.dob,
-            gender: userInfo.gender,
-          })
-        );
-        if (firebaseUser.accessToken !== await AsyncStorage.getItem("access_Token")) {
-          await AsyncStorage.setItem("access_Token", firebaseUser.accessToken);
-          // window.location.reload();
+      if (firebaseUser) {
+        // Nếu đã có user trong Redux state, không cần làm gì thêm
+        if (user) {
+          setIsLoading(false);
+          return;
         }
+        
+        // Nếu chưa có user trong Redux, thử lấy từ AsyncStorage
+        let userInfoString = await AsyncStorage.getItem("userInfo");
+        let userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+        
+        if (userInfo) {
+          dispatch(
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              role: userInfo.role,
+              address: userInfo.address,
+              phone: userInfo.phone,
+              dob: userInfo.dob,
+              gender: userInfo.gender,
+            })
+          );
+        }
+        
+        // Cập nhật access token
+        await AsyncStorage.setItem("access_Token", firebaseUser.accessToken);
         setIsLoading(false);
-        return;
       } else {
         // User đã đăng xuất
         console.log("User logged out");
@@ -140,7 +147,7 @@ export default function Router() {
     });
 
     return () => unsubscribe();
-  }, [auth, dispatch]);
+  }, [auth, dispatch, user]);
 
   console.log("user ", user);
 
