@@ -53,6 +53,7 @@ export default function LoginForm() {
           // Cập nhật Redux state trực tiếp để Router.js nhận được ngay
           dispatch(
             setUser({
+              userID: res.payload.DT.userId,
               uid: user.uid,
               email: user.email,
               displayName: user.displayName,
@@ -94,6 +95,7 @@ export default function LoginForm() {
       let user = result.user;
       if (user) {
         let res = await dispatch(Login({ user }));
+
         if (res.payload.EC === 0) {
           // Lưu thông tin user vào AsyncStorage trước
           await AsyncStorage.setItem("access_Token", user.accessToken);
@@ -102,6 +104,7 @@ export default function LoginForm() {
           // Cập nhật Redux state trực tiếp để Router.js nhận được ngay
           dispatch(
             setUser({
+              userID: res.payload.DT.userId,
               uid: user.uid,
               email: user.email,
               displayName: user.displayName,

@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 //SEARCH: axios npm github
 
-const URL_ANDROID = "http://172.28.32.218:8080/api";
+const URL_ANDROID = "http://192.168.1.95:8080/api";
 const URL_WEB = "http://localhost:8080/api";
 
 const baseUrl =
@@ -22,11 +22,11 @@ const instance = axios.create({
 // Cài đặt header mặc định
 instance.defaults.headers.common[
   "Authorization"
-] = `Bearer ${AsyncStorage.getItem("accessToken")}`;
+] = `Bearer ${AsyncStorage.getItem("access_Token")}`;
 
 // Interceptor cho request
 const getToken = async () => {
-  return await AsyncStorage.getItem("accessToken");
+  return await AsyncStorage.getItem("access_Token");
 };
 
 instance.interceptors.request.use(

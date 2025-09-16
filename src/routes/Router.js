@@ -29,6 +29,7 @@ import SettingTabs from "../pages/doctor/SettingTabs";
 import Header from "../routes/Header";
 import { getAuth } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import FormPatient from "../pages/patient/assistant/FormPatient";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -67,7 +68,7 @@ const DoctorTab = ({ route }) => {
 
 const PatientTabs = ({ route }) => {
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, marginTop: 65 }}>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
@@ -79,7 +80,7 @@ const PatientTabs = ({ route }) => {
               "Sức khỏe": focused ? "id-card" : "id-card-outline",
               "Dinh dưỡng": focused ? "nutrition" : "nutrition-outline",
               "Đặt lịch": focused ? "sparkles" : "sparkles-outline",
-              "Hồ sơ": focused ? "person" : "person-outline",
+              "Trợ lý AI": focused ? "chatbubble" : "chatbubble-outline",
             };
             return <Icon name={icons[route.name]} size={size} color={color} />;
           },
@@ -91,7 +92,7 @@ const PatientTabs = ({ route }) => {
         <Tab.Screen name="Sức khỏe" component={HealthTabs} />
         <Tab.Screen name="Dinh dưỡng" component={NutritionTabs} />
         <Tab.Screen name="Đặt lịch" component={BookingTabs} />
-        <Tab.Screen name="Hồ sơ" component={PersonalTabs} />
+        <Tab.Screen name="Trợ lý AI" component={FormPatient} />
       </Tab.Navigator>
     </View>
   );
@@ -113,14 +114,15 @@ export default function Router() {
           setIsLoading(false);
           return;
         }
-        
+
         // Nếu chưa có user trong Redux, thử lấy từ AsyncStorage
         let userInfoString = await AsyncStorage.getItem("userInfo");
         let userInfo = userInfoString ? JSON.parse(userInfoString) : null;
-        
+
         if (userInfo) {
           dispatch(
             setUser({
+              userID: userInfo.userId,
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName,
@@ -133,7 +135,7 @@ export default function Router() {
             })
           );
         }
-        
+
         // Cập nhật access token
         await AsyncStorage.setItem("access_Token", firebaseUser.accessToken);
         setIsLoading(false);
@@ -172,11 +174,18 @@ export default function Router() {
               options={{ headerShown: false }}
             />
           ) : (
-            <Stack.Screen
-              name="PatientTabs"
-              component={PatientTabs}
-              options={{ headerShown: false }}
-            />
+            <>
+              <Stack.Screen
+                name="PatientTabs"
+                component={PatientTabs}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="PersonalTabs"
+                component={PersonalTabs}
+                options={{ headerShown: false }}
+              />
+            </>
           )
         ) : (
           <>

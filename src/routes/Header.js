@@ -110,6 +110,9 @@ const Header = () => {
               },
             ]}
           >
+            <Pressable onPress={() => navigation.navigate("PersonalTabs")} style={styles.menuItem}>
+              <Text>Thông tin các nhân</Text>
+            </Pressable>
             <Pressable onPress={handleChangePassword} style={styles.menuItem}>
               <Text>Đổi mật khẩu</Text>
             </Pressable>
