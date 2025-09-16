@@ -21,6 +21,9 @@ import RegisterForm from "../pages/auth/register";
 import BookingTabs from "../pages/patient/BookingTabs";
 import NutritionTabs from "../pages/patient/NutritionTabs";
 import ResetPassword from "../pages/auth/ResetPassword";
+import ChangePassword from "../components/changePassword";
+import FoodTrackerApp from "../pages/patient/nutrition/FoodTrackerApp";
+import SuggestedFood from "../pages/patient/nutrition/SuggestedFood";
 import OverviewTab from "../pages/doctor/OverviewTab";
 import InformationTab from "../pages/doctor/InformationTab";
 import AppointmentTab from "../pages/doctor/AppointmentTab";
@@ -168,11 +171,18 @@ export default function Router() {
       <Stack.Navigator>
         {user ? (
           user.role === 'doctor' ? (
-            <Stack.Screen
-              name="DoctorTab"
-              component={DoctorTab}
-              options={{ headerShown: false }}
-            />
+            <>
+              <Stack.Screen
+                name="DoctorTab"
+                component={DoctorTab}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ChangePassword"
+                component={ChangePassword}
+                options={{ headerShown: false }}
+              />
+            </>
           ) : (
             <>
               <Stack.Screen
@@ -183,6 +193,46 @@ export default function Router() {
               <Stack.Screen
                 name="PersonalTabs"
                 component={PersonalTabs}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Home"
+                component={Home}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="HealthTabs"
+                component={HealthTabs}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Nutrition"
+                component={NutritionTabs}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="FoodTrackerApp"
+                component={FoodTrackerApp}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="SuggestedFood"
+                component={SuggestedFood}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="BookingTabs"
+                component={BookingTabs}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="FormPatient"
+                component={FormPatient}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ChangePassword"
+                component={ChangePassword}
                 options={{ headerShown: false }}
               />
             </>

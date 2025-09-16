@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, Text, Button, StyleSheet, Alert } from 'react-native';
 
-const OverviewTab = () => {
+const SettingTabs = () => {
   const handlePress = () => {
     Alert.alert('Chào bạn!', 'Bạn đã nhấn nút.');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Chào mừng đến với OverviewTab!</Text>
+      <Text style={styles.title}>Chào mừng đến với SettingTabs!</Text>
       <Text style={styles.text}>Đây là màn hình React Native cơ bản.</Text>
       <Button title="Nhấn tôi" onPress={handlePress} color="#2196F3" />
     </View>
@@ -37,4 +37,6 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OverviewTab;
+export default SettingTabs;
+
+

@@ -49,7 +49,7 @@ const Header = () => {
   };
 
   const handleChangePassword = () => {
-    navigation.navigate("ForgotPassword");
+    navigation.navigate("ChangePassword");
   };
 
   return (
