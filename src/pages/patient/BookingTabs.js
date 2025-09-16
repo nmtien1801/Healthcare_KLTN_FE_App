@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useSelector } from "react-redux";
 import { db } from "../../../firebase";
@@ -409,34 +409,159 @@ const BookingTabs = ({ handleStartCall }) => {
     setNewAppointment(appointment);
   };
 
+  ////////////////////// 
+  const mockAppointments = [
+    {
+      id: '1',
+      name: 'Pham Thi Thuy Nhi',
+      hospital: 'Bệnh viện Bạch Mai',
+      date: '17/09/2025',
+      time: '10:00',
+      status: 'Đã xác nhận'
+    },
+    {
+      id: '2',
+      name: 'Pham Thi Thuy Nhi',
+      hospital: 'Bệnh viện Bạch Mai',
+      date: '21/09/2025',
+      time: '11:30',
+      status: 'Đã xác nhận'
+    }
+  ];
+  const [appointmentType, setAppointmentType] = useState('Tại phòng khám');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDoctor, setSelectedDoctor] = useState('');
+  const [selectedTime, setSelectedTime] = useState('');
+  const [reason, setReason] = useState('');
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chào mừng đến với BookingTabs!</Text>
-      <Text style={styles.text}>Đây là màn hình React Native cơ bản.</Text>
-    </View>
+    <ScrollView style={styles.container}>
+      {/* Upcoming Appointments */}
+      <Text style={styles.sectionTitle}>Lịch hẹn sắp tới</Text>
+      <FlatList
+        data={mockAppointments}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.appointmentCard}>
+            <View style={styles.row}>
+              <Text style={styles.name}>{item.name}</Text>
+              <View style={[styles.status, { backgroundColor: '#d4edda' }]}>
+                <Text style={{ color: '#155724' }}>{item.status}</Text>
+              </View>
+            </View>
+            <Text style={styles.hospital}>{item.hospital}</Text>
+            <Text>{item.date} - {item.time}</Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.chatButton}>
+                <Text style={styles.buttonText}>Chat</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.callButton}>
+                <Text style={styles.buttonText}>Gọi</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelButton}>
+                <Text style={styles.buttonText}>Hủy</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      />
+
+      {/* New Appointment */}
+      <Text style={styles.sectionTitle}>Đặt lịch khám mới</Text>
+      <View style={styles.form}>
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={[styles.typeButton, appointmentType === 'Tại phòng khám' && styles.typeButtonActive]}
+            onPress={() => setAppointmentType('Tại phòng khám')}
+          >
+            <Text style={styles.buttonText}>Tại phòng khám</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.typeButton, appointmentType === 'Khám trực tuyến' && styles.typeButtonActive]}
+            onPress={() => setAppointmentType('Khám trực tuyến')}
+          >
+            <Text style={styles.buttonText}>Khám trực tuyến</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Chọn ngày khám"
+          value={selectedDate}
+          onChangeText={setSelectedDate}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Chọn bác sĩ"
+          value={selectedDoctor}
+          onChangeText={setSelectedDoctor}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Chọn giờ khám"
+          value={selectedTime}
+          onChangeText={setSelectedTime}
+        />
+        <TextInput
+          style={[styles.input, { height: 80 }]}
+          placeholder="Lý do khám"
+          value={reason}
+          onChangeText={setReason}
+          multiline
+        />
+
+        <TouchableOpacity style={styles.submitButton}>
+          <Text style={styles.buttonText}>Xác nhận đặt lịch khám</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
+    padding: 16,
+    backgroundColor: '#f5f6fa',
   },
-  title: {
-    fontSize: 24,
-    color: '#2196F3',
-    marginBottom: 12,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-  },
-  text: {
-    fontSize: 16,
+    marginVertical: 12,
     color: '#333',
-    marginBottom: 24,
-    textAlign: 'center',
   },
+  appointmentCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  name: { fontSize: 16, fontWeight: 'bold' },
+  hospital: { color: '#555', marginVertical: 4 },
+  status: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  buttonRow: { flexDirection: 'row', marginTop: 8 },
+  chatButton: { backgroundColor: '#2196F3', padding: 8, borderRadius: 8, marginRight: 8 },
+  callButton: { backgroundColor: '#4CAF50', padding: 8, borderRadius: 8, marginRight: 8 },
+  cancelButton: { backgroundColor: '#f44336', padding: 8, borderRadius: 8 },
+  buttonText: { color: '#fff', fontWeight: 'bold' },
+  form: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 24 },
+  typeButton: { flex: 1, padding: 10, borderRadius: 8, marginRight: 8, backgroundColor: '#e0e0e0' },
+  typeButtonActive: { backgroundColor: '#2196F3' },
+  input: { backgroundColor: '#f0f0f0', padding: 10, borderRadius: 8, marginVertical: 8 },
+  submitButton: { backgroundColor: '#2196F3', padding: 14, borderRadius: 12, marginTop: 12, alignItems: 'center' },
 });
 
 export default BookingTabs;

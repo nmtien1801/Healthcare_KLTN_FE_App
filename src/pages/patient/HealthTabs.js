@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, Button, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { LineChart } from "react-native-chart-kit";
+import { Dimensions } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 import { suggestFoodsByAi, GetCaloFood } from '../../redux/foodAiSlice'
 import { setWithExpiry, getWithExpiry } from '../../components/customizeStorage'
 import { fetchBloodSugar, saveBloodSugar } from '../../redux/patientSlice'
 import ApiBooking from '../../apis/ApiBooking'
+
+const screenWidth = Dimensions.get("window").width;
 
 const HealthTabs = () => {
   const [messageInput, setMessageInput] = useState([]);
@@ -192,33 +196,177 @@ const HealthTabs = () => {
     }
   }
 
+  const [bloodSugarInput, setBloodSugarInput] = useState("");
+  const dummyBloodSugarData = {
+    labels: ["13/09"],
+    datasets: [
+      {
+        data: [5, 6, 7],
+        color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`, // lúc đói
+        strokeWidth: 2,
+      },
+      {
+        data: [6, 7, 8],
+        color: (opacity = 1) => `rgba(255, 165, 0, ${opacity})`, // sau ăn
+        strokeWidth: 2,
+      },
+    ],
+  };
+
+  const handleSaveBloodSugar = () => {
+    alert(`Đã lưu chỉ số ${bloodSugarInput} mmol/L (${measurementType === "before" ? "Trước ăn" : "Sau ăn"})`);
+    setBloodSugarInput("");
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chào mừng đến với HealthTabs!</Text>
-      <Text style={styles.text}>Đây là màn hình React Native cơ bản.</Text>
-    </View>
+    <ScrollView style={styles.container}>
+      {/* Biểu đồ theo dõi */}
+      <Text style={styles.sectionTitle}>Biểu đồ theo dõi</Text>
+      <LineChart
+        data={dummyBloodSugarData}
+        width={screenWidth - 40}
+        height={220}
+        chartConfig={{
+          backgroundColor: "#fff",
+          backgroundGradientFrom: "#fff",
+          backgroundGradientTo: "#fff",
+          decimalPlaces: 1,
+          color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+          propsForDots: {
+            r: "4",
+            strokeWidth: "2",
+            stroke: "#2196F3",
+          },
+        }}
+        style={{
+          marginVertical: 8,
+          borderRadius: 16,
+        }}
+      />
+
+      {/* Nhập chỉ số mới */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Nhập chỉ số mới</Text>
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={[styles.buttonToggle, measurementType === "before" && styles.buttonActive]}
+            onPress={() => setMeasurementType("before")}
+          >
+            <Text style={styles.buttonText}>Trước ăn</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.buttonToggle, measurementType === "after" && styles.buttonActive]}
+            onPress={() => setMeasurementType("after")}
+          >
+            <Text style={styles.buttonText}>Sau ăn</Text>
+          </TouchableOpacity>
+        </View>
+        <TextInput
+          style={styles.input}
+          placeholder="Nhập chỉ số đường huyết (mmol/L)"
+          keyboardType="numeric"
+          value={bloodSugarInput}
+          onChangeText={setBloodSugarInput}
+        />
+        <Button title="Lưu" onPress={handleSaveBloodSugar} />
+      </View>
+
+      {/* Kế hoạch dùng thuốc */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Kế hoạch dùng thuốc</Text>
+        <Text>Sáng: Không dùng</Text>
+        <Text>Trưa: Không dùng</Text>
+        <Text>Tối: Không dùng</Text>
+        <Button title="Chuẩn đoán" onPress={() => alert("Chuẩn đoán")} />
+      </View>
+
+      {/* Kế hoạch dinh dưỡng */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Kế hoạch dinh dưỡng</Text>
+        <Text>Calo/ngày: 1504 calo</Text>
+        <Text>Bánh mì nguyên cám: 100g (79 calo)</Text>
+        <Text>Yến mạch: 100g (153 calo)</Text>
+        <Text>Hạt diêm mạch: 100g (120 calo)</Text>
+        <Text>Gạo lứt: 100g (216 calo)</Text>
+        <Text>Khoai lang: 100g (86 calo)</Text>
+        <Button title="Xem thêm (18 món)" onPress={() => alert("Xem thêm thực đơn")} />
+      </View>
+
+      {/* Thông tin thêm */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Thông tin thêm</Text>
+        <Text style={styles.infoTitle}>Chỉ số bình thường</Text>
+        <Text>Đường huyết lúc đói: 3.9 – 5.5 mmol/L</Text>
+        <Text>Đường huyết sau ăn 2h: {"< 7.8 mmol/L"}</Text>
+
+        <Text style={styles.infoTitle}>Chỉ số tiền tiểu đường</Text>
+        <Text>Đường huyết lúc đói: 5.6 – 6.9 mmol/L</Text>
+        <Text>Đường huyết sau ăn 2h: 7.8 – 11.0 mmol/L</Text>
+
+        <Text style={styles.infoTitle}>Chỉ số tiểu đường</Text>
+        <Text>Đường huyết lúc đói: ≥ 7.0 mmol/L</Text>
+        <Text>Đường huyết sau ăn 2h: {"> 11.1 mmol/L"}</Text>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#f5f5f5",
   },
-  title: {
-    fontSize: 24,
-    color: '#2196F3',
-    marginBottom: 12,
-    fontWeight: 'bold',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    margin: 10,
   },
-  text: {
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 15,
+    marginHorizontal: 10,
+    marginVertical: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  cardTitle: {
     fontSize: 16,
-    color: '#333',
-    marginBottom: 24,
-    textAlign: 'center',
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  row: {
+    flexDirection: "row",
+    marginBottom: 10,
+  },
+  buttonToggle: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2196F3",
+    marginRight: 5,
+  },
+  buttonActive: {
+    backgroundColor: "#2196F3",
+  },
+  buttonText: {
+    textAlign: "center",
+    color: "#fff",
+  },
+  infoTitle: {
+    fontWeight: "bold",
+    marginTop: 8,
   },
 });
 

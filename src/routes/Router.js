@@ -29,7 +29,7 @@ import SettingTabs from "../pages/doctor/SettingTabs";
 import Header from "../routes/Header";
 import { getAuth } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import FormPatient from "../pages/patient/assistant/FormPatient";
+import Diagnosis from "../pages/patient/assistant/diagnosis";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -92,7 +92,7 @@ const PatientTabs = ({ route }) => {
         <Tab.Screen name="Sức khỏe" component={HealthTabs} />
         <Tab.Screen name="Dinh dưỡng" component={NutritionTabs} />
         <Tab.Screen name="Đặt lịch" component={BookingTabs} />
-        <Tab.Screen name="Trợ lý AI" component={FormPatient} />
+        <Tab.Screen name="Trợ lý AI" component={Diagnosis} />
       </Tab.Navigator>
     </View>
   );

@@ -18,12 +18,7 @@ import SuggestedFood from "./nutrition/SuggestedFood";
 
 const TopTab = createMaterialTopTabNavigator();
 
-export default function NutritionTabs({
-  route,
-  socketRef,
-  friendRequestCount,
-  groupRequestCount,
-}) {
+export default function NutritionTabs({ }) {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);

@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, StyleSheet, Alert } from 'react-native';
-import ChatBox from "./ChatBox";
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Switch,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchTrendMedicine, selectMedicineLoading, selectTrendMedicine, selectMedicineError, applyMedicines, fetchMedicines } from "../../../redux/medicineAiSlice";
 import { api, apply_medicine } from "../../../apis/assistant";
+import { Picker } from "@react-native-picker/picker";
 
-const HealthTabs = () => {
+const FormPatient = () => {
   const currentYear = new Date().getFullYear();
   const dispatch = useDispatch();
   let user = useSelector((state) => state.auth.user);
@@ -279,34 +288,142 @@ const HealthTabs = () => {
     setPrescriptionStatus("applied");
     setMessages((prev) => [...prev, { sender: "bot", text: "✅ Đã áp dụng đơn thuốc trong 1 tuần. Hãy theo dõi chỉ số thường xuyên." }]);
   };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chào mừng đến với FormPatient!</Text>
-      <Text style={styles.text}>Đây là màn hình React Native cơ bản.</Text>
-    </View>
+    <ScrollView contentContainerStyle={styles.container}>
+      {/* Header */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionHeaderText}>🩺 Thông tin bệnh nhân</Text>
+      </View>
+
+      {/* Tuổi + Giới tính */}
+      <View style={styles.row}>
+        <TextInput
+          style={[styles.input, { flex: 1, marginRight: 8 }]}
+          placeholder="Tuổi"
+          keyboardType="numeric"
+          value={formData.age}
+          onChangeText={(value) => handleChange("age", value)}
+        />
+        <View style={[styles.pickerContainer, { flex: 1 }]}>
+          <Picker
+            selectedValue={formData.gender}
+            onValueChange={(value) => handleChange("gender", value)}
+          >
+            <Picker.Item label="Chọn giới tính" value="" />
+            <Picker.Item label="Nữ" value="female" />
+            <Picker.Item label="Nam" value="male" />
+          </Picker>
+        </View>
+      </View>
+
+      {/* BMI + HbA1c + Đường huyết */}
+      <View style={styles.row}>
+        <TextInput
+          style={[styles.input, { flex: 1, marginRight: 8 }]}
+          placeholder="BMI"
+          keyboardType="numeric"
+          value={formData.bmi}
+          onChangeText={(value) => handleChange("bmi", value)}
+        />
+        <TextInput
+          style={[styles.input, { flex: 1, marginRight: 8 }]}
+          placeholder="HbA1c (%)"
+          keyboardType="numeric"
+          value={formData.hbA1c_level}
+          onChangeText={(value) => handleChange("hbA1c_level", value)}
+        />
+        <TextInput
+          style={[styles.input, { flex: 1 }]}
+          placeholder="Đường huyết (mg/dL)"
+          keyboardType="numeric"
+          value={formData.blood_glucose_level}
+          onChangeText={(value) => handleChange("blood_glucose_level", value)}
+        />
+      </View>
+
+      {/* Huyết áp + Bệnh tim */}
+      <View style={styles.row}>
+        <View style={styles.switchContainer}>
+          <Switch
+            value={formData.hypertension}
+            onValueChange={(value) => handleChange("hypertension", value)}
+          />
+          <Text style={styles.switchLabel}>Huyết áp cao</Text>
+        </View>
+        <View style={styles.switchContainer}>
+          <Switch
+            value={formData.heart_disease}
+            onValueChange={(value) => handleChange("heart_disease", value)}
+          />
+          <Text style={styles.switchLabel}>Bệnh tim</Text>
+        </View>
+      </View>
+
+      {/* Lịch sử hút thuốc */}
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={formData.smoking_history}
+          onValueChange={(value) => handleChange("smoking_history", value)}
+        >
+          <Picker.Item label="Chọn lịch sử hút thuốc" value="" />
+          <Picker.Item label="Không bao giờ" value="never" />
+          <Picker.Item label="Từng hút" value="ever" />
+          <Picker.Item label="Hiện tại" value="current" />
+        </Picker>
+      </View>
+
+      {/* Kế hoạch dùng thuốc */}
+      <View
+        style={[
+          styles.medicineBox,
+          prescriptionStatus === "not_created"
+            ? { backgroundColor: "#fff4e5" }
+            : { backgroundColor: "#e6f4ea" },
+        ]}
+      >
+        <View style={styles.medicineHeaderRow}>
+          <Text style={styles.medicineHeader}>📋 Kế hoạch dùng thuốc</Text>
+          {prescriptionStatus === "not_created" && (
+            <TouchableOpacity style={styles.createButton}>
+              <Text style={styles.createButtonText}>Tạo đơn thuốc</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {prescriptionStatus === "not_created" && (
+          <Text style={styles.medicineNote}>
+            Chưa có đơn thuốc. Vui lòng khởi tạo để có thể áp dụng theo dõi.
+          </Text>
+        )}
+        <Text>• Sáng: {medicines?.sang?.length ? medicines.sang.join(", ") : "Không dùng"}</Text>
+        <Text>• Trưa: {medicines?.trua?.length ? medicines.trua.join(", ") : "Không dùng"}</Text>
+        <Text>• Tối: {medicines?.toi?.length ? medicines.toi.join(", ") : "Không dùng"}</Text>
+      </View>
+
+      {/* Submit Button */}
+      <TouchableOpacity style={styles.submitButton} disabled={loading}>
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Dự đoán nguy cơ ➤</Text>}
+      </TouchableOpacity>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 24,
-    color: '#2196F3',
-    marginBottom: 12,
-    fontWeight: 'bold',
-  },
-  text: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
+  container: { padding: 16, backgroundColor: "#fff" },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  sectionHeaderText: { fontSize: 18, fontWeight: "bold", color: "#4f46e5" },
+  row: { flexDirection: "row", marginBottom: 12 },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 16, },
+  pickerContainer: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, marginBottom: 12, overflow: "hidden", },
+  switchContainer: { flexDirection: "row", alignItems: "center", flex: 1, },
+  switchLabel: { marginLeft: 8 },
+  medicineBox: { borderRadius: 8, padding: 12, marginBottom: 16, },
+  medicineHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  medicineHeader: { fontWeight: "bold" }, medicineNote: { marginBottom: 8, color: "#555" },
+  createButton: { backgroundColor: "#f97316", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  createButtonText: { color: "#fff", fontWeight: "bold" },
+  submitButton: { backgroundColor: "#4f46e5", padding: 14, borderRadius: 8, alignItems: "center", marginBottom: 32, },
+  submitText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
 
-export default HealthTabs;
+export default FormPatient;
