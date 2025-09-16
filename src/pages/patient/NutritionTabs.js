@@ -13,12 +13,12 @@ import { createMaterialTopTabNavigator } from "@react-navigation/material-top-ta
 import Icon from "react-native-vector-icons/Ionicons";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
-import FoodTrackerApp from "../../components/FoodTrackerApp";
-import SuggestedFood from "../../components/SuggestedFood";
+import FoodTrackerApp from "./nutrition/FoodTrackerApp";
+import SuggestedFood from "./nutrition/SuggestedFood";
 
 const TopTab = createMaterialTopTabNavigator();
 
-export default function ContactsTabs({
+export default function NutritionTabs({
   route,
   socketRef,
   friendRequestCount,

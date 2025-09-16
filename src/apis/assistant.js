@@ -13,3 +13,9 @@ export const apply_medicine = axios.create({
     headers: { "Content-Type": "application/json" },
 });
 
+export const get_advice = axios.create({
+    baseURL: "http://localhost:5678/webhook", //local
+    timeout: 5000,
+    headers: { "Content-Type": "application/json" },
+});
+
