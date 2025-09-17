@@ -27,6 +27,7 @@ export default function App() {
             "Tổng quan": "doctor/overview",
             "Bệnh nhân": "doctor/patients",
             "Lịch hẹn": "doctor/appointments",
+            "Chấm công": "doctor/attendance",
             "Thông tin": "doctor/info",
             "Cài đặt": "doctor/settings",
           },
