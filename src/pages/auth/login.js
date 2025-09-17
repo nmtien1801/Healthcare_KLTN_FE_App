@@ -53,7 +53,7 @@ export default function LoginForm() {
           // Cập nhật Redux state trực tiếp để Router.js nhận được ngay
           dispatch(
             setUser({
-              userID: res.payload.DT.userId,
+              userId: res.payload.DT.userId,
               uid: user.uid,
               email: user.email,
               displayName: user.displayName,
@@ -104,7 +104,7 @@ export default function LoginForm() {
           // Cập nhật Redux state trực tiếp để Router.js nhận được ngay
           dispatch(
             setUser({
-              userID: res.payload.DT.userId,
+              userId: res.payload.DT.userId,
               uid: user.uid,
               email: user.email,
               displayName: user.displayName,

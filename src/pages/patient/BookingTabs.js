@@ -1,16 +1,640 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  StyleSheet,
+  Dimensions,
+  Alert,
+  Modal,
+  ActivityIndicator,
+  FlatList
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useSelector } from "react-redux";
 import { db } from "../../../firebase";
 import ApiBooking from "../../apis/ApiBooking";
-// import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+const { width, height } = Dimensions.get('window');
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 8,
+  },
+  appointmentCard: {
+    backgroundColor: '#f0f2ff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  doctorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  doctorAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+  },
+  doctorName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  doctorSpecialty: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  statusBadge: {
+    backgroundColor: '#28a745',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButton: {
+    backgroundColor: '#007bff',
+  },
+  warningButton: {
+    backgroundColor: '#ffc107',
+  },
+  appointmentDetails: {
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  detailText: {
+    fontSize: 13,
+    color: '#333',
+    marginLeft: 8,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#dc3545',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  cancelButtonText: {
+    color: '#dc3545',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  featureRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
+  },
+  featureItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  featureIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  featureText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#333',
+    textAlign: 'center',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  paginationButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#007bff',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paginationButtonText: {
+    color: '#007bff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  pageIndicator: {
+    backgroundColor: '#007bff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 5,
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  chatModal: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 320,
+    height: 450,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  chatHeader: {
+    backgroundColor: '#007bff',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  chatHeaderText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  chatMessages: {
+    flex: 1,
+    padding: 12,
+  },
+  messageContainer: {
+    marginBottom: 12,
+  },
+  messageBubble: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    maxWidth: '80%',
+  },
+  patientMessage: {
+    backgroundColor: '#007bff',
+    alignSelf: 'flex-end',
+  },
+  doctorMessage: {
+    backgroundColor: '#f1f1f1',
+    alignSelf: 'flex-start',
+  },
+  messageText: {
+    fontSize: 14,
+  },
+  patientMessageText: {
+    color: '#fff',
+  },
+  doctorMessageText: {
+    color: '#333',
+  },
+  messageTime: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 4,
+  },
+  chatInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  chatInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    fontSize: 14,
+  },
+  sendButton: {
+    backgroundColor: '#007bff',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Fixed modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  modalBody: {
+    marginBottom: 20,
+  },
+  modalText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 12,
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  primaryButton: {
+    backgroundColor: '#007bff',
+  },
+  secondaryButton: {
+    backgroundColor: '#6c757d',
+  },
+  dangerButton: {
+    backgroundColor: '#dc3545',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  secondaryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  // Booking form styles
+  bookingContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+  },
+  bookingCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  bookingHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  bookingTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  bookingSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  appointmentTypeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  appointmentTypeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appointmentTypeButtonActive: {
+    backgroundColor: '#007bff',
+    borderColor: '#007bff',
+  },
+  appointmentTypeButtonInactive: {
+    backgroundColor: 'transparent',
+    borderColor: '#007bff',
+  },
+  appointmentTypeTextActive: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  appointmentTypeTextInactive: {
+    color: '#007bff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  datePickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+  },
+  datePickerText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+  },
+  timeSlotContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  timeSlot: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  timeSlotActive: {
+    backgroundColor: '#007bff',
+    borderColor: '#007bff',
+  },
+  timeSlotInactive: {
+    backgroundColor: '#f8f9fa',
+    borderColor: '#e0e0e0',
+  },
+  timeSlotDisabled: {
+    backgroundColor: '#f0f0f0',
+    borderColor: '#e0e0e0',
+    opacity: 0.5,
+  },
+  timeSlotTextActive: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  timeSlotTextInactive: {
+    color: '#333',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    backgroundColor: '#fff',
+    textAlignVertical: 'top',
+  },
+  submitButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+});
+
+const Button = ({ children, variant = "primary", size = "md", onPress, disabled, style, ...props }) => {
+  const getButtonStyle = () => {
+    const baseStyle = {
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+    };
+
+    const variants = {
+      primary: { backgroundColor: '#007bff', borderColor: '#007bff' },
+      secondary: { backgroundColor: '#6c757d', borderColor: '#6c757d' },
+      success: { backgroundColor: '#28a745', borderColor: '#28a745' },
+      danger: { backgroundColor: '#dc3545', borderColor: '#dc3545' },
+      warning: { backgroundColor: '#ffc107', borderColor: '#ffc107' },
+      info: { backgroundColor: '#17a2b8', borderColor: '#17a2b8' },
+      light: { backgroundColor: '#f8f9fa', borderColor: '#f8f9fa' },
+      dark: { backgroundColor: '#343a40', borderColor: '#343a40' },
+      outline: { backgroundColor: 'transparent', borderColor: '#007bff', borderWidth: 1 },
+      ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
+    };
+
+    const sizes = {
+      sm: { paddingHorizontal: 8, paddingVertical: 4, minHeight: 32 },
+      md: { paddingHorizontal: 12, paddingVertical: 8, minHeight: 40 },
+      lg: { paddingHorizontal: 16, paddingVertical: 12, minHeight: 48 },
+    };
+
+    return {
+      ...baseStyle,
+      ...variants[variant],
+      ...sizes[size],
+      opacity: disabled ? 0.6 : 1,
+      ...style,
+    };
+  };
+
+  const getTextStyle = () => {
+    const textColors = {
+      primary: '#ffffff',
+      secondary: '#ffffff',
+      success: '#ffffff',
+      danger: '#ffffff',
+      warning: '#212529',
+      info: '#ffffff',
+      light: '#212529',
+      dark: '#ffffff',
+      outline: '#007bff',
+      ghost: '#6c757d',
+    };
+
+    return {
+      color: textColors[variant],
+      fontWeight: '500',
+      fontSize: size === 'sm' ? 12 : size === 'lg' ? 16 : 14,
+    };
+  };
+
+  return (
+    <TouchableOpacity
+      style={getButtonStyle()}
+      onPress={onPress}
+      disabled={disabled}
+      {...props}
+    >
+      {typeof children === 'string' ? (
+        <Text style={getTextStyle()}>{children}</Text>
+      ) : (
+        children
+      )}
+    </TouchableOpacity>
+  );
+};
+
+// Modal Component
+const CustomModal = ({ visible, onClose, title, children, type = "info" }) => {
+  const getIcon = () => {
+    const iconProps = { size: 48, style: { marginBottom: 12 } };
+    switch (type) {
+      case "success":
+        return <Ionicons name="checkmark-circle" color="#28a745" {...iconProps} />;
+      case "danger":
+        return <Ionicons name="trash" color="#dc3545" {...iconProps} />;
+      case "warning":
+        return <Ionicons name="time" color="#ffc107" {...iconProps} />;
+      default:
+        return <Ionicons name="calendar" color="#007bff" {...iconProps} />;
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+            {getIcon()}
+            {children}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment }) => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [cancelling, setCancelling] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false); // Fixed variable name
   const user = useSelector((state) => state.auth.userInfo);
   const [currentPage, setCurrentPage] = useState(0);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -20,7 +644,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
   const [cancelErrorMessage, setCancelErrorMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Fetch appointments từ API
+  // Fetch appointments from API
   useEffect(() => {
     const fetchAppointments = async () => {
       console.log("Fetching appointments...");
@@ -29,7 +653,6 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
         const response = await ApiBooking.getUpcomingAppointments();
         console.log("Appointments fetched:", response);
 
-        // đảm bảo appointments luôn là array
         const data = Array.isArray(response)
           ? response
           : response?.appointments || response?.data || [];
@@ -50,7 +673,6 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
   useEffect(() => {
     if (onNewAppointment) {
       setAppointments((prev) => {
-        // Kiểm tra tránh trùng lặp
         const exists = prev.some(appt => appt._id === onNewAppointment._id);
         if (!exists) {
           return [...prev, onNewAppointment];
@@ -75,24 +697,22 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
     setCurrentPage((prev) => (prev < totalPages - 1 ? prev + 1 : 0));
   };
 
-  // Hủy lịch hẹn
   const handleCancelBooking = (appointmentId) => {
     setAppointmentToCancel(appointmentId);
     setShowCancelModal(true);
   };
 
-  const confirmCancelBooking = async () => {
+  const handleCancelAppointment = async () => { // Fixed function name
     if (!appointmentToCancel) return;
 
     try {
-      setCancelling(true);
+      setIsCanceling(true);
       await ApiBooking.cancelBooking(appointmentToCancel);
 
       setAppointments((prev) =>
         prev.filter((appt) => appt._id !== appointmentToCancel)
       );
 
-      // Reset page nếu trang hiện tại không còn lịch hẹn nào
       const remainingAppointments = appointments.filter((appt) => appt._id !== appointmentToCancel);
       const newTotalPages = Math.ceil(remainingAppointments.length / itemsPerPage);
       if (currentPage >= newTotalPages && newTotalPages > 0) {
@@ -107,11 +727,11 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
       setCancelErrorMessage(errorMsg);
       setShowCancelErrorModal(true);
     } finally {
-      setCancelling(false);
+      setIsCanceling(false);
     }
   };
 
-  // chat với bác sĩ
+  // Chat functionality
   const [showChatbot, setShowChatbot] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -127,10 +747,13 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
     },
   ]);
 
-  const roomChats = [senderId, receiverId].sort().join('_');
+  const roomChats = useMemo(() => {
+    if (!senderId) return '';
+    return [senderId, receiverId].sort().join('_');
+  }, [senderId, receiverId]);
 
   useEffect(() => {
-    if (!senderId) return;
+    if (!senderId || !roomChats) return;
 
     const q = query(
       collection(db, 'chats', roomChats, 'messages'),
@@ -138,20 +761,17 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
-
       const firebaseMessages = snapshot.docs.map(doc => {
         const data = doc.data();
-
         return {
           id: doc.id,
-          text: data.message || data.text || '', // Hỗ trợ cả 'message' và 'text'
+          text: data.message || data.text || '',
           sender: data.senderId === senderId ? "patient" : "doctor",
-          timestamp: data.timestamp ? data.timestamp.toDate() : new Date(), // Chuyển đổi Firestore timestamp
-          originalData: data // Lưu trữ dữ liệu gốc để debug
+          timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
+          originalData: data
         };
       });
 
-      // Giữ lại tin nhắn chào mừng nếu không có tin nhắn từ Firebase
       if (firebaseMessages.length === 0) {
         setChatMessages(prev => prev.filter(msg => msg.isWelcome));
       } else {
@@ -164,30 +784,19 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
     return () => unsub();
   }, [senderId, roomChats]);
 
-  // Scroll to bottom khi có tin nhắn mới
-  useEffect(() => {
-    if (showChatbot && chatMessages.length > 0) {
-      const chatContainer = document.querySelector('.chat-messages');
-      if (chatContainer) {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-    }
-  }, [chatMessages, showChatbot]);
-
   const sendMessage = async () => {
-    if (messageInput.trim() === "") return;
+    if (!messageInput.trim() || !senderId || !roomChats) return;
 
     setIsSending(true);
     const userMessage = messageInput.trim();
     setMessageInput("");
 
-    // Thêm tin nhắn vào UI ngay lập tức
     const tempMessage = {
-      id: Date.now().toString(), // Tạo ID tạm thời
+      id: Date.now().toString(),
       text: userMessage,
       sender: "patient",
       timestamp: new Date(),
-      isTemp: true // Đánh dấu là tin nhắn tạm thời
+      isTemp: true
     };
 
     setChatMessages((prev) => [...prev, tempMessage]);
@@ -196,11 +805,10 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
       const docRef = await addDoc(collection(db, "chats", roomChats, "messages"), {
         senderId,
         receiverId,
-        message: userMessage, // Sử dụng 'message' để nhất quán
+        message: userMessage,
         timestamp: serverTimestamp()
       });
 
-      // Cập nhật tin nhắn tạm thời thành tin nhắn thật
       setChatMessages((prev) => prev.map(msg =>
         msg.isTemp && msg.text === userMessage
           ? { ...msg, id: docRef.id, isTemp: false }
@@ -209,10 +817,8 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
 
     } catch (err) {
       console.error('Error sending message:', err);
-      // Xóa tin nhắn khỏi UI nếu gửi thất bại
       setChatMessages((prev) => prev.filter(msg => !msg.isTemp || msg.text !== userMessage));
-      // Có thể thay thế bằng toast notification sau này
-      console.error("Lỗi kết nối đến máy chủ:", err);
+      Alert.alert("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại.");
     } finally {
       setIsSending(false);
     }
@@ -220,8 +826,352 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Chào mừng đến với BookingTabs!</Text>
-      <Text style={styles.text}>Đây là màn hình React Native cơ bản.</Text>
+      <View style={styles.card}>
+        <View style={styles.header}>
+          <Ionicons name="calendar" size={24} color="#007bff" />
+          <Text style={styles.headerText}>Lịch hẹn sắp tới</Text>
+        </View>
+
+        {loading && (
+          <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+            <ActivityIndicator size="large" color="#007bff" />
+            <Text style={{ color: '#666', marginTop: 8 }}>Đang tải...</Text>
+          </View>
+        )}
+
+        {!loading && appointments.length === 0 && (
+          <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+            <Text style={{ color: '#666', textAlign: 'center' }}>Không có lịch hẹn sắp tới.</Text>
+          </View>
+        )}
+
+        {!loading && currentAppointments.length > 0 && (
+          <View>
+            {currentAppointments.map((appointment, index) => (
+              <View
+                key={appointment._id || appointment.id || index}
+                style={styles.appointmentCard}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Image
+                      source={{
+                        uri: appointment.doctorId?.userId?.avatar ||
+                          "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
+                      }}
+                      style={styles.doctorAvatar}
+                    />
+                    <View style={{ marginLeft: 16 }}>
+                      <Text style={styles.doctorName}>
+                        {appointment.doctorId?.userId?.username || appointment.doctorId?.name || "Bác sĩ Trần Thị B"}
+                      </Text>
+                      <Text style={styles.doctorSpecialty}>
+                        {appointment.doctorId?.hospital || "Chuyên khoa Nội tiết"}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ backgroundColor: '#e8f5e8', padding: 8, borderRadius: 8 }}>
+                      <Ionicons name="shield" size={20} color="#34c759" />
+                    </View>
+                    <Text style={{ fontSize: 14, color: '#666', marginLeft: 8 }}>
+                      Bảo mật 100%
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.appointmentDetails}>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="calendar" size={20} color="#007bff" />
+                    <Text style={styles.detailText}>
+                      {new Date(appointment.date).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="time" size={20} color="#007bff" />
+                    <Text style={styles.detailText}>
+                      {appointment.time}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.bottomRow}>
+                  <View style={styles.statusRow}>
+                    <View style={styles.statusBadge}>
+                      <Text style={styles.statusText}>● Online</Text>
+                    </View>
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.primaryButton]}
+                        onPress={() => setShowChatbot(true)}
+                      >
+                        <Ionicons name="chatbubble" size={12} color="#fff" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionButton, styles.warningButton]}
+                        onPress={() =>
+                          handleStartCall(
+                            user,
+                            {
+                              uid: "weHP9TWfdrZo5L9rmY81BRYxNXr2",
+                              name: appointment.doctorId?.name || "Bác sĩ Trần Thị B",
+                              role: "doctor",
+                            },
+                            "patient"
+                          )
+                        }
+                      >
+                        <Ionicons name="call" size={12} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.statusRow}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={14}
+                      color={appointment.status === "pending" ? "#ffc107" : "#28a745"}
+                    />
+                    <Text style={{
+                      color: appointment.status === "pending" ? "#ffc107" : "#28a745",
+                      fontSize: 12,
+                      fontWeight: '500',
+                      marginLeft: 4,
+                      marginRight: 12,
+                    }}>
+                      {appointment.status === "pending" ? "Chờ xác nhận" : "Đã xác nhận"}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={() => handleCancelBooking(appointment._id || appointment.id)}
+                      disabled={isCanceling}
+                    >
+                      <Text style={styles.cancelButtonText}>
+                        {isCanceling ? "Đang hủy..." : "Hủy"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={styles.featureRow}>
+          <View style={styles.featureItem}>
+            <View style={[styles.featureIcon, { backgroundColor: '#e8f5e8' }]}>
+              <Ionicons name="shield-checkmark" size={20} color="#28a745" />
+            </View>
+            <Text style={styles.featureText}>Bảo mật 100%</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <View style={[styles.featureIcon, { backgroundColor: '#fff3cd' }]}>
+              <Ionicons name="medal" size={20} color="#ffc107" />
+            </View>
+            <Text style={styles.featureText}>Bác sĩ chuyên nghiệp</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <View style={[styles.featureIcon, { backgroundColor: '#cce7ff' }]}>
+              <Ionicons name="time" size={20} color="#007bff" />
+            </View>
+            <Text style={styles.featureText}>Hỗ trợ 24/7</Text>
+          </View>
+        </View>
+
+        {/* Pagination */}
+        {!loading && appointments.length > 2 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              style={styles.paginationButton}
+              onPress={handlePrev}
+              disabled={appointments.length <= 2}
+            >
+              <Text style={styles.paginationButtonText}>← Trước</Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                {currentPage + 1} / {totalPages}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.paginationButton}
+              onPress={handleNext}
+              disabled={appointments.length <= 2}
+            >
+              <Text style={styles.paginationButtonText}>Sau →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && appointments.length > 0 && appointments.length <= 2 && (
+          <View style={{ alignItems: 'center', marginTop: 12 }}>
+            <Text style={{ color: '#666', fontSize: 12 }}>
+              Hiển thị {appointments.length} lịch hẹn sắp tới
+            </Text>
+          </View>
+        )}
+
+        {/* Chat Modal */}
+        <Modal
+          visible={showChatbot}
+          animationType="slide"
+          transparent={false}
+          onRequestClose={() => setShowChatbot(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: '#fff' }}>
+            <View style={styles.chatHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="chatbubbles" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.chatHeaderText}>Chat với bác sĩ</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowChatbot(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView 
+              style={styles.chatMessages}
+              ref={scrollViewRef => {
+                this.scrollView = scrollViewRef;
+              }}
+              onContentSizeChange={() => this.scrollView?.scrollToEnd({ animated: true })}
+            >
+              {chatMessages.length === 0 ? (
+                <View style={{ alignItems: 'center', marginTop: 40 }}>
+                  <Ionicons name="chatbubbles" size={24} color="#666" style={{ marginBottom: 8 }} />
+                  <Text style={{ color: '#666', textAlign: 'center' }}>Chưa có tin nhắn nào</Text>
+                  <Text style={{ color: '#999', fontSize: 12, textAlign: 'center' }}>Bắt đầu cuộc trò chuyện với bác sĩ</Text>
+                </View>
+              ) : (
+                chatMessages.map((msg) => (
+                  <View key={msg.id} style={styles.messageContainer}>
+                    <View style={[
+                      styles.messageBubble,
+                      msg.sender === "patient" ? styles.patientMessage : styles.doctorMessage
+                    ]}>
+                      <Text style={[
+                        styles.messageText,
+                        msg.sender === "patient" ? styles.patientMessageText : styles.doctorMessageText
+                      ]}>
+                        {msg.text}
+                      </Text>
+                    </View>
+                    <Text style={[
+                      styles.messageTime,
+                      { textAlign: msg.sender === "patient" ? 'right' : 'left' }
+                    ]}>
+                      {msg.timestamp && msg.timestamp instanceof Date ?
+                        msg.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) :
+                        (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '')
+                      }
+                    </Text>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+
+            <View style={styles.chatInputContainer}>
+              <TextInput
+                style={styles.chatInput}
+                placeholder="Nhập tin nhắn..."
+                value={messageInput}
+                onChangeText={setMessageInput}
+                onSubmitEditing={() => !isSending && sendMessage()}
+                editable={!isSending}
+                multiline
+              />
+              <TouchableOpacity
+                style={styles.sendButton}
+                onPress={sendMessage}
+                disabled={isSending || !messageInput.trim()}
+              >
+                {isSending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="send" size={16} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Cancel Confirmation Modal */}
+        <Modal
+          visible={showCancelModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowCancelModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Xác nhận hủy lịch hẹn</Text>
+                <TouchableOpacity onPress={() => setShowCancelModal(false)}>
+                  <Ionicons name="close" size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.modalBody}>
+                <Text style={styles.modalText}>Bạn có chắc chắn muốn hủy lịch hẹn này không?</Text>
+              </View>
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[styles.button, styles.secondaryButton]}
+                  onPress={() => setShowCancelModal(false)}
+                  disabled={isCanceling}
+                >
+                  <Text style={styles.secondaryButtonText}>Không</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.dangerButton]}
+                  onPress={handleCancelAppointment}
+                  disabled={isCanceling}
+                >
+                  {isCanceling ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                      <Text style={styles.buttonText}>Đang hủy...</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.buttonText}>Có, hủy lịch hẹn</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Cancel Error Modal */}
+        <CustomModal
+          visible={showCancelErrorModal}
+          onClose={() => setShowCancelErrorModal(false)}
+          title="Lỗi hủy lịch hẹn"
+          type="danger"
+        >
+          <Text style={{ textAlign: 'center', marginBottom: 16 }}>{cancelErrorMessage}</Text>
+          <Button variant="danger" onPress={() => setShowCancelErrorModal(false)}>
+            Đóng
+          </Button>
+        </CustomModal>
+
+        {/* Error Modal */}
+        <CustomModal
+          visible={showErrorModal}
+          onClose={() => setShowErrorModal(false)}
+          title="Lỗi"
+          type="danger"
+        >
+          <Text style={{ textAlign: 'center', marginBottom: 16 }}>{errorMessage}</Text>
+          <Button variant="primary" onPress={() => setShowErrorModal(false)}>
+            Đóng
+          </Button>
+        </CustomModal>
+
+      </View>
     </View>
   );
 };
@@ -230,7 +1180,6 @@ const BookingNew = ({ handleSubmit }) => {
   const [appointmentType, setAppointmentType] = useState("onsite");
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [selectedDate, setSelectedDate] = useState(() => {
-    // Mặc định chọn ngày hiện tại
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -242,35 +1191,23 @@ const BookingNew = ({ handleSubmit }) => {
   const [notes, setNotes] = useState("");
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const user = useSelector((state) => state.auth.userInfo);
 
-
-  useEffect(() => {
-    if (error || success) {
-      const timer = setTimeout(() => {
-        setError(null);
-        setSuccess(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error, success]);
-
-  // Lấy bác sĩ theo ngày
+  // Fetch doctors by date
   useEffect(() => {
     if (!selectedDate) return;
 
     const fetchDoctors = async () => {
       setLoadingDoctors(true);
+      setSelectedDoctor(null); // Reset selected doctor when date changes
       try {
         const response = await ApiBooking.getDoctorsByDate(selectedDate);
-        // Chuẩn hóa data
         const data = Array.isArray(response)
           ? response
           : response?.data || [];
@@ -288,57 +1225,61 @@ const BookingNew = ({ handleSubmit }) => {
     fetchDoctors();
   }, [selectedDate]);
 
+  const handleDateChange = (event, date) => {
+    setShowDatePicker(false);
+    if (date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      setSelectedDate(`${year}-${month}-${day}`);
+    }
+  };
+
   const onSubmit = useCallback(async () => {
     console.log("onSubmit called");
 
-    // Kiểm tra các trường bắt buộc
+    // Validation
     if (!user?.uid) {
-      console.log("Error: User not logged in", user); // Log thông tin user
       setErrorMessage("Vui lòng đăng nhập để đặt lịch.");
       setShowErrorModal(true);
       return;
     }
-    if (!selectedDoctor || !selectedDate || !selectedTime) {
-      console.log("Error: Missing required fields", {
-        selectedDoctor,
-        selectedDate,
-        selectedTime,
-        reason
-      }); // Log các trường bắt buộc
+    
+    if (!selectedDoctor || !selectedDate || !selectedTime || !reason.trim()) {
       setErrorMessage("Vui lòng chọn bác sĩ, ngày, giờ khám và nhập lý do khám.");
       setShowErrorModal(true);
       return;
     }
 
-    // Kiểm tra ngày hợp lệ (cho phép chọn ngày hiện tại)
+    // Date validation
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const selected = new Date(selectedDate);
     if (selected < today) {
-      console.log("Error: Invalid date", { selectedDate, today }); // Log ngày
       setErrorMessage("Không thể chọn ngày trong quá khứ.");
       setShowErrorModal(true);
       return;
     }
 
-    // Kiểm tra thời gian trong khung giờ làm việc của bác sĩ
+    // Doctor working hours validation
     const selectedDoctorData = doctors.find(d => (d.id || d._id || d.doctorId) === selectedDoctor);
     if (!selectedDoctorData) {
-      console.log("Error: Invalid doctor", { selectedDoctor, doctors }); // Log bác sĩ
       setErrorMessage("Bác sĩ không hợp lệ. Vui lòng chọn lại.");
       setShowErrorModal(true);
       return;
     }
+    
     const doctorStartTime = selectedDoctorData?.shift?.start || "08:00";
     const doctorEndTime = selectedDoctorData?.shift?.end || "17:00";
     if (selectedTime < doctorStartTime || selectedTime > doctorEndTime) {
-      console.log("Error: Invalid time", { selectedTime, doctorStartTime, doctorEndTime }); // Log thời gian
       setErrorMessage("Thời gian chọn không nằm trong khung giờ làm việc của bác sĩ.");
       setShowErrorModal(true);
       return;
     }
 
     try {
+      setLoadingSubmit(true);
+      
       const payload = {
         firebaseUid: user.uid,
         doctorId: selectedDoctor,
@@ -347,43 +1288,44 @@ const BookingNew = ({ handleSubmit }) => {
         type: appointmentType,
         reason: reason.trim(),
         notes: notes.trim(),
-        createdAt: new Date().toISOString() // Thêm thời gian tạo để theo dõi
+        createdAt: new Date().toISOString()
       };
 
       const response = await ApiBooking.bookAppointment(payload);
-
       console.log("Booking response:", response);
+
       const newAppointment = {
-        _id: response._id || response.id || Date.now().toString(), // Đảm bảo có _id
+        _id: response._id || response.id || Date.now().toString(),
         doctorId: {
           _id: selectedDoctor,
           name: selectedDoctorData.name,
-          specialty: selectedDoctorData.specialty || "Chuyên khoa Nội tiết",
-          image: selectedDoctorData.avatar || "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face"
+          userId: {
+            username: selectedDoctorData.name,
+            avatar: selectedDoctorData.avatar || "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face"
+          },
+          hospital: selectedDoctorData.hospital || "Chuyên khoa Nội tiết",
         },
         date: selectedDate,
         time: selectedTime,
-        status: response.status || "pending" // Mặc định là pending nếu API không trả về status
+        status: response.status || "pending"
       };
 
       const successMsg = `Đặt lịch khám thành công với bác sĩ ${selectedDoctorData.name} vào ${selectedTime} ngày ${new Date(selectedDate).toLocaleDateString("vi-VN")}!`;
       setSuccessMessage(successMsg);
       setShowSuccessModal(true);
 
-      // Reset form (giữ nguyên ngày hiện tại)
+      // Reset form
       setSelectedDoctor(null);
-      // Giữ nguyên ngày hiện tại, không reset
       setSelectedTime("");
       setReason("");
       setNotes("");
       setAppointmentType("onsite");
 
-      // Gọi handleSubmit từ props
+      // Call handleSubmit from props
       handleSubmit(newAppointment);
 
     } catch (err) {
       console.error("Lỗi khi đặt lịch:", err);
-      // SỬA: Thông báo lỗi chi tiết hơn bằng modal
       const errorMsg = err.response?.data?.message || err.message || "Không thể đặt lịch. Vui lòng kiểm tra kết nối và thử lại.";
       setErrorMessage(errorMsg);
       setShowErrorModal(true);
@@ -392,11 +1334,245 @@ const BookingNew = ({ handleSubmit }) => {
     }
   }, [user, selectedDoctor, selectedDate, selectedTime, reason, notes, appointmentType, doctors, handleSubmit]);
 
+  // Generate time slots
+  const generateTimeSlots = () => {
+    const allTimeSlots = [];
+    for (let hour = 8; hour <= 16; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        if (hour === 16 && minute > 30) break;
+        const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+        allTimeSlots.push(timeString);
+      }
+    }
+    return allTimeSlots;
+  };
+
+  const isTimeInWorkingHours = (time) => {
+    if (!selectedDoctor) return false;
+    const selectedDoctorData = doctors.find(d => (d.id || d._id || d.doctorId) === selectedDoctor);
+    if (!selectedDoctorData) return false;
+    
+    const doctorStartTime = selectedDoctorData?.shift?.start || "08:00";
+    const doctorEndTime = selectedDoctorData?.shift?.end || "17:00";
+    return time >= doctorStartTime && time <= doctorEndTime;
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chào mừng đến với BookingTabs!</Text>
-      <Text style={styles.text}>Đây là màn hình React Native cơ bản.</Text>
-    </View>
+    <ScrollView style={styles.bookingContainer}>
+      <View style={styles.bookingCard}>
+        <View style={styles.bookingHeader}>
+          <Text style={styles.bookingTitle}>🩺 Đặt lịch khám mới</Text>
+          <Text style={styles.bookingSubtitle}>
+            Vui lòng điền đầy đủ thông tin để đặt lịch
+          </Text>
+        </View>
+
+        {/* Appointment Type */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Loại hình khám</Text>
+          <View style={styles.appointmentTypeRow}>
+            <TouchableOpacity
+              style={[
+                styles.appointmentTypeButton,
+                appointmentType === "onsite" ? styles.appointmentTypeButtonActive : styles.appointmentTypeButtonInactive
+              ]}
+              onPress={() => setAppointmentType("onsite")}
+            >
+              <Ionicons name="location" size={16} color={appointmentType === "onsite" ? "#fff" : "#007bff"} style={{ marginRight: 8 }} />
+              <Text style={appointmentType === "onsite" ? styles.appointmentTypeTextActive : styles.appointmentTypeTextInactive}>
+                Tại phòng khám
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.appointmentTypeButton,
+                appointmentType === "online" ? styles.appointmentTypeButtonActive : styles.appointmentTypeButtonInactive
+              ]}
+              onPress={() => setAppointmentType("online")}
+            >
+              <Ionicons name="videocam" size={16} color={appointmentType === "online" ? "#fff" : "#007bff"} style={{ marginRight: 8 }} />
+              <Text style={appointmentType === "online" ? styles.appointmentTypeTextActive : styles.appointmentTypeTextInactive}>
+                Khám trực tuyến
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Date Selection */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Chọn ngày khám</Text>
+          <TouchableOpacity
+            style={styles.datePickerContainer}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Ionicons name="calendar" size={20} color="#007bff" style={{ marginRight: 8 }} />
+            <Text style={styles.datePickerText}>
+              {selectedDate ? new Date(selectedDate + 'T00:00:00').toLocaleDateString("vi-VN") : "Chọn ngày"}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color="#666" />
+          </TouchableOpacity>
+          
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date()}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              minimumDate={new Date()}
+            />
+          )}
+        </View>
+
+        {/* Doctor Selection */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Chọn bác sĩ</Text>
+          {loadingDoctors ? (
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <ActivityIndicator size="large" color="#007bff" />
+              <Text style={{ color: '#666', marginTop: 8 }}>Đang tải danh sách bác sĩ...</Text>
+            </View>
+          ) : doctors.length === 0 && selectedDate ? (
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <Text style={{ color: '#666', textAlign: 'center' }}>Không có bác sĩ làm việc thời gian này.</Text>
+            </View>
+          ) : (
+            <View>
+              {doctors.map((doctor) => (
+                <TouchableOpacity
+                  key={doctor.id || doctor._id}
+                  style={[
+                    styles.datePickerContainer,
+                    { marginBottom: 8 },
+                    selectedDoctor === (doctor.doctorId || doctor.id || doctor._id) && { borderColor: '#007bff', borderWidth: 2 }
+                  ]}
+                  onPress={() => setSelectedDoctor(doctor.doctorId || doctor.id || doctor._id)}
+                >
+                  <Image
+                    source={{
+                      uri: doctor.avatar || "https://png.pngtree.com/png-clipart/20210310/original/pngtree-hospital-hotline-avatar-female-doctor-png-image_5951490.jpg"
+                    }}
+                    style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#333' }}>{doctor.name}</Text>
+                    <Text style={{ fontSize: 12, color: '#666' }}>
+                      {doctor.hospital || "Bệnh viện chưa cập nhật"}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                      <Ionicons name="star" size={12} color="#ffc107" />
+                      <Text style={{ fontSize: 10, color: '#666', marginLeft: 4 }}>4.9 • {doctor.exp || "10"} năm KN</Text>
+                    </View>
+                  </View>
+                  {selectedDoctor === (doctor.doctorId || doctor.id || doctor._id) && (
+                    <Ionicons name="checkmark-circle" size={20} color="#007bff" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Time Selection */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            Chọn giờ khám
+            {!selectedDoctor && (
+              <Text style={{ fontSize: 12, color: '#666' }}> (Vui lòng chọn bác sĩ trước)</Text>
+            )}
+          </Text>
+          <View style={styles.timeSlotContainer}>
+            {generateTimeSlots().map((time) => {
+              const canSelect = selectedDoctor && isTimeInWorkingHours(time);
+              const isSelected = selectedTime === time;
+
+              return (
+                <TouchableOpacity
+                  key={time}
+                  style={[
+                    styles.timeSlot,
+                    isSelected ? styles.timeSlotActive : canSelect ? styles.timeSlotInactive : styles.timeSlotDisabled
+                  ]}
+                  onPress={() => canSelect && setSelectedTime(time)}
+                  disabled={!canSelect}
+                >
+                  <Text style={isSelected ? styles.timeSlotTextActive : styles.timeSlotTextInactive}>
+                    {time}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Reason */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Lý do khám *</Text>
+          <TextInput
+            style={[styles.textArea, { height: 80 }]}
+            multiline
+            numberOfLines={4}
+            value={reason}
+            onChangeText={setReason}
+            placeholder="Mô tả ngắn gọn lý do bạn muốn khám..."
+          />
+        </View>
+
+        {/* Notes */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Ghi chú thêm</Text>
+          <TextInput
+            style={[styles.textArea, { height: 60 }]}
+            multiline
+            numberOfLines={3}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Thêm thông tin bổ sung nếu có..."
+          />
+        </View>
+
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={styles.submitButton}
+          onPress={onSubmit}
+          disabled={loadingSubmit}
+        >
+          {loadingSubmit ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="checkmark-circle" size={16} color="#fff" />
+          )}
+          <Text style={styles.submitButtonText}>
+            {loadingSubmit ? "Đang đặt lịch..." : "Xác nhận đặt lịch khám"}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Success Modal */}
+        <CustomModal
+          visible={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          title="Đặt lịch thành công!"
+          type="success"
+        >
+          <Text style={{ textAlign: 'center', marginBottom: 16 }}>{successMessage}</Text>
+          <Button variant="success" onPress={() => setShowSuccessModal(false)}>
+            Đóng
+          </Button>
+        </CustomModal>
+
+        {/* Error Modal */}
+        <CustomModal
+          visible={showErrorModal}
+          onClose={() => setShowErrorModal(false)}
+          title="Lỗi đặt lịch hẹn"
+          type="danger"
+        >
+          <Text style={{ textAlign: 'center', marginBottom: 16 }}>{errorMessage}</Text>
+          <Button variant="danger" onPress={() => setShowErrorModal(false)}>
+            Đóng
+          </Button>
+        </CustomModal>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -404,164 +1580,28 @@ const BookingTabs = ({ handleStartCall }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [newAppointment, setNewAppointment] = useState(null);
 
-  const handleSubmit = (appointment) => {
+  const handleSubmit = useCallback((appointment) => {
     setRefreshTrigger((prev) => prev + 1);
     setNewAppointment(appointment);
-  };
-
-  ////////////////////// 
-  const mockAppointments = [
-    {
-      id: '1',
-      name: 'Pham Thi Thuy Nhi',
-      hospital: 'Bệnh viện Bạch Mai',
-      date: '17/09/2025',
-      time: '10:00',
-      status: 'Đã xác nhận'
-    },
-    {
-      id: '2',
-      name: 'Pham Thi Thuy Nhi',
-      hospital: 'Bệnh viện Bạch Mai',
-      date: '21/09/2025',
-      time: '11:30',
-      status: 'Đã xác nhận'
-    }
-  ];
-  const [appointmentType, setAppointmentType] = useState('Tại phòng khám');
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedDoctor, setSelectedDoctor] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
-  const [reason, setReason] = useState('');
+  }, []);
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Upcoming Appointments */}
-      <Text style={styles.sectionTitle}>Lịch hẹn sắp tới</Text>
-      <FlatList
-        data={mockAppointments}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.appointmentCard}>
-            <View style={styles.row}>
-              <Text style={styles.name}>{item.name}</Text>
-              <View style={[styles.status, { backgroundColor: '#d4edda' }]}>
-                <Text style={{ color: '#155724' }}>{item.status}</Text>
-              </View>
-            </View>
-            <Text style={styles.hospital}>{item.hospital}</Text>
-            <Text>{item.date} - {item.time}</Text>
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.chatButton}>
-                <Text style={styles.buttonText}>Chat</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.callButton}>
-                <Text style={styles.buttonText}>Gọi</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelButton}>
-                <Text style={styles.buttonText}>Hủy</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      />
-
-      {/* New Appointment */}
-      <Text style={styles.sectionTitle}>Đặt lịch khám mới</Text>
-      <View style={styles.form}>
-        <View style={styles.row}>
-          <TouchableOpacity
-            style={[styles.typeButton, appointmentType === 'Tại phòng khám' && styles.typeButtonActive]}
-            onPress={() => setAppointmentType('Tại phòng khám')}
-          >
-            <Text style={styles.buttonText}>Tại phòng khám</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.typeButton, appointmentType === 'Khám trực tuyến' && styles.typeButtonActive]}
-            onPress={() => setAppointmentType('Khám trực tuyến')}
-          >
-            <Text style={styles.buttonText}>Khám trực tuyến</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Chọn ngày khám"
-          value={selectedDate}
-          onChangeText={setSelectedDate}
+    <ScrollView style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
+      {/* Lịch hẹn sắp tới - ở trên */}
+      <View style={{ marginBottom: 16 }}>
+        <UpcomingAppointment
+          handleStartCall={handleStartCall}
+          refreshTrigger={refreshTrigger}
+          onNewAppointment={newAppointment}
         />
-        <TextInput
-          style={styles.input}
-          placeholder="Chọn bác sĩ"
-          value={selectedDoctor}
-          onChangeText={setSelectedDoctor}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Chọn giờ khám"
-          value={selectedTime}
-          onChangeText={setSelectedTime}
-        />
-        <TextInput
-          style={[styles.input, { height: 80 }]}
-          placeholder="Lý do khám"
-          value={reason}
-          onChangeText={setReason}
-          multiline
-        />
-
-        <TouchableOpacity style={styles.submitButton}>
-          <Text style={styles.buttonText}>Xác nhận đặt lịch khám</Text>
-        </TouchableOpacity>
+      </View>
+      
+      {/* Đặt lịch khám mới - ở dưới */}
+      <View>
+        <BookingNew handleSubmit={handleSubmit} />
       </View>
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#f5f6fa',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginVertical: 12,
-    color: '#333',
-  },
-  appointmentCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  name: { fontSize: 16, fontWeight: 'bold' },
-  hospital: { color: '#555', marginVertical: 4 },
-  status: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  buttonRow: { flexDirection: 'row', marginTop: 8 },
-  chatButton: { backgroundColor: '#2196F3', padding: 8, borderRadius: 8, marginRight: 8 },
-  callButton: { backgroundColor: '#4CAF50', padding: 8, borderRadius: 8, marginRight: 8 },
-  cancelButton: { backgroundColor: '#f44336', padding: 8, borderRadius: 8 },
-  buttonText: { color: '#fff', fontWeight: 'bold' },
-  form: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 24 },
-  typeButton: { flex: 1, padding: 10, borderRadius: 8, marginRight: 8, backgroundColor: '#e0e0e0' },
-  typeButtonActive: { backgroundColor: '#2196F3' },
-  input: { backgroundColor: '#f0f0f0', padding: 10, borderRadius: 8, marginVertical: 8 },
-  submitButton: { backgroundColor: '#2196F3', padding: 14, borderRadius: 12, marginTop: 12, alignItems: 'center' },
-});
 
 export default BookingTabs;

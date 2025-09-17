@@ -1,28 +1,27 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
-  Dimensions,
-  Alert,
-} from "react-native";
-import { useSelector } from "react-redux";
-import { useNavigation } from "@react-navigation/native";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import ApiBooking from "../../apis/ApiBooking";
-
-const { width } = Dimensions.get("window");
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import ApiBooking from '../../apis/ApiBooking';
 
 const Home = () => {
   const navigation = useNavigation();
-  let user = useSelector((state) => state.auth.user);
-  let bloodSugar = useSelector((state) => state.patient.bloodSugar);
+  const user = useSelector((state) => state.auth.userInfo);
+  const bloodSugar = useSelector((state) => state.patient.bloodSugar);
   const [nearestAppointment, setNearestAppointment] = useState(null);
+  const [medications, setMedications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  let calculateAge = (user) => {
-    if (!user.dob) return "";
+  const calculateAge = (user) => {
+    if (!user?.dob) return '';
     const dob = new Date(user.dob);
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -31,58 +30,51 @@ const Home = () => {
       age--;
     }
     return age;
-  }
+  };
 
-  // Lấy lịch hẹn gần nhất
+  // Fetch nearest appointment
   useEffect(() => {
     const fetchNearestAppointment = async () => {
       try {
+        setLoading(true);
         const appointments = await ApiBooking.getUpcomingAppointments();
-
         if (appointments && appointments.length > 0) {
-          // Sắp xếp theo thời gian: kết hợp date và time
           const sortedAppointments = appointments.sort((a, b) => {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);
-
-            // Kiểm tra xem date có hợp lệ không
             if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
               return 0;
             }
-
-            // Nếu cùng ngày, so sánh theo giờ
             if (dateA.getTime() === dateB.getTime()) {
               return a.time.localeCompare(b.time);
             }
-
             return dateA - dateB;
           });
-
-          // Lấy lịch hẹn gần nhất (phần tử đầu tiên)
           setNearestAppointment(sortedAppointments[0]);
         }
       } catch (error) {
         console.error('Lỗi khi lấy lịch hẹn:', error);
+      } finally {
+        setLoading(false);
       }
     };
-
     fetchNearestAppointment();
   }, []);
 
+  // Handle user data with fallback values
   const userData = {
-    name: user?.username,
-    age: calculateAge(user),
-    gender: user?.gender,
-    condition: "Tiểu đường type 2",
-    doctor: nearestAppointment?.doctorId?.userId?.username ?? "",
-    nextAppointment: nearestAppointment?.date ? new Date(nearestAppointment.date).toLocaleDateString('vi-VN') : "13/09/2025",
+    name: user?.username || 'Khách',
+    age: user ? calculateAge(user) : '',
+    gender: user?.gender || 'N/A',
+    condition: 'Tiểu đường type 2',
+    doctor: nearestAppointment?.doctorId?.userId?.username || 'Chưa có',
+    nextAppointment: nearestAppointment?.date
+      ? new Date(nearestAppointment.date).toLocaleDateString('vi-VN')
+      : '13/09/2025',
     bloodSugar: bloodSugar?.DT?.bloodSugarData
-      ? Object.values(bloodSugar.DT.bloodSugarData).map(item => item.value)
+      ? Object.values(bloodSugar.DT.bloodSugarData).map((item) => item.value)
       : [],
   };
-
-  // thuốc
-  const [medications, setMedications] = useState([]);
 
   const handleMedicationToggle = (index) => {
     const updated = [...medications];
@@ -90,362 +82,350 @@ const Home = () => {
     setMedications(updated);
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.row}>
-        {/* Thông tin bệnh nhân */}
-        <View style={styles.card}>
-          <View style={styles.userRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{userData.name}</Text>
-            </View>
-            <View>
-              <Text style={styles.userName}>{userData.name}</Text>
-              <Text style={styles.condition}>{userData.condition}</Text>
-            </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Chăm sóc sức khỏe - Tiểu đường</Text>
+        <Text style={styles.headerSubtitle}>Xin chào, {userData.name}</Text>
+      </View>
+
+      {/* Patient Info */}
+      <View style={styles.card}>
+        <View style={styles.patientHeader}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{userData.name ? userData.name.charAt(0) : 'K'}</Text>
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoCol}>
-              <Text style={styles.label}>Tuổi</Text>
-              <Text style={styles.value}>{userData.age}</Text>
-            </View>
-            <View style={styles.infoCol}>
-              <Text style={styles.label}>Giới tính</Text>
-              <Text style={styles.value}>{userData.gender}</Text>
-            </View>
-            <View style={styles.infoCol}>
-              <Text style={styles.label}>Bác sĩ</Text>
-              <Text style={styles.value}>{userData.doctor}</Text>
-            </View>
+          <View>
+            <Text style={styles.patientName}>{userData.name}</Text>
+            <Text style={styles.patientCondition}>{userData.condition}</Text>
           </View>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.patientInfo}>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Tuổi</Text>
+            <Text style={styles.infoValue}>{userData.age || 'N/A'}</Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Giới tính</Text>
+            <Text style={styles.infoValue}>{userData.gender}</Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Bác sĩ</Text>
+            <Text style={styles.infoValue}>{userData.doctor}</Text>
+          </View>
+        </View>
+        <Text style={styles.nextAppointment}>
+          Lịch hẹn tiếp theo: {userData.nextAppointment}
+        </Text>
+      </View>
 
-          <Text style={styles.nextAppointment}>
-            Lịch hẹn tiếp theo: {userData.nextAppointment}
+      {/* Blood Sugar */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Đường huyết hôm nay</Text>
+          <TouchableOpacity
+            style={styles.detailButton}
+            onPress={() => navigation.navigate('HealthTabs')}
+          >
+            <Text style={styles.detailButtonText}>Xem Chi tiết</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.bloodSugarCard}>
+          <Text style={styles.bloodSugarValue}>
+            {userData.bloodSugar.length > 0 ? userData.bloodSugar.slice(-1)[0] : 'N/A'} mmol/L
           </Text>
-        </View>
-
-        {/* Chỉ số đường huyết */}
-        <View style={styles.card}>
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>Đường huyết hôm nay</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate("HealthTabs")}
-              style={styles.button}
-            >
-              <Text style={styles.buttonText}>Xem chi tiết</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.sugarBox}>
-            <Text style={styles.sugarValue}>
-              {userData.bloodSugar.slice(-1)[0]} mmol/L
-            </Text>
-            <Text style={styles.date}>23/06/2025</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Cao hơn bình thường</Text>
-            </View>
+          <Text style={styles.bloodSugarDate}>23/06/2025</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>Cao hơn bình thường</Text>
           </View>
         </View>
       </View>
 
-      {/* Medication Schedule */}
-      <View style={styles.medicationCard}>
-        <Text style={styles.medicationTitle}>Lịch uống thuốc hôm nay</Text>
-        {medications.map((med) => (
-          <View key={med.id} style={styles.medicationItem}>
-            <View style={styles.medicationInfo}>
-              <Text style={styles.medicationName}>
-                {med.name} {med.dosage}
-              </Text>
-              <Text style={styles.medicationTime}>{med.time}</Text>
-            </View>
-            <TouchableOpacity
-              style={[
-                styles.medicationButton,
-                med.taken && styles.medicationButtonTaken,
-              ]}
-              onPress={() => handleMedicationToggle(med.id)}
-            >
-              <Ionicons
-                name={med.taken ? "checkmark-circle" : "ellipse-outline"}
-                size={20}
-                color={med.taken ? "#fff" : "#6366F1"}
-              />
-              <Text
+      {/* Medications */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Lịch uống thuốc</Text>
+        {medications.length > 0 ? (
+          medications.map((med, idx) => (
+            <View key={idx} style={styles.medicationItem}>
+              <View>
+                <Text style={styles.medicationName}>
+                  {med.name} {med.dosage}
+                </Text>
+                <Text style={styles.medicationTime}>{med.time}</Text>
+              </View>
+              <TouchableOpacity
                 style={[
-                  styles.medicationButtonText,
-                  med.taken && styles.medicationButtonTextTaken,
+                  styles.medicationButton,
+                  med.taken ? styles.takenButton : styles.untakenButton,
                 ]}
+                onPress={() => handleMedicationToggle(idx)}
               >
-                {med.taken ? "Đã uống" : "Đánh dấu"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+                <Text style={styles.medicationButtonText}>
+                  {med.taken ? 'Đã uống' : 'Đánh dấu'}
+                </Text>
+                {med.taken && <Icon name="check" size={16} color="#FFF" />}
+              </TouchableOpacity>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.noMedications}>Chưa có thuốc được thêm.</Text>
+        )}
       </View>
 
-      {/* AI Assistant Banner */}
-      <TouchableOpacity
-        style={styles.aiAssistantBanner}
-        onPress={() => navigation.navigate("Assistant")}
-      >
-        <View style={styles.aiAssistantContent}>
-          <View style={styles.aiAssistantIcon}>
-            <Ionicons name="sparkles" size={24} color="#fff" />
-          </View>
-          <View style={styles.aiAssistantText}>
-            <Text style={styles.aiAssistantTitle}>Trợ lý sức khỏe AI</Text>
-            <Text style={styles.aiAssistantSubtitle}>
-              Đặt câu hỏi về sức khỏe và nhận tư vấn ngay lập tức
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward-outline" size={20} color="#fff" />
+      {/* Chatbot Support */}
+      <View style={styles.chatCard}>
+        <View>
+          <Text style={styles.chatTitle}>Trợ lý sức khỏe AI</Text>
+          <Text style={styles.chatSubtitle}>Tư vấn lịch uống thuốc</Text>
         </View>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.chatButton}
+          onPress={() => navigation.navigate('Assistant')}
+        >
+          <Icon name="chat" size={16} color="#3B82F6" />
+          <Text style={styles.chatButtonText}>Chat ngay</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
 
-export default Home;
-
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: "column", // mobile hiển thị theo cột
-    gap: 16,
-    padding: 12,
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#3B82F6',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#3B82F6',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
     padding: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    marginBottom: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  userRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+  patientHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#4F46E5",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   avatarText: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 24,
+    color: '#FFF',
+    fontWeight: 'bold',
   },
-  userName: {
-    fontSize: 16,
-    fontWeight: "600",
+  patientName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E3A8A',
   },
-  condition: {
-    fontSize: 12,
-    color: "#6b7280",
+  patientCondition: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   divider: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    height: 1,
+    backgroundColor: '#E5E7EB',
     marginVertical: 12,
   },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  patientInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  infoItem: {
+    alignItems: 'center',
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1E3A8A',
+  },
+  nextAppointment: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E3A8A',
+  },
+  detailButton: {
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  detailButtonText: {
+    fontSize: 12,
+    color: '#3B82F6',
+  },
+  bloodSugarCard: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  bloodSugarValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#3B82F6',
+    marginBottom: 4,
+  },
+  bloodSugarDate: {
+    fontSize: 12,
+    color: '#6B7280',
     marginBottom: 8,
   },
-  infoCol: { alignItems: "center", flex: 1 },
-  label: { color: "#6b7280", fontSize: 12 },
-  value: { fontWeight: "500", fontSize: 14 },
-  nextAppointment: {
-    textAlign: "center",
-    color: "#6b7280",
-    fontSize: 12,
-    marginTop: 8,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  title: { fontWeight: "600", fontSize: 14 },
-  button: {
-    borderWidth: 1,
-    borderColor: "#4F46E5",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  buttonText: { fontSize: 12, color: "#4F46E5" },
-  sugarBox: {
-    backgroundColor: "#f3f4f6",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    marginTop: 12,
-  },
-  sugarValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#2563eb",
-  },
-  date: { fontSize: 12, color: "#6b7280", marginBottom: 6 },
   badge: {
-    backgroundColor: "#facc15",
+    backgroundColor: '#F59E0B',
     borderRadius: 12,
-    paddingHorizontal: 10,
     paddingVertical: 4,
+    paddingHorizontal: 12,
   },
-  badgeText: { fontSize: 12, fontWeight: "500", color: "#111827" },
-
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  chart: {
-    borderRadius: 16,
-  },
-  medicationCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  medicationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 16,
+  badgeText: {
+    fontSize: 12,
+    color: '#1F2937',
   },
   medicationItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 12,
     marginBottom: 8,
-  },
-  medicationInfo: {
-    flex: 1,
   },
   medicationName: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 2,
+    fontWeight: '600',
+    color: '#1E3A8A',
   },
   medicationTime: {
     fontSize: 12,
-    color: "#6B7280",
+    color: '#6B7280',
   },
   medicationButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#6366F1",
-    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
-  medicationButtonTaken: {
-    backgroundColor: "#10B981",
-    borderColor: "#10B981",
+  takenButton: {
+    backgroundColor: '#2E7D32',
+  },
+  untakenButton: {
+    borderWidth: 1,
+    borderColor: '#3B82F6',
   },
   medicationButtonText: {
     fontSize: 12,
-    color: "#6366F1",
-    fontWeight: "500",
+    color: '#FFF',
+    marginRight: 4,
   },
-  medicationButtonTextTaken: {
-    color: "#fff",
+  noMedications: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
   },
-  quickActionsCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  quickActionsTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 16,
-  },
-  quickActionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  quickActionButton: {
-    width: (width - 64) / 2,
-    backgroundColor: "#F9FAFB",
+  chatCard: {
+    backgroundColor: '#6366F1',
     borderRadius: 12,
     padding: 16,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  quickActionText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#374151",
-    marginTop: 8,
-    textAlign: "center",
-  },
-  aiAssistantBanner: {
-    backgroundColor: "#6366F1",
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginBottom: 24,
-    overflow: "hidden",
-  },
-  aiAssistantContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-  },
-  aiAssistantIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  aiAssistantText: {
-    flex: 1,
-  },
-  aiAssistantTitle: {
+  chatTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-    marginBottom: 4,
+    fontWeight: '600',
+    color: '#FFF',
   },
-  aiAssistantSubtitle: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.8)",
-    lineHeight: 18,
+  chatSubtitle: {
+    fontSize: 12,
+    color: '#E5E7EB',
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  chatButtonText: {
+    fontSize: 12,
+    color: '#3B82F6',
+    marginLeft: 4,
   },
 });
+
+export default Home;

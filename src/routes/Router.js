@@ -122,7 +122,7 @@ export default function Router() {
         if (userInfo) {
           dispatch(
             setUser({
-              userID: userInfo.userId,
+              userId: userInfo.userId,
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName,
