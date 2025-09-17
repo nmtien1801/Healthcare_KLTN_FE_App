@@ -7,9 +7,12 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
+    Dimensions,
 } from "react-native";
 import { User, Clock, CalendarDays, Stethoscope, FileText } from "lucide-react-native";
 import { TYPE_OPTIONS, STATUS_OPTIONS } from "../../../utils/appointmentConstants";
+
+const { width, height } = Dimensions.get("window");
 
 const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
     const [formData, setFormData] = useState({
@@ -18,11 +21,11 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
         patientDisease: "",
         date: "",
         time: "",
-        type: "",
+        type: "Tái khám",
         reason: "",
         doctor: "",
         notes: "",
-        status: "",
+        status: "Chờ xác nhận",
     });
 
     const [errors, setErrors] = useState({});
@@ -31,9 +34,9 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
         if (appointment) {
             setFormData({
                 patientName: appointment.patientName || "",
-                patientAge: appointment.patientAge || "",
+                patientAge: appointment.patientAge?.toString() || "", // Chuyển sang string để hiển thị
                 patientDisease: appointment.patientDisease || "",
-                date: appointment.date || "",
+                date: appointment.date || "", // Đảm bảo định dạng DD/MM/YYYY
                 time: appointment.time || "",
                 type: appointment.type || "Tái khám",
                 reason: appointment.reason || "",
@@ -164,23 +167,27 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
         <Modal
             visible={visible}
             transparent
-            animationType="fade"
+            animationType="slide"
             onRequestClose={onClose}
         >
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Chỉnh sửa lịch hẹn</Text>
+                        <Text style={styles.modalTitle}>Chỉnh Sửa Lịch Hẹn</Text>
                         <TouchableOpacity onPress={onClose}>
                             <Text style={styles.closeButton}>×</Text>
                         </TouchableOpacity>
                     </View>
-                    <ScrollView style={styles.modalBody}>
+                    <ScrollView
+                        style={styles.modalBody}
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                    >
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Thông tin bệnh nhân</Text>
+                            <Text style={styles.sectionTitle}>Thông Tin Bệnh Nhân</Text>
                             <View style={styles.inputGroup}>
                                 <View style={styles.labelContainer}>
-                                    <User size={14} color="#333" />
+                                    <User size={16} color="#1a3c6e" />
                                     <Text style={styles.label}>Tên bệnh nhân *</Text>
                                 </View>
                                 <TextInput
@@ -188,6 +195,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                     value={formData.patientName}
                                     onChangeText={(value) => handleChange("patientName", value)}
                                     placeholder="Nhập tên bệnh nhân"
+                                    placeholderTextColor="#999"
                                 />
                                 {errors.patientName && (
                                     <Text style={styles.errorText}>{errors.patientName}</Text>
@@ -195,12 +203,15 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                             </View>
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                                    <Text style={styles.label}>Tuổi *</Text>
+                                    <View style={styles.labelContainer}>
+                                        <Text style={styles.label}>Tuổi *</Text>
+                                    </View>
                                     <TextInput
                                         style={[styles.input, errors.patientAge && styles.inputError]}
                                         value={formData.patientAge}
                                         onChangeText={(value) => handleChange("patientAge", value)}
                                         placeholder="Nhập tuổi"
+                                        placeholderTextColor="#999"
                                         keyboardType="numeric"
                                     />
                                     {errors.patientAge && (
@@ -208,12 +219,15 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                     )}
                                 </View>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                                    <Text style={styles.label}>Bệnh *</Text>
+                                    <View style={styles.labelContainer}>
+                                        <Text style={styles.label}>Bệnh *</Text>
+                                    </View>
                                     <TextInput
                                         style={[styles.input, errors.patientDisease && styles.inputError]}
                                         value={formData.patientDisease}
                                         onChangeText={(value) => handleChange("patientDisease", value)}
                                         placeholder="Nhập bệnh"
+                                        placeholderTextColor="#999"
                                     />
                                     {errors.patientDisease && (
                                         <Text style={styles.errorText}>{errors.patientDisease}</Text>
@@ -222,25 +236,26 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                             </View>
                         </View>
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Thông tin lịch hẹn</Text>
+                            <Text style={styles.sectionTitle}>Thông Tin Lịch Hẹn</Text>
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
                                     <View style={styles.labelContainer}>
-                                        <CalendarDays size={14} color="#333" />
-                                        <Text style={styles.label}>Ngày hẹn *</Text>
+                                        <CalendarDays size={16} color="#1a3c6e" />
+                                        <Text style={styles.label}>Ngày hẹn (DD/MM/YYYY) *</Text>
                                     </View>
                                     <TextInput
                                         style={[styles.input, errors.date && styles.inputError]}
                                         value={formData.date}
                                         onChangeText={(value) => handleChange("date", value)}
                                         placeholder="DD/MM/YYYY"
+                                        placeholderTextColor="#999"
                                         keyboardType="numeric"
                                     />
                                     {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
                                 </View>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
                                     <View style={styles.labelContainer}>
-                                        <Clock size={14} color="#333" />
+                                        <Clock size={16} color="#1a3c6e" />
                                         <Text style={styles.label}>Giờ hẹn *</Text>
                                     </View>
                                     <TextInput
@@ -248,6 +263,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                         value={formData.time}
                                         onChangeText={(value) => handleChange("time", value)}
                                         placeholder="HH:MM"
+                                        placeholderTextColor="#999"
                                         keyboardType="numeric"
                                     />
                                     {errors.time && <Text style={styles.errorText}>{errors.time}</Text>}
@@ -255,18 +271,21 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                             </View>
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                                    <Text style={styles.label}>Loại khám *</Text>
+                                    <View style={styles.labelContainer}>
+                                        <Text style={styles.label}>Loại khám *</Text>
+                                    </View>
                                     <TextInput
                                         style={[styles.input, errors.type && styles.inputError]}
                                         value={formData.type}
                                         onChangeText={(value) => handleChange("type", value)}
                                         placeholder="Tái khám, Khám mới, Tư vấn"
+                                        placeholderTextColor="#999"
                                     />
                                     {errors.type && <Text style={styles.errorText}>{errors.type}</Text>}
                                 </View>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
                                     <View style={styles.labelContainer}>
-                                        <Stethoscope size={14} color="#333" />
+                                        <Stethoscope size={16} color="#1a3c6e" />
                                         <Text style={styles.label}>Bác sĩ *</Text>
                                     </View>
                                     <TextInput
@@ -274,6 +293,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                         value={formData.doctor}
                                         onChangeText={(value) => handleChange("doctor", value)}
                                         placeholder="Nhập tên bác sĩ"
+                                        placeholderTextColor="#999"
                                     />
                                     {errors.doctor && (
                                         <Text style={styles.errorText}>{errors.doctor}</Text>
@@ -281,14 +301,17 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                 </View>
                             </View>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Lý do khám *</Text>
+                                <View style={styles.labelContainer}>
+                                    <Text style={styles.label}>Lý do khám *</Text>
+                                </View>
                                 <TextInput
                                     style={[styles.textArea, errors.reason && styles.inputError]}
                                     value={formData.reason}
                                     onChangeText={(value) => handleChange("reason", value)}
                                     placeholder="Mô tả lý do khám"
+                                    placeholderTextColor="#999"
                                     multiline
-                                    numberOfLines={2}
+                                    numberOfLines={3}
                                 />
                                 {errors.reason && (
                                     <Text style={styles.errorText}>{errors.reason}</Text>
@@ -296,7 +319,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                             </View>
                             <View style={styles.inputGroup}>
                                 <View style={styles.labelContainer}>
-                                    <FileText size={14} color="#333" />
+                                    <FileText size={16} color="#1a3c6e" />
                                     <Text style={styles.label}>Ghi chú</Text>
                                 </View>
                                 <TextInput
@@ -304,17 +327,21 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                     value={formData.notes}
                                     onChangeText={(value) => handleChange("notes", value)}
                                     placeholder="Ghi chú thêm về lịch hẹn"
+                                    placeholderTextColor="#999"
                                     multiline
-                                    numberOfLines={2}
+                                    numberOfLines={3}
                                 />
                             </View>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Tình trạng *</Text>
+                                <View style={styles.labelContainer}>
+                                    <Text style={styles.label}>Tình trạng *</Text>
+                                </View>
                                 <TextInput
                                     style={[styles.input, errors.status && styles.inputError]}
                                     value={formData.status}
                                     onChangeText={(value) => handleChange("status", value)}
                                     placeholder="Đã xác nhận, Chờ xác nhận, Đã hủy, Hoàn thành"
+                                    placeholderTextColor="#999"
                                 />
                                 {errors.status && <Text style={styles.errorText}>{errors.status}</Text>}
                             </View>
@@ -337,117 +364,136 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0,0,0,0.6)",
         justifyContent: "center",
         alignItems: "center",
     },
     modalContent: {
         backgroundColor: "#fff",
-        borderRadius: 12,
-        width: "90%",
-        maxHeight: "80%",
-        padding: 16,
+        borderRadius: 16,
+        width: width * 0.9,
+        maxHeight: height * 0.9,
+        padding: width * 0.05,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 5,
     },
     modalHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 12,
+        marginBottom: 16,
     },
     modalTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#333",
+        fontSize: width * 0.05,
+        fontWeight: "700",
+        color: "#1a3c6e",
     },
     closeButton: {
-        fontSize: 24,
-        color: "#333",
+        fontSize: width * 0.06,
+        color: "#1a3c6e",
+        fontWeight: "600",
     },
     modalBody: {
-        flex: 1,
+        flexGrow: 0,
+    },
+    scrollContent: {
+        paddingBottom: 20,
+        gap: 12,
     },
     section: {
         marginBottom: 16,
+        gap: 12,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: width * 0.045,
         fontWeight: "600",
-        color: "#007bff",
-        marginBottom: 12,
+        color: "#1a3c6e",
+        marginBottom: 8,
     },
     inputGroup: {
-        marginBottom: 12,
+        gap: 6,
     },
     row: {
         flexDirection: "row",
         justifyContent: "space-between",
+        gap: 8,
     },
     halfWidth: {
-        width: "48%",
+        flex: 1,
+        maxWidth: width * 0.42,
     },
     labelContainer: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 4,
+        gap: 6,
     },
     label: {
-        fontSize: 14,
+        fontSize: width * 0.04,
         fontWeight: "500",
-        color: "#333",
-        marginLeft: 4,
+        color: "#1a3c6e",
     },
     input: {
-        backgroundColor: "#f8f9fa",
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
+        backgroundColor: "#f0f2f5",
+        borderRadius: 12,
+        padding: width * 0.03,
+        fontSize: width * 0.04,
         color: "#333",
         borderWidth: 1,
-        borderColor: "#dee2e6",
+        borderColor: "#e0e4e8",
     },
     inputError: {
         borderColor: "#dc3545",
     },
     textArea: {
-        backgroundColor: "#f8f9fa",
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
+        backgroundColor: "#f0f2f5",
+        borderRadius: 12,
+        padding: width * 0.03,
+        fontSize: width * 0.04,
         color: "#333",
         borderWidth: 1,
-        borderColor: "#dee2e6",
-        minHeight: 60,
+        borderColor: "#e0e4e8",
+        minHeight: height * 0.1,
     },
     errorText: {
-        fontSize: 12,
+        fontSize: width * 0.035,
         color: "#dc3545",
         marginTop: 4,
     },
     modalFooter: {
         flexDirection: "row",
         justifyContent: "space-between",
+        gap: 12,
         paddingTop: 12,
     },
     cancelButton: {
         backgroundColor: "#6c757d",
-        padding: 12,
-        borderRadius: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
         flex: 1,
-        marginRight: 8,
         alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     submitButton: {
         backgroundColor: "#007bff",
-        padding: 12,
-        borderRadius: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
         flex: 1,
-        marginLeft: 8,
         alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     buttonText: {
+        fontSize: width * 0.04,
         color: "#fff",
         fontWeight: "600",
-        fontSize: 16,
     },
 });
 

@@ -7,10 +7,13 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
+    Dimensions,
 } from "react-native";
 import { Clock, CalendarDays, Stethoscope, FileText, MessageSquare, Phone } from "lucide-react-native";
 import { getLabelFromOptions } from "../../../utils/appointmentHelper";
 import { STATUS_COLORS, STATUS_OPTIONS, TYPE_OPTIONS } from "../../../utils/appointmentConstants";
+
+const { width, height } = Dimensions.get("window");
 
 const ViewAppointmentModal = ({ visible, onClose, appointment, onEdit }) => {
     if (!visible || !appointment) return null;
@@ -19,25 +22,41 @@ const ViewAppointmentModal = ({ visible, onClose, appointment, onEdit }) => {
         return name
             ?.split(" ")
             .map((n) => n[0])
-            .join("");
+            .join("")
+            .toUpperCase();
+    };
+
+    // Đảm bảo định dạng ngày DD/MM/YYYY
+    const formatDate = (dateStr) => {
+        if (!dateStr) return "";
+        // Giả định dateStr đã ở định dạng DD/MM/YYYY hoặc YYYY-MM-DD
+        if (dateStr.includes("-")) {
+            const [year, month, day] = dateStr.split("-");
+            return `${day}/${month}/${year}`;
+        }
+        return dateStr;
     };
 
     return (
         <Modal
             visible={visible}
             transparent
-            animationType="fade"
+            animationType="slide"
             onRequestClose={onClose}
         >
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Chi tiết lịch hẹn</Text>
+                        <Text style={styles.modalTitle}>Chi Tiết Lịch Hẹn</Text>
                         <TouchableOpacity onPress={onClose}>
                             <Text style={styles.closeButton}>×</Text>
                         </TouchableOpacity>
                     </View>
-                    <ScrollView style={styles.modalBody}>
+                    <ScrollView
+                        style={styles.modalBody}
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                    >
                         {/* Header with avatar and basic info */}
                         <View style={styles.headerContainer}>
                             {appointment.patientAvatar ? (
@@ -75,18 +94,18 @@ const ViewAppointmentModal = ({ visible, onClose, appointment, onEdit }) => {
 
                         {/* Appointment Details */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Thông tin lịch hẹn</Text>
+                            <Text style={styles.sectionTitle}>Thông Tin Lịch Hẹn</Text>
                             <View style={styles.row}>
                                 <View style={styles.detailItem}>
                                     <View style={styles.labelContainer}>
-                                        <CalendarDays size={14} color="#666" />
+                                        <CalendarDays size={16} color="#1a3c6e" />
                                         <Text style={styles.label}>Ngày hẹn:</Text>
                                     </View>
-                                    <Text style={styles.detailText}>{appointment.date}</Text>
+                                    <Text style={styles.detailText}>{formatDate(appointment.date)}</Text>
                                 </View>
                                 <View style={styles.detailItem}>
                                     <View style={styles.labelContainer}>
-                                        <Clock size={14} color="#666" />
+                                        <Clock size={16} color="#1a3c6e" />
                                         <Text style={styles.label}>Giờ hẹn:</Text>
                                     </View>
                                     <Text style={styles.detailText}>{appointment.time}</Text>
@@ -94,30 +113,38 @@ const ViewAppointmentModal = ({ visible, onClose, appointment, onEdit }) => {
                             </View>
                             <View style={styles.row}>
                                 <View style={styles.detailItem}>
-                                    <Text style={styles.label}>Loại khám:</Text>
+                                    <View style={styles.labelContainer}>
+                                        <Text style={styles.label}>Loại khám:</Text>
+                                    </View>
                                     <Text style={styles.detailText}>
                                         {getLabelFromOptions(TYPE_OPTIONS, appointment.type)}
                                     </Text>
                                 </View>
                                 <View style={styles.detailItem}>
                                     <View style={styles.labelContainer}>
-                                        <Stethoscope size={14} color="#666" />
+                                        <Stethoscope size={16} color="#1a3c6e" />
                                         <Text style={styles.label}>Bác sĩ:</Text>
                                     </View>
                                     <Text style={styles.detailText}>{appointment.doctor}</Text>
                                 </View>
                             </View>
                             <View style={styles.detailItem}>
-                                <Text style={styles.label}>Lý do khám:</Text>
-                                <Text style={styles.detailText}>{appointment.reason}</Text>
+                                <View style={styles.labelContainer}>
+                                    <Text style={styles.label}>Lý do khám:</Text>
+                                </View>
+                                <Text style={styles.detailText} numberOfLines={3} ellipsizeMode="tail">
+                                    {appointment.reason}
+                                </Text>
                             </View>
                             {appointment.notes && (
                                 <View style={styles.detailItem}>
                                     <View style={styles.labelContainer}>
-                                        <FileText size={14} color="#666" />
+                                        <FileText size={16} color="#1a3c6e" />
                                         <Text style={styles.label}>Ghi chú:</Text>
                                     </View>
-                                    <Text style={styles.detailText}>{appointment.notes}</Text>
+                                    <Text style={styles.detailText} numberOfLines={3} ellipsizeMode="tail">
+                                        {appointment.notes}
+                                    </Text>
                                 </View>
                             )}
                         </View>
@@ -152,124 +179,151 @@ const ViewAppointmentModal = ({ visible, onClose, appointment, onEdit }) => {
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0,0,0,0.6)",
         justifyContent: "center",
         alignItems: "center",
     },
     modalContent: {
         backgroundColor: "#fff",
-        borderRadius: 12,
-        width: "90%",
-        maxHeight: "80%",
-        padding: 16,
+        borderRadius: 16,
+        width: width * 0.9,
+        maxHeight: height * 0.9,
+        padding: width * 0.05,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 5,
     },
     modalHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 12,
+        marginBottom: 16,
     },
     modalTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#333",
+        fontSize: width * 0.05,
+        fontWeight: "700",
+        color: "#1a3c6e",
     },
     closeButton: {
-        fontSize: 24,
-        color: "#333",
+        fontSize: width * 0.06,
+        color: "#1a3c6e",
+        fontWeight: "600",
     },
     modalBody: {
-        flex: 1,
+        flexGrow: 0,
+    },
+    scrollContent: {
+        paddingBottom: 20,
+        gap: 12,
     },
     headerContainer: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#f8f9fa",
-        borderRadius: 8,
-        padding: 12,
+        backgroundColor: "#f0f2f5",
+        borderRadius: 12,
+        padding: width * 0.03,
         marginBottom: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     avatar: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
+        width: width * 0.15,
+        height: width * 0.15,
+        borderRadius: width * 0.075,
         marginRight: 12,
+        borderWidth: 1,
+        borderColor: "#e0e4e8",
     },
     avatarFallback: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
+        width: width * 0.15,
+        height: width * 0.15,
+        borderRadius: width * 0.075,
         backgroundColor: "#007bff",
         justifyContent: "center",
         alignItems: "center",
         marginRight: 12,
+        borderWidth: 1,
+        borderColor: "#e0e4e8",
     },
     avatarText: {
         color: "#fff",
-        fontSize: 24,
-        fontWeight: "bold",
+        fontSize: width * 0.06,
+        fontWeight: "700",
     },
     headerInfo: {
         flex: 1,
     },
     patientName: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#333",
+        fontSize: width * 0.045,
+        fontWeight: "700",
+        color: "#1a3c6e",
         marginBottom: 4,
     },
     patientDetails: {
-        fontSize: 14,
+        fontSize: width * 0.035,
         color: "#666",
         marginBottom: 8,
     },
     statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
         borderRadius: 12,
         alignSelf: "flex-start",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     statusText: {
-        fontSize: 12,
+        fontSize: width * 0.035,
         fontWeight: "600",
     },
     section: {
         marginBottom: 16,
+        gap: 12,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: width * 0.045,
         fontWeight: "600",
-        color: "#007bff",
-        marginBottom: 12,
+        color: "#1a3c6e",
+        marginBottom: 8,
     },
     row: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginBottom: 12,
+        gap: 8,
+        flexWrap: "wrap",
     },
     detailItem: {
-        width: "48%",
+        flex: 1,
+        maxWidth: width * 0.42,
+        gap: 6,
     },
     labelContainer: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 4,
+        gap: 6,
     },
     label: {
-        fontSize: 12,
+        fontSize: width * 0.035,
         fontWeight: "500",
-        color: "#666",
-        marginLeft: 4,
+        color: "#1a3c6e",
     },
     detailText: {
-        fontSize: 14,
+        fontSize: width * 0.04,
         fontWeight: "500",
         color: "#333",
     },
     modalFooter: {
         flexDirection: "row",
         justifyContent: "space-between",
+        alignItems: "center",
         paddingTop: 12,
+        gap: 12,
     },
     actionButtons: {
         flexDirection: "row",
@@ -277,33 +331,46 @@ const styles = StyleSheet.create({
     },
     iconButton: {
         backgroundColor: "#17a2b8",
-        padding: 8,
-        borderRadius: 8,
+        padding: 10,
+        borderRadius: 12,
         alignItems: "center",
         justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     mainButtons: {
         flexDirection: "row",
         gap: 8,
+        flex: 1,
     },
     cancelButton: {
         backgroundColor: "#6c757d",
-        padding: 12,
-        borderRadius: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
         alignItems: "center",
         flex: 1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     editButton: {
         backgroundColor: "#007bff",
-        padding: 12,
-        borderRadius: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
         alignItems: "center",
         flex: 1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     buttonText: {
+        fontSize: width * 0.04,
         color: "#fff",
         fontWeight: "600",
-        fontSize: 16,
     },
 });
 

@@ -20,7 +20,7 @@ import ApiDoctor from "../../apis/ApiDoctor";
 import { getLabelFromOptions } from "../../utils/appointmentHelper";
 import { STATUS_COLORS, STATUS_OPTIONS, TYPE_OPTIONS } from "../../utils/appointmentConstants";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 const itemsPerPage = 5;
 
 export default function AppointmentTab() {
@@ -43,12 +43,10 @@ export default function AppointmentTab() {
   useEffect(() => {
     const fetchAppointments = async () => {
       console.log("fetchAppointments chạy...");
-
       try {
         const resToday = await ApiDoctor.getAppointmentsToday();
         console.log("Raw Today:", resToday);
         setTodayAppointments(resToday.map(mapAppointment));
-
         console.log("Appointments Today:", resToday);
         const resUpcoming = await ApiDoctor.getAppointments();
         console.log("Upcoming Appointments:", resUpcoming);
@@ -62,7 +60,7 @@ export default function AppointmentTab() {
 
   const mapAppointment = (item) => {
     console.log("Mapping item:", item);
-    return ({
+    return {
       id: item._id,
       patientName: item.patientId?.userId?.username || "N/A",
       patientAge: item.patientId?.age || "N/A",
@@ -77,7 +75,7 @@ export default function AppointmentTab() {
       doctor: item.doctorId?.userId?.username || "Tạm thời chưa có",
       notes: item.notes || "Tạm thời chưa có",
       status: item.status,
-    })
+    };
   };
 
   const getStatusColors = (status) => {
@@ -95,26 +93,19 @@ export default function AppointmentTab() {
     }
   };
 
-  // Xử lý nhập ngày
   const handleDateChange = (text) => {
     setDateInput(text);
-
     if (!text) {
       setFilterDate(null);
       return;
     }
-
-    // Kiểm tra định dạng DD/MM/YYYY
     const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
     if (!regex.test(text)) {
       Alert.alert("Lỗi", "Vui lòng nhập ngày theo định dạng DD/MM/YYYY.");
       return;
     }
-
     const [day, month, year] = text.split("/").map(Number);
     const date = new Date(year, month - 1, day);
-
-    // Kiểm tra ngày hợp lệ
     if (
       date.getDate() === day &&
       date.getMonth() === month - 1 &&
@@ -127,7 +118,6 @@ export default function AppointmentTab() {
     }
   };
 
-  // Filter + Search
   const filteredToday = useMemo(() => {
     return todayAppointments.filter((a) => {
       const matchSearch =
@@ -135,9 +125,7 @@ export default function AppointmentTab() {
         a.patientDisease.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.reason.toLowerCase().includes(searchTerm.toLowerCase());
-
       const matchDate = filterDate ? a.date === new Date(filterDate).toLocaleDateString("vi-VN") : true;
-
       return matchSearch && matchDate;
     });
   }, [todayAppointments, searchTerm, filterDate]);
@@ -149,9 +137,7 @@ export default function AppointmentTab() {
         a.patientDisease.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.reason.toLowerCase().includes(searchTerm.toLowerCase());
-
       const matchDate = filterDate ? a.date === new Date(filterDate).toLocaleDateString("vi-VN") : true;
-
       return matchSearch && matchDate;
     });
   }, [upcomingAppointments, searchTerm, filterDate]);
@@ -199,16 +185,13 @@ export default function AppointmentTab() {
         ...updatedAppointment,
         date: new Date(updatedAppointment.date).toISOString().split("T")[0],
       };
-
       await ApiDoctor.updateAppointment(updatedAppointment.id, payload);
-
       setUpcomingAppointments((prev) =>
         prev.map((app) => (app.id === updatedAppointment.id ? updatedAppointment : app))
       );
       setTodayAppointments((prev) =>
         prev.map((app) => (app.id === updatedAppointment.id ? updatedAppointment : app))
       );
-
       setShowEditModal(false);
       setSelectedAppointment(updatedAppointment);
     } catch (error) {
@@ -225,16 +208,13 @@ export default function AppointmentTab() {
   const confirmDeleteAppointment = async () => {
     try {
       if (!appointmentToDelete) return;
-
       await ApiDoctor.deleteAppointment(appointmentToDelete.id);
-
       setUpcomingAppointments((prev) =>
         prev.filter((app) => app.id !== appointmentToDelete.id)
       );
       setTodayAppointments((prev) =>
         prev.filter((app) => app.id !== appointmentToDelete.id)
       );
-
       setShowDeleteModal(false);
       setAppointmentToDelete(null);
     } catch (error) {
@@ -243,7 +223,6 @@ export default function AppointmentTab() {
     }
   };
 
-  // Pagination
   const paginate = (appointments, page) =>
     appointments.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
@@ -253,39 +232,65 @@ export default function AppointmentTab() {
   const paginatedToday = paginate(filteredToday, todayPage);
   const paginatedUpcoming = paginate(filteredUpcoming, upcomingPage);
 
-  const renderAppointmentRow = (appointment) => {
+  const renderAppointmentCard = (appointment) => {
     const statusColors = getStatusColors(appointment.status);
     return (
-      <View style={styles.row}>
-        <View style={styles.patientCell}>
+      <View style={styles.cardItem}>
+        <View style={styles.cardHeader}>
           <Image source={{ uri: appointment.patientAvatar }} style={styles.avatar} />
           <View style={styles.patientInfo}>
-            <Text style={styles.patientName}>{appointment.patientName}</Text>
+            <Text style={styles.patientName} numberOfLines={1} ellipsizeMode="tail">
+              {appointment.patientName}
+            </Text>
             <Text style={styles.patientAge}>{appointment.patientAge} tuổi</Text>
           </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+            <Text style={[styles.statusText, { color: statusColors.text }]} numberOfLines={1}>
+              {getLabelFromOptions(STATUS_OPTIONS, appointment.status)}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.diseaseCell} numberOfLines={1}>{appointment.patientDisease}</Text>
-        <View style={styles.timeCell}>
-          <Clock size={12} color="#666" />
-          <Text style={styles.timeText}>{appointment.time}</Text>
-          <CalendarDays size={12} color="#666" style={styles.dateIcon} />
-          <Text style={styles.dateText}>{appointment.date}</Text>
-        </View>
-        <Text style={styles.typeCell}>{getLabelFromOptions(TYPE_OPTIONS, appointment.type)}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
-          <Text style={[styles.statusText, { color: statusColors.text }]}>
-            {getLabelFromOptions(STATUS_OPTIONS, appointment.status)}
+        <View style={styles.cardBody}>
+          <Text style={styles.cardText}>
+            <Text style={styles.cardLabel}>Bệnh: </Text>
+            {appointment.patientDisease}
+          </Text>
+          <View style={styles.timeRow}>
+            <Clock size={16} color="#666" />
+            <Text style={styles.cardText}>{appointment.time}</Text>
+            <CalendarDays size={16} color="#666" style={styles.dateIcon} />
+            <Text style={styles.cardText}>{appointment.date}</Text>
+          </View>
+          <Text style={styles.cardText}>
+            <Text style={styles.cardLabel}>Loại: </Text>
+            {getLabelFromOptions(TYPE_OPTIONS, appointment.type)}
+          </Text>
+          <Text style={styles.cardText}>
+            <Text style={styles.cardLabel}>Lý do: </Text>
+            {appointment.reason}
           </Text>
         </View>
-        <View style={styles.actionsCell}>
-          <TouchableOpacity onPress={() => handleViewAppointment(appointment)} style={styles.actionButton}>
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            onPress={() => handleViewAppointment(appointment)}
+            style={styles.actionButton}
+          >
             <Eye size={16} color="#007bff" />
+            <Text style={styles.actionText}>Xem</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleEditAppointment(appointment)} style={styles.actionButton}>
+          <TouchableOpacity
+            onPress={() => handleEditAppointment(appointment)}
+            style={styles.actionButton}
+          >
             <Edit size={16} color="#28a745" />
+            <Text style={styles.actionText}>Sửa</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleDeleteAppointment(appointment)} style={styles.actionButton}>
+          <TouchableOpacity
+            onPress={() => handleDeleteAppointment(appointment)}
+            style={styles.actionButton}
+          >
             <Trash2 size={16} color="#dc3545" />
+            <Text style={styles.actionText}>Xóa</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -303,21 +308,9 @@ export default function AppointmentTab() {
         >
           <Text style={styles.pagText}>Trước</Text>
         </TouchableOpacity>
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-          <TouchableOpacity
-            key={page}
-            onPress={() => setPage(page)}
-            style={[
-              styles.pagButton,
-              styles.pageItem,
-              page === currentPage && styles.activePage,
-            ]}
-          >
-            <Text style={[styles.pagText, page === currentPage && styles.activeText]}>
-              {page}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <Text style={styles.pageInfo}>
+          Trang {currentPage} / {totalPages}
+        </Text>
         <TouchableOpacity
           onPress={() => setPage((p) => Math.min(p + 1, totalPages))}
           disabled={currentPage === totalPages}
@@ -338,7 +331,7 @@ export default function AppointmentTab() {
             <SearchIcon size={16} color="#999" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Tìm kiếm..."
+              placeholder="Tìm kiếm bệnh nhân, bệnh, bác sĩ..."
               value={searchTerm}
               onChangeText={setSearchTerm}
             />
@@ -355,7 +348,6 @@ export default function AppointmentTab() {
           </View>
           <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
             <Plus size={16} color="#fff" />
-            <Text style={styles.addButtonText}>Thêm</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -365,7 +357,7 @@ export default function AppointmentTab() {
       <FlatList
         data={paginated}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => renderAppointmentRow(item)}
+        renderItem={({ item }) => renderAppointmentCard(item)}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Không có lịch hẹn.</Text>
@@ -380,12 +372,9 @@ export default function AppointmentTab() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.header}>Lịch hẹn khám bệnh</Text>
-
-      {renderTable("Lịch hẹn hôm nay", paginatedToday, totalTodayPages, todayPage, setTodayPage, true)}
-
-      {renderTable("Lịch hẹn sắp tới", paginatedUpcoming, totalUpcomingPages, upcomingPage, setUpcomingPage)}
-
+      <Text style={styles.header}>Lịch Hẹn Khám Bệnh</Text>
+      {renderTable("Lịch Hẹn Hôm Nay", paginatedToday, totalTodayPages, todayPage, setTodayPage, true)}
+      {renderTable("Lịch Hẹn Sắp Tới", paginatedUpcoming, totalUpcomingPages, upcomingPage, setUpcomingPage)}
       <AddAppointmentModal
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -403,8 +392,6 @@ export default function AppointmentTab() {
         appointment={selectedAppointment}
         onSave={handleUpdateAppointment}
       />
-
-      {/* Delete Confirmation Modal */}
       <Modal
         visible={showDeleteModal}
         transparent
@@ -413,7 +400,7 @@ export default function AppointmentTab() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Xác nhận xóa</Text>
+            <Text style={styles.modalTitle}>Xác Nhận Xóa Lịch Hẹn</Text>
             <Text style={styles.modalBody}>
               Bạn có chắc chắn muốn xóa lịch hẹn của{"\n"}
               <Text style={styles.modalBold}>{appointmentToDelete?.patientName}</Text>{"\n"}
@@ -444,49 +431,56 @@ export default function AppointmentTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
-    padding: 16,
+    backgroundColor: "#f5f7fa",
+    paddingHorizontal: width * 0.05,
+    paddingVertical: 20,
   },
   header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 24,
+    fontSize: width * 0.07,
+    fontWeight: "700",
+    color: "#1a3c6e",
     textAlign: "center",
-    color: "#333",
+    marginBottom: 20,
+    letterSpacing: 0.5,
   },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: width * 0.05,
     marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: width * 0.05,
     fontWeight: "600",
+    color: "#1a3c6e",
     marginBottom: 12,
-    color: "#333",
   },
   filterRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 12,
     flexWrap: "wrap",
+    gap: 8,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
-    borderRadius: 8,
+    backgroundColor: "#f0f2f5",
+    borderRadius: 12,
     paddingHorizontal: 12,
-    marginRight: 8,
-    marginBottom: 8,
     flex: 1,
-    minWidth: 150,
+    minWidth: width * 0.4,
+    maxWidth: width * 0.5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   searchIcon: {
     marginRight: 8,
@@ -494,223 +488,234 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     paddingVertical: 8,
-    fontSize: 16,
+    fontSize: width * 0.04,
+    color: "#333",
   },
   dateInputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
-    borderRadius: 8,
+    backgroundColor: "#f0f2f5",
+    borderRadius: 12,
     paddingHorizontal: 12,
-    marginRight: 8,
-    marginBottom: 8,
-    minWidth: 120,
+    minWidth: width * 0.3,
+    maxWidth: width * 0.35,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   dateInput: {
     flex: 1,
     paddingVertical: 8,
-    fontSize: 16,
+    fontSize: width * 0.04,
+    color: "#333",
     marginLeft: 4,
   },
   dateIcon: {
     marginRight: 4,
   },
   addButton: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#007bff",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: "#fff",
-    marginLeft: 4,
-    fontWeight: "600",
+    borderRadius: 12,
+    padding: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: width * 0.12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   appointmentCount: {
-    fontSize: 14,
+    fontSize: width * 0.04,
     color: "#007bff",
     marginBottom: 12,
+    fontWeight: "500",
   },
   list: {
-    maxHeight: 400,
+    maxHeight: height * 0.6,
   },
-  row: {
+  cardItem: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: width * 0.04,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  patientCell: {
-    flex: 2,
-    flexDirection: "row",
-    alignItems: "center",
+    marginBottom: 8,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 8,
+    width: width * 0.12,
+    height: width * 0.12,
+    borderRadius: width * 0.06,
+    marginRight: 12,
   },
   patientInfo: {
     flex: 1,
+    justifyContent: "center",
   },
   patientName: {
+    fontSize: width * 0.045,
     fontWeight: "600",
-    color: "#333",
+    color: "#1a3c6e",
   },
   patientAge: {
-    fontSize: 12,
+    fontSize: width * 0.035,
     color: "#666",
   },
-  diseaseCell: {
-    flex: 1.5,
-    fontSize: 14,
-    color: "#333",
-  },
-  timeCell: {
-    flex: 1.5,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  timeText: {
-    fontSize: 14,
-    color: "#333",
-    marginLeft: 2,
-  },
-  dateIcon: {
-    marginLeft: 8,
-  },
-  dateText: {
-    fontSize: 14,
-    color: "#333",
-    marginLeft: 2,
-  },
-  typeCell: {
-    flex: 1,
-    fontSize: 14,
-    color: "#333",
-    textAlign: "center",
-  },
   statusBadge: {
-    flex: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
     alignItems: "center",
+    justifyContent: "center",
   },
   statusText: {
-    fontSize: 12,
+    fontSize: width * 0.035,
     fontWeight: "600",
   },
-  actionsCell: {
-    flex: 1,
+  cardBody: {
+    marginBottom: 8,
+  },
+  cardText: {
+    fontSize: width * 0.04,
+    color: "#333",
+    marginBottom: 6,
+  },
+  cardLabel: {
+    fontWeight: "600",
+    color: "#1a3c6e",
+  },
+  timeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
+  cardActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: 8,
+    gap: 12,
   },
   actionButton: {
-    padding: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#f0f2f5",
+  },
+  actionText: {
+    fontSize: width * 0.035,
+    color: "#333",
+    marginLeft: 4,
+    fontWeight: "500",
   },
   emptyContainer: {
-    paddingVertical: 40,
+    paddingVertical: 20,
     alignItems: "center",
   },
   emptyText: {
+    fontSize: width * 0.04,
     color: "#999",
-    fontSize: 16,
   },
   pagination: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     marginTop: 12,
-    gap: 8,
+    gap: 12,
   },
   pagButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    minWidth: 40,
-    alignItems: "center",
-  },
-  pageItem: {
     backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#dee2e6",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  activePage: {
-    backgroundColor: "#007bff",
-    borderColor: "#007bff",
-  },
-  activeText: {
-    color: "#fff",
+  pageInfo: {
+    fontSize: width * 0.04,
+    color: "#333",
+    fontWeight: "500",
   },
   pagText: {
-    fontSize: 14,
-    color: "#333",
+    fontSize: width * 0.04,
+    color: "#007bff",
+    fontWeight: "600",
   },
   disabled: {
     opacity: 0.5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    width: width * 0.8,
-    maxWidth: 300,
+    borderRadius: 16,
+    padding: width * 0.06,
+    width: width * 0.85,
+    maxWidth: 340,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
+    fontSize: width * 0.05,
+    fontWeight: "700",
+    color: "#1a3c6e",
     textAlign: "center",
+    marginBottom: 12,
   },
   modalBody: {
-    fontSize: 16,
-    lineHeight: 20,
-    marginBottom: 20,
+    fontSize: width * 0.04,
+    lineHeight: width * 0.06,
+    color: "#333",
     textAlign: "center",
+    marginBottom: 20,
   },
   modalBold: {
-    fontWeight: "bold",
+    fontWeight: "600",
+    color: "#1a3c6e",
   },
   modalButtons: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
+    gap: 12,
   },
   cancelButton: {
-    backgroundColor: "#6c757d",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
     flex: 1,
-    marginRight: 8,
+    backgroundColor: "#6c757d",
+    paddingVertical: 10,
+    borderRadius: 12,
     alignItems: "center",
   },
   cancelButtonText: {
+    fontSize: width * 0.04,
     color: "#fff",
     fontWeight: "600",
   },
   deleteButton: {
-    backgroundColor: "#dc3545",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
     flex: 1,
-    marginLeft: 8,
+    backgroundColor: "#dc3545",
+    paddingVertical: 10,
+    borderRadius: 12,
     alignItems: "center",
   },
   deleteButtonText: {
+    fontSize: width * 0.04,
     color: "#fff",
     fontWeight: "600",
   },
