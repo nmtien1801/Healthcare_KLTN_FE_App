@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,28 +8,29 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { api, get_advice } from '../../apis/assistant';
 import { useSelector, useDispatch } from 'react-redux';
 import { suggestFoodsByAi, GetCaloFood } from '../../redux/foodAiSlice';
+import { fetchBloodSugar, saveBloodSugar } from '../../redux/patientSlice';
 import { useNavigation } from '@react-navigation/native';
 import { setWithExpiry, getWithExpiry } from '../../components/customizeStorage';
-import { fetchBloodSugar, saveBloodSugar } from '../../redux/patientSlice';
 import ApiBooking from '../../apis/ApiBooking';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const Following = ({ user, nearestAppointment }) => {
-  let bloodSugar = useSelector((state) => state.patient.bloodSugar);
-  const latestReading = bloodSugar?.DT?.bloodSugarData[0].value;
+  const bloodSugar = useSelector((state) => state.patient.bloodSugar);
+  const latestReading = bloodSugar?.DT?.bloodSugarData?.[0]?.value || 0;
 
   const readingStatus = {
     status: latestReading < 6 ? 'normal' : latestReading < 7 ? 'prediabetes' : 'danger',
     color: latestReading < 6 ? '#28a745' : latestReading < 7 ? '#ffc107' : '#dc3545',
-    bgColor: latestReading < 6 ? '#d4edda' : latestReading < 7 ? '#fff3cd' : '#f8d7da'
+    bgColor: latestReading < 6 ? '#d4edda' : latestReading < 7 ? '#fff3cd' : '#f8d7da',
   };
 
   return (
@@ -45,7 +46,7 @@ const Following = ({ user, nearestAppointment }) => {
             <View style={styles.readingInfo}>
               <Text style={styles.readingLabel}>Lần đo gần nhất</Text>
               <Text style={[styles.readingValue, { color: readingStatus.color }]}>
-                {latestReading} mmol/L
+                {latestReading ? `${latestReading} mmol/L` : 'N/A'}
               </Text>
             </View>
             <View style={[styles.iconContainer, { backgroundColor: readingStatus.bgColor }]}>
@@ -67,13 +68,13 @@ const Following = ({ user, nearestAppointment }) => {
           <View style={styles.infoList}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Họ tên:</Text>
-              <Text style={styles.infoValue}>{user.username}</Text>
+              <Text style={styles.infoValue}>{user?.username || 'N/A'}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Tuổi:</Text>
               <Text style={styles.infoValue}>
                 {(() => {
-                  if (!user.dob) return "";
+                  if (!user?.dob) return 'N/A';
                   const dob = new Date(user.dob);
                   const today = new Date();
                   let age = today.getFullYear() - dob.getFullYear();
@@ -87,7 +88,7 @@ const Following = ({ user, nearestAppointment }) => {
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Giới tính:</Text>
-              <Text style={styles.infoValue}>{user.gender}</Text>
+              <Text style={styles.infoValue}>{user?.gender || 'N/A'}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Tình trạng:</Text>
@@ -95,7 +96,9 @@ const Following = ({ user, nearestAppointment }) => {
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Bác sĩ:</Text>
-              <Text style={styles.infoValue}>Bác sĩ Trần Thị B</Text>
+              <Text style={styles.infoValue}>
+                {nearestAppointment?.doctorId?.userId?.username || 'Chưa có'}
+              </Text>
             </View>
           </View>
         </View>
@@ -113,14 +116,14 @@ const Following = ({ user, nearestAppointment }) => {
               <Text style={styles.appointmentDate}>
                 {new Date(nearestAppointment.date).toLocaleDateString('vi-VN')}
               </Text>
-              <Text style={styles.appointmentTime}>
-                {nearestAppointment.time}
+              <Text style={styles.appointmentTime}>{nearestAppointment.time}</Text>
+              <Text style={styles.appointmentInfo}>
+                <Text style={styles.boldText}>Bác sĩ:</Text>{' '}
+                {nearestAppointment.doctorId?.userId?.username || 'N/A'}
               </Text>
               <Text style={styles.appointmentInfo}>
-                <Text style={styles.boldText}>Bác sĩ:</Text> {nearestAppointment.doctorId.userId.username}
-              </Text>
-              <Text style={styles.appointmentInfo}>
-                <Text style={styles.boldText}>Địa điểm:</Text> {nearestAppointment.type === 'onsite' ? 'Tại phòng khám' : 'Trực tuyến'}
+                <Text style={styles.boldText}>Địa điểm:</Text>{' '}
+                {nearestAppointment.type === 'onsite' ? 'Tại phòng khám' : 'Trực tuyến'}
               </Text>
               {nearestAppointment.reason && (
                 <Text style={styles.appointmentInfo}>
@@ -147,22 +150,27 @@ const Following = ({ user, nearestAppointment }) => {
             </View>
             <Text style={styles.cardTitle}>Tình trạng hiện tại</Text>
           </View>
-
           <View style={[styles.statusContainer, { backgroundColor: readingStatus.bgColor }]}>
             <View style={styles.statusHeader}>
-              <Icon 
-                name={readingStatus.status === 'normal' ? 'check-circle' : 'warning'} 
-                size={18} 
-                color={readingStatus.color} 
+              <Icon
+                name={readingStatus.status === 'normal' ? 'check-circle' : 'warning'}
+                size={18}
+                color={readingStatus.color}
               />
               <Text style={[styles.statusTitle, { color: readingStatus.color }]}>
-                {readingStatus.status === 'normal' ? 'Bình thường' : readingStatus.status === 'prediabetes' ? 'Tiền tiểu đường' : 'Cần chú ý'}
+                {readingStatus.status === 'normal'
+                  ? 'Bình thường'
+                  : readingStatus.status === 'prediabetes'
+                  ? 'Tiền tiểu đường'
+                  : 'Cần chú ý'}
               </Text>
             </View>
             <Text style={styles.statusDescription}>
-              {readingStatus.status === 'normal' ? 'Chỉ số đường huyết trong mức bình thường' :
-                readingStatus.status === 'prediabetes' ? 'Chỉ số cao hơn bình thường, cần theo dõi' :
-                  'Chỉ số cao, cần tham khảo ý kiến bác sĩ'}
+              {readingStatus.status === 'normal'
+                ? 'Chỉ số đường huyết trong mức bình thường'
+                : readingStatus.status === 'prediabetes'
+                ? 'Chỉ số cao hơn bình thường, cần theo dõi'
+                : 'Chỉ số cao, cần tham khảo ý kiến bác sĩ'}
             </Text>
           </View>
         </View>
@@ -172,10 +180,9 @@ const Following = ({ user, nearestAppointment }) => {
 };
 
 const bloodSugarDaily = ({ bloodSugar }) => {
-  // 👉 Nhóm dữ liệu theo ngày và tính trung bình
   const dailyData = {};
 
-  bloodSugar.forEach(item => {
+  bloodSugar?.forEach((item) => {
     const date = new Date(item.time);
     const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
 
@@ -190,31 +197,47 @@ const bloodSugarDaily = ({ bloodSugar }) => {
     }
   });
 
-  // 👉 Tính trung bình cho mỗi ngày
   const sortedDates = Object.keys(dailyData).sort();
-  const dates = sortedDates.map(date => {
+  const dates = sortedDates.map((date) => {
     const d = new Date(date);
-    return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}`;
+    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}`;
   });
 
-  const fastingData = sortedDates.map(date => {
+  const fastingData = sortedDates.map((date) => {
     const values = dailyData[date].fasting;
     return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
   });
 
-  const postMealData = sortedDates.map(date => {
+  const postMealData = sortedDates.map((date) => {
     const values = dailyData[date].postMeal;
     return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
   });
 
-  return { dates, fastingData, postMealData }
-}
+  return { dates, fastingData, postMealData };
+};
+
+const getYesterdayAvg = ({ dailyBloodSugar }) => {
+  const len = dailyBloodSugar.dates.length;
+  if (len < 1) return null;
+
+  const fasting = dailyBloodSugar.fastingData[len - 1];
+  const postMeal = dailyBloodSugar.postMealData[len - 1];
+
+  const avg =
+    [fasting, postMeal]
+      .filter((v) => v !== null)
+      .reduce((a, b) => a + b, 0) /
+    ([fasting, postMeal].filter((v) => v !== null).length || 1);
+
+  return { fasting, postMeal, avg };
+};
 
 const Chart = ({ bloodSugar }) => {
-  // Xử lý data cho React Native chart
   let dailyBloodSugar = { dates: [], fastingData: [], postMealData: [] };
 
-  if (bloodSugar && bloodSugar.length > 0) {
+  if (bloodSugar?.length > 0) {
     try {
       dailyBloodSugar = bloodSugarDaily({ bloodSugar });
     } catch (error) {
@@ -222,22 +245,23 @@ const Chart = ({ bloodSugar }) => {
     }
   }
 
-  // Chuẩn bị data cho LineChart
   const chartData = {
-    labels: dailyBloodSugar.dates.slice(-7), // Lấy 7 ngày gần nhất
+    labels: dailyBloodSugar.dates.slice(-7),
     datasets: [
       {
-        data: dailyBloodSugar.fastingData.slice(-7).map(val => val || 0),
-        color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`, // xanh
-        strokeWidth: 2
+        data: dailyBloodSugar.fastingData.slice(-7).map((val) => val || 0),
+        color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+        strokeWidth: 2,
+        label: 'Lúc đói',
       },
       {
-        data: dailyBloodSugar.postMealData.slice(-7).map(val => val || 0),
-        color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`, // vàng cam
-        strokeWidth: 2
-      }
+        data: dailyBloodSugar.postMealData.slice(-7).map((val) => val || 0),
+        color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`,
+        strokeWidth: 2,
+        label: 'Sau ăn',
+      },
     ],
-    legend: ["Lúc đói", "Sau ăn"]
+    legend: ['Lúc đói', 'Sau ăn'],
   };
 
   const chartConfig = {
@@ -249,10 +273,10 @@ const Chart = ({ bloodSugar }) => {
     useShadowColorFromDataset: false,
     decimalPlaces: 1,
     propsForDots: {
-      r: "4",
-      strokeWidth: "2",
-      stroke: "#ffa726"
-    }
+      r: '4',
+      strokeWidth: '2',
+      stroke: '#ffa726',
+    },
   };
 
   return (
@@ -266,14 +290,16 @@ const Chart = ({ bloodSugar }) => {
       <View style={styles.chartContainer}>
         <Text style={styles.chartSubtitle}>Chỉ số đường huyết (mmol/L) - 7 ngày gần nhất</Text>
         {dailyBloodSugar.dates.length > 0 ? (
-          <LineChart
-            data={chartData}
-            width={screenWidth - 40}
-            height={220}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chart}
-          />
+          <TouchableWithoutFeedback>
+            <LineChart
+              data={chartData}
+              width={screenWidth - 40}
+              height={220}
+              chartConfig={chartConfig}
+              bezier
+              style={styles.chart}
+            />
+          </TouchableWithoutFeedback>
         ) : (
           <View style={styles.noDataContainer}>
             <Text style={styles.noDataText}>Chưa có dữ liệu để hiển thị</Text>
@@ -284,346 +310,346 @@ const Chart = ({ bloodSugar }) => {
   );
 };
 
-const getYesterdayAvg = ({ dailyBloodSugar }) => {
-  const len = dailyBloodSugar.dates.length;
-  if (len < 1) return null;
-
-  const fasting = dailyBloodSugar.fastingData[len - 1];
-  const postMeal = dailyBloodSugar.postMealData[len - 1];
-
-  // Tính trung bình chung của hôm trước
-  const avg = [fasting, postMeal].filter(v => v !== null)
-    .reduce((a, b) => a + b, 0) /
-    ([fasting, postMeal].filter(v => v !== null).length || 1);
-
-  return { fasting, postMeal, avg };
-};
-
 const Plan = ({ aiPlan, user, bloodSugar }) => {
-  const [food, setFood] = useState([]);
+  const [food, setFood] = useState(null);
   const [showAllFood, setShowAllFood] = useState(false);
   const [medicines, setMedicines] = useState({
     sang: [],
     trua: [],
     toi: [],
   });
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigation = useNavigation();
 
-  // kiểm tra calo hiện tại
   useEffect(() => {
-    const fetchFood = async () => {
-      // Check cache trước
-      const cached = JSON.parse(getWithExpiry("food"));
-      if (cached) {
-        setFood(cached);
-        return;
-      }
-      let dailyBloodSugar = bloodSugarDaily({ bloodSugar })
-      let yesterday = getYesterdayAvg({ dailyBloodSugar });
-
-      // Lấy calo từ server
-      const res = await dispatch(GetCaloFood(user.userId));
-      const data = res?.payload?.DT?.menuFood;
-
-      if (data && yesterday) {
-        const response = await dispatch(suggestFoodsByAi({ min: data.caloMin, max: data.caloMax, mean: yesterday.avg, currentCalo: data.caloCurrent, menuFoodId: data._id }));
-
-        if (response?.payload?.result) {
-          setWithExpiry("food", JSON.stringify(response.payload.result));
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch medications
+        const meds = await ApiBooking.getMedications(user?.userId);
+        if (meds) {
+          setMedicines({
+            sang: meds.filter((m) => m.time === 'sáng').map((m) => `${m.name} ${m.lieu_luong}`),
+            trua: meds.filter((m) => m.time === 'trưa').map((m) => `${m.name} ${m.lieu_luong}`),
+            toi: meds.filter((m) => m.time === 'tối').map((m) => `${m.name} ${m.lieu_luong}`),
+          });
         }
-        setFood(response.payload.result);
+
+        // Fetch food
+        const cached = await getWithExpiry('food');
+        if (cached) {
+          setFood(JSON.parse(cached));
+          setLoading(false);
+          return;
+        }
+
+        const dailyBloodSugar = bloodSugarDaily({ bloodSugar });
+        const yesterday = getYesterdayAvg({ dailyBloodSugar });
+
+        const res = await dispatch(GetCaloFood(user?.userId)).unwrap();
+        const data = res?.DT?.menuFood;
+
+        if (data && yesterday) {
+          const response = await dispatch(
+            suggestFoodsByAi({
+              min: data.caloMin,
+              max: data.caloMax,
+              mean: yesterday.avg,
+              currentCalo: data.caloCurrent,
+              menuFoodId: data._id,
+            })
+          ).unwrap();
+
+          if (response?.result) {
+            await setWithExpiry('food', JSON.stringify(response.result));
+            setFood(response.result);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching plan data:', error);
+        Alert.alert('Lỗi', 'Không thể tải kế hoạch. Vui lòng thử lại.');
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchFood();
-  }, [bloodSugar, user.userId]);
-
+    if (user?.userId && bloodSugar?.length > 0) {
+      fetchData();
+    }
+  }, [user?.userId, bloodSugar, dispatch]);
 
   return (
     <View>
-      {/* Lời khuyên */}
-      <View style={styles.adviceCard}>
-        <Text style={styles.adviceTitle}>👉 Lời Khuyên</Text>
-        <Text style={styles.adviceText}>{aiPlan.advice || "Chưa có lời khuyên"}</Text>
-        <Text style={styles.adviceAuthor}>
-          — {aiPlan.assistant_name || "AI Assistant"}
-        </Text>
-      </View>
-
-      {/* KẾ HOẠCH THUỐC */}
-      <View style={styles.medicineCard}>
-        <Text style={styles.medicineTitle}>
-          📋 Kế hoạch dùng thuốc
-        </Text>
-
-        {(!medicines || (medicines.sang?.length === 0 && medicines.trua?.length === 0 && medicines.toi?.length === 0)) && (
-          <Text style={styles.noMedicineText}>
-            Chưa có đơn thuốc. Vui lòng khởi tạo để có thể áp dụng theo dõi.
-          </Text>
-        )}
-
-        <View style={styles.medicineList}>
-          <Text style={styles.medicineItem}>
-            <Text style={styles.boldText}>Sáng:</Text>{" "}
-            {medicines?.sang?.length > 0 ? medicines.sang.join(", ") : "Không dùng"}
-          </Text>
-          <Text style={styles.medicineItem}>
-            <Text style={styles.boldText}>Trưa:</Text>{" "}
-            {medicines?.trua?.length > 0 ? medicines.trua.join(", ") : "Không dùng"}
-          </Text>
-          <Text style={styles.medicineItem}>
-            <Text style={styles.boldText}>Tối:</Text>{" "}
-            {medicines?.toi?.length > 0 ? medicines.toi.join(", ") : "Không dùng"}
-          </Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007bff" />
+          <Text style={styles.loadingText}>Đang tải kế hoạch...</Text>
         </View>
+      ) : (
+        <>
+          {/* Lời khuyên */}
+          <View style={styles.adviceCard}>
+            <Text style={styles.adviceTitle}>👉 Lời Khuyên</Text>
+            <Text style={styles.adviceText}>{aiPlan?.advice || 'Chưa có lời khuyên'}</Text>
+            <Text style={styles.adviceAuthor}>
+              — {aiPlan?.assistant_name || 'AI Assistant'}
+            </Text>
+          </View>
 
-        <View style={styles.buttonContainer}>
-          {(!medicines || (medicines.sang?.length === 0 && medicines.trua?.length === 0 && medicines.toi?.length === 0)) && (
-            <TouchableOpacity style={styles.diagnosisButton} onPress={() => navigation.navigate('Assistant')}>
-              <Text style={styles.diagnosisButtonText}>Chuẩn đoán</Text>
-            </TouchableOpacity>
-          )}
-          {medicines && (medicines.sang?.length > 0 || medicines.trua?.length > 0 || medicines.toi?.length > 0) && (
-            <TouchableOpacity style={styles.appliedButton} disabled>
-              <Text style={styles.appliedButtonText}>Đã áp dụng</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* KẾ HOẠCH DINH DƯỠNG */}
-      <View style={styles.nutritionCard}>
-        <Text style={styles.nutritionTitle}>🥗 Kế hoạch dinh dưỡng</Text>
-        {food && food.chosen && food.chosen.length > 0 ? (
-          <View>
-            <Text style={styles.calorieInfo}><Text style={styles.boldText}>Calo/ngày:</Text> {food?.sum} calo</Text>
-            <View style={styles.foodList}>
-              {food.chosen.slice(0, showAllFood ? undefined : 5).map((item, idx) => (
-                <Text key={idx} style={styles.foodItem}>
-                  <Text style={styles.boldText}>{item.name}:</Text> ({item.calo} calo) - {item.weight}g
+          {/* KẾ HOẠCH THUỐC */}
+          <View style={styles.medicineCard}>
+            <Text style={styles.medicineTitle}>📋 Kế hoạch dùng thuốc</Text>
+            {medicines.sang.length === 0 && medicines.trua.length === 0 && medicines.toi.length === 0 ? (
+              <Text style={styles.noMedicineText}>
+                Chưa có đơn thuốc. Vui lòng khởi tạo để có thể áp dụng theo dõi.
+              </Text>
+            ) : (
+              <View style={styles.medicineList}>
+                <Text style={styles.medicineItem}>
+                  <Text style={styles.boldText}>Sáng:</Text>{' '}
+                  {medicines.sang.length > 0 ? medicines.sang.join(', ') : 'Không dùng'}
                 </Text>
-              ))}
-            </View>
-
-            {food.chosen.length > 5 && (
-              <View style={styles.expandButtonContainer}>
-                <TouchableOpacity
-                  style={styles.expandButton}
-                  onPress={() => setShowAllFood(!showAllFood)}
-                >
-                  <Text style={styles.expandButtonText}>
-                    {showAllFood ? 'Thu gọn' : `Xem thêm (${food.chosen.length - 5} món)`}
-                  </Text>
-                </TouchableOpacity>
+                <Text style={styles.medicineItem}>
+                  <Text style={styles.boldText}>Trưa:</Text>{' '}
+                  {medicines.trua.length > 0 ? medicines.trua.join(', ') : 'Không dùng'}
+                </Text>
+                <Text style={styles.medicineItem}>
+                  <Text style={styles.boldText}>Tối:</Text>{' '}
+                  {medicines.toi.length > 0 ? medicines.toi.join(', ') : 'Không dùng'}
+                </Text>
               </View>
             )}
+            <View style={styles.buttonContainer}>
+              {medicines.sang.length === 0 && medicines.trua.length === 0 && medicines.toi.length === 0 ? (
+                <TouchableOpacity
+                  style={styles.diagnosisButton}
+                  onPress={() => navigation.navigate('Assistant')}
+                  accessibilityLabel="Chẩn đoán đơn thuốc"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.diagnosisButtonText}>Chẩn đoán</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.appliedButton}
+                  disabled
+                  accessibilityLabel="Đã áp dụng đơn thuốc"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.appliedButtonText}>Đã áp dụng</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        ) : (
-          <TouchableOpacity style={styles.exploreButton} onPress={() => navigation.navigate('SuggestedFood')}>
-            <Text style={styles.exploreButtonText}>Khám phá thực đơn</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+
+          {/* KẾ HOẠCH DINH DƯỠNG */}
+          <View style={styles.nutritionCard}>
+            <Text style={styles.nutritionTitle}>🥗 Kế hoạch dinh dưỡng</Text>
+            {food?.chosen?.length > 0 ? (
+              <View>
+                <Text style={styles.calorieInfo}>
+                  <Text style={styles.boldText}>Calo/ngày:</Text> {food.sum} calo
+                </Text>
+                <View style={styles.foodList}>
+                  {food.chosen.slice(0, showAllFood ? undefined : 5).map((item, idx) => (
+                    <Text key={idx} style={styles.foodItem}>
+                      <Text style={styles.boldText}>{item.name}:</Text> ({item.calo} calo) - {item.weight}g
+                    </Text>
+                  ))}
+                </View>
+                {food.chosen.length > 5 && (
+                  <View style={styles.expandButtonContainer}>
+                    <TouchableOpacity
+                      style={styles.expandButton}
+                      onPress={() => setShowAllFood(!showAllFood)}
+                      accessibilityLabel={showAllFood ? 'Thu gọn danh sách thực phẩm' : 'Xem thêm thực phẩm'}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.expandButtonText}>
+                        {showAllFood ? 'Thu gọn' : `Xem thêm (${food.chosen.length - 5} món)`}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.exploreButton}
+                onPress={() => navigation.navigate('SuggestedFood')}
+                accessibilityLabel="Khám phá thực đơn"
+                accessibilityRole="button"
+              >
+                <Text style={styles.exploreButtonText}>Khám phá thực đơn</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </>
+      )}
     </View>
   );
-}
+};
 
 const HealthTabs = () => {
   const [messageInput, setMessageInput] = useState('');
-  const dispatch = useDispatch();
   const [aiPlan, setAiPlan] = useState({});
-  let user = useSelector((state) => state.auth.user);
-  const [measurementType, setMeasurementType] = useState("before");
+  const [measurementType, setMeasurementType] = useState('before');
   const [bloodSugar, setBloodSugar] = useState([]);
   const [nearestAppointment, setNearestAppointment] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
   const navigation = useNavigation();
+  const user = useSelector((state) => state.auth.userInfo); // Standardized to userInfo
 
-  // get bloodSugar
   useEffect(() => {
-    if (!user?.userId) {
-      console.log('No userId, skipping fetchBloodSugarData');
-      return;
-    }
+    const fetchData = async () => {
+      if (!user?.userId) {
+        console.log('No userId, skipping data fetch');
+        setLoading(false);
+        return;
+      }
 
-    let fetchBloodSugarData = async () => {
+      setLoading(true);
       try {
-        // Lấy cả dữ liệu lúc đói và sau ăn
+        // Fetch blood sugar data
         const [postMealRes, fastingRes] = await Promise.all([
-          dispatch(fetchBloodSugar({ userId: user.userId, type: "postMeal", days: 7 })),
-          dispatch(fetchBloodSugar({ userId: user.userId, type: "fasting", days: 7 }))
+          dispatch(fetchBloodSugar({ userId: user.userId, type: 'postMeal', days: 7 })).unwrap(),
+          dispatch(fetchBloodSugar({ userId: user.userId, type: 'fasting', days: 7 })).unwrap(),
         ]);
 
-        // Gộp dữ liệu từ cả hai API calls
         const allData = [];
+        const postMealData = postMealRes?.DT?.bloodSugarData || postMealRes?.DT || postMealRes || [];
+        const fastingData = fastingRes?.DT?.bloodSugarData || fastingRes?.DT || fastingRes || [];
 
-        // Kiểm tra response structure - thử nhiều format khác nhau
-        let postMealData = null;
-        let fastingData = null;
-
-        // Thử format 1: payload.DT.bloodSugarData
-        if (postMealRes?.payload?.DT?.bloodSugarData) {
-          postMealData = postMealRes.payload.DT.bloodSugarData;
-        }
-        // Thử format 2: payload.DT
-        else if (postMealRes?.payload?.DT && Array.isArray(postMealRes.payload.DT)) {
-          postMealData = postMealRes.payload.DT;
-        }
-        // Thử format 3: payload trực tiếp
-        else if (postMealRes?.payload && Array.isArray(postMealRes.payload)) {
-          postMealData = postMealRes.payload;
-        }
-
-        if (fastingRes?.payload?.DT?.bloodSugarData) {
-          fastingData = fastingRes.payload.DT.bloodSugarData;
-        }
-        else if (fastingRes?.payload?.DT && Array.isArray(fastingRes.payload.DT)) {
-          fastingData = fastingRes.payload.DT;
-        }
-        else if (fastingRes?.payload && Array.isArray(fastingRes.payload)) {
-          fastingData = fastingRes.payload;
-        }
-
-        // Thêm data vào allData nếu có
-        if (postMealData && Array.isArray(postMealData)) {
-          console.log('Adding postMeal data:', postMealData);
+        if (Array.isArray(postMealData)) {
           allData.push(...postMealData);
-        } else {
-          console.log('No postMeal data found in response');
         }
-
-        if (fastingData && Array.isArray(fastingData)) {
+        if (Array.isArray(fastingData)) {
           allData.push(...fastingData);
-        } else {
-          console.log('No fasting data found in response');
         }
 
         setBloodSugar(allData);
-      } catch (error) {
-        console.error('Error fetching blood sugar data:', error);
-      }
-    }
 
-    fetchBloodSugarData()
-  }, [dispatch, user?.userId])
-
-  // Lấy lịch hẹn gần nhất
-  useEffect(() => {
-    const fetchNearestAppointment = async () => {
-      try {
+        // Fetch nearest appointment
         const appointments = await ApiBooking.getUpcomingAppointments();
-
-        if (appointments && appointments.length > 0) {
-          // Sắp xếp theo thời gian: kết hợp date và time
+        if (appointments?.length > 0) {
           const sortedAppointments = appointments.sort((a, b) => {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);
-
-            // Nếu cùng ngày, so sánh theo giờ
+            if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
             if (dateA.getTime() === dateB.getTime()) {
               return a.time.localeCompare(b.time);
             }
-
             return dateA - dateB;
           });
-
-          // Lấy lịch hẹn gần nhất (phần tử đầu tiên)
           setNearestAppointment(sortedAppointments[0]);
         }
       } catch (error) {
-        console.error('Lỗi khi lấy lịch hẹn:', error);
+        console.error('Error fetching data:', error);
+        Alert.alert('Lỗi', 'Không thể tải dữ liệu. Vui lòng thử lại.');
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchNearestAppointment();
-  }, []);
+    fetchData();
+  }, [user?.userId, dispatch]);
 
   const handleAiAgent = async () => {
-    if (messageInput.trim() === "") return;
-
-    const inputValue = messageInput.trim();
-    const inputType = measurementType;
-
-    let result = '';
-
-    if (inputType === "before") {
-      if (inputValue < 3.9) {
-        result = '<3,9';
-      } else if (inputValue >= 3.9 && inputValue <= 5.6) {
-        result = '3,9 – 5,6';
-      } else if (inputValue > 5.6 && inputValue <= 6.9) {
-        result = '5,7 – 6,9';
-      } else if (inputValue >= 7) {
-        result = '>=7';
-      } else {
-        result = 'Giá trị không hợp lệ';
-      }
-    } else if (inputType === "after") {
-      if (inputValue < 3.9) {
-        result = '<3,9';
-      } else if (inputValue >= 3.9 && inputValue <= 7.7) {
-        result = '3,9 – 7,7';
-      } else if (inputValue > 7.8 && inputValue <= 11) {
-        result = '7,8 - 11';
-      } else if (inputValue > 11) {
-        result = '>11';
-      } else {
-        result = 'Giá trị không hợp lệ';
-      }
+    if (messageInput.trim() === '') {
+      Alert.alert('Lỗi', 'Vui lòng nhập chỉ số đường huyết');
+      return;
     }
 
-    setMessageInput("");
+    const inputValue = parseFloat(messageInput.trim());
+    if (isNaN(inputValue)) {
+      Alert.alert('Lỗi', 'Chỉ số đường huyết không hợp lệ');
+      return;
+    }
 
+    const inputType = measurementType;
+    let result = '';
+
+    if (inputType === 'before') {
+      if (inputValue < 3.9) result = '<3,9';
+      else if (inputValue >= 3.9 && inputValue <= 5.6) result = '3,9 – 5,6';
+      else if (inputValue > 5.6 && inputValue <= 6.9) result = '5,7 – 6,9';
+      else result = '>=7';
+    } else {
+      if (inputValue < 3.9) result = '<3,9';
+      else if (inputValue >= 3.9 && inputValue <= 7.7) result = '3,9 – 7,7';
+      else if (inputValue > 7.8 && inputValue <= 11) result = '7,8 - 11';
+      else result = '>11';
+    }
+
+    setLoading(true);
     try {
-      const saveResult = await dispatch(saveBloodSugar({
-        userId: user.userId,
-        value: parseFloat(inputValue),
-        type: inputType === "before" ? "fasting" : "postMeal"
-      }));
+      await dispatch(
+        saveBloodSugar({
+          userId: user?.userId,
+          value: inputValue,
+          type: inputType === 'before' ? 'fasting' : 'postMeal',
+          time: new Date().toISOString(),
+        })
+      ).unwrap();
 
-      const res = await get_advice.post(
-        "/mess-fb-new", 
-        {
-          message: {
-            input: inputValue,
-            measurementType: inputType,
-            type: result
-          }
+      const res = await get_advice.post('/mess-fb-new', {
+        message: {
+          input: inputValue,
+          measurementType: inputType,
+          type: result,
         },
-      );
+      });
 
-      const botResponse = res.data;
-      setAiPlan(botResponse);
-
+      setAiPlan(res.data);
+      setMessageInput('');
       Alert.alert('Thành công', 'Đã lưu chỉ số đường huyết thành công!');
 
-      dispatch(fetchBloodSugar({ userId: user.userId, type: "postMeal", days: 7 }));
-      dispatch(fetchBloodSugar({ userId: user.userId, type: "fasting", days: 7 }));
+      // Refresh blood sugar data
+      const [postMealRes, fastingRes] = await Promise.all([
+        dispatch(fetchBloodSugar({ userId: user.userId, type: 'postMeal', days: 7 })).unwrap(),
+        dispatch(fetchBloodSugar({ userId: user.userId, type: 'fasting', days: 7 })).unwrap(),
+      ]);
 
-    } catch (err) {
-      console.error('API error:', err);
-      setMessageInput(inputValue);
+      const allData = [];
+      const postMealData = postMealRes?.DT?.bloodSugarData || postMealRes?.DT || postMealRes || [];
+      const fastingData = fastingRes?.DT?.bloodSugarData || fastingRes?.DT || fastingRes || [];
+
+      if (Array.isArray(postMealData)) allData.push(...postMealData);
+      if (Array.isArray(fastingData)) allData.push(...fastingData);
+
+      setBloodSugar(allData);
+    } catch (error) {
+      console.error('API error:', error);
       Alert.alert('Lỗi', 'Có lỗi xảy ra khi lưu dữ liệu. Vui lòng thử lại!');
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007bff" />
+        <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.mainContainer}>
+    <ScrollView style={styles.mainContainer} contentContainerStyle={styles.contentContainer}>
       <Following user={user} nearestAppointment={nearestAppointment} />
-
       <Chart bloodSugar={bloodSugar} />
-
       <View style={styles.bottomSection}>
         <View style={styles.inputCard}>
           <Text style={styles.inputTitle}>Nhập chỉ số mới</Text>
-
           <View style={styles.inputRow}>
             <View style={styles.pickerContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.picker}
-                onPress={() => {
-                  setMeasurementType(measurementType === 'before' ? 'after' : 'before');
-                }}
+                onPress={() => setMeasurementType(measurementType === 'before' ? 'after' : 'before')}
+                accessibilityLabel="Chọn loại đo đường huyết"
+                accessibilityRole="button"
               >
                 <Text style={styles.pickerText}>
                   {measurementType === 'before' ? 'Trước ăn' : 'Sau ăn'}
@@ -631,35 +657,32 @@ const HealthTabs = () => {
                 <Icon name="keyboard-arrow-down" size={20} color="#666" />
               </TouchableOpacity>
             </View>
-
             <TextInput
-              style={[
-                styles.textInput,
-                { borderColor: measurementType === "before" ? "#007bff" : "#ffc107" }
-              ]}
+              style={[styles.textInput, { borderColor: measurementType === 'before' ? '#007bff' : '#ffc107' }]}
               placeholder="Nhập chỉ số đường huyết"
               value={messageInput}
               onChangeText={setMessageInput}
               keyboardType="numeric"
               onSubmitEditing={handleAiAgent}
+              accessibilityLabel="Nhập chỉ số đường huyết (mmol/L)"
+              accessibilityRole="textbox"
             />
-
             <TouchableOpacity
-              style={styles.saveButton}
+              style={[styles.saveButton, loading && styles.disabledButton]}
               onPress={handleAiAgent}
+              disabled={loading}
+              accessibilityLabel="Lưu chỉ số đường huyết"
+              accessibilityRole="button"
             >
-              <Text style={styles.saveButtonText}>Lưu</Text>
+              <Text style={styles.saveButtonText}>{loading ? 'Đang lưu...' : 'Lưu'}</Text>
             </TouchableOpacity>
           </View>
-
           <View style={styles.infoContainer}>
             <Icon name="info" size={14} color="#6c757d" />
             <Text style={styles.infoText}>Nhập chỉ số đường huyết theo đơn vị mmol/L</Text>
           </View>
-
           {aiPlan && <Plan aiPlan={aiPlan} user={user} bloodSugar={bloodSugar} />}
         </View>
-
         <View style={styles.infoCard}>
           <Text style={styles.infoCardTitle}>Thông tin thêm</Text>
           <View style={styles.infoSections}>
@@ -668,13 +691,11 @@ const HealthTabs = () => {
               <Text style={styles.normalText}>Đường huyết lúc đói: 3.9 - 5.5 mmol/L</Text>
               <Text style={styles.normalText}>Đường huyết sau ăn 2h: &lt; 7.8 mmol/L</Text>
             </View>
-
             <View style={styles.warningSection}>
               <Text style={styles.warningTitle}>Chỉ số tiền tiểu đường</Text>
               <Text style={styles.warningText}>Đường huyết lúc đói: 5.6 - 6.9 mmol/L</Text>
               <Text style={styles.warningText}>Đường huyết sau ăn 2h: 7.8 - 11.0 mmol/L</Text>
             </View>
-
             <View style={styles.dangerSection}>
               <Text style={styles.dangerTitle}>Chỉ số tiểu đường</Text>
               <Text style={styles.dangerText}>Đường huyết lúc đói: ≥ 7.0 mmol/L</Text>
@@ -692,8 +713,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  contentContainer: {
+    paddingBottom: 20,
+  },
   container: {
     padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#007bff',
   },
   headerCard: {
     backgroundColor: '#ffffff',
@@ -991,6 +1025,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
+  },
+  disabledButton: {
+    backgroundColor: '#6c757d',
+    opacity: 0.6,
   },
   saveButtonText: {
     color: '#ffffff',
