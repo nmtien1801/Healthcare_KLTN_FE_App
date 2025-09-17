@@ -106,21 +106,11 @@ export default function Router() {
   // authContext -> duy trì trạng thái đăng nhập của người dùng
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      console.log("Firebase Auth State Changed:", firebaseUser ? "User logged in" : "User logged out");
-      
       if (firebaseUser) {
         try {
           // Lấy thông tin user từ AsyncStorage
           const userInfoString = await AsyncStorage.getItem("userInfo");
           const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
-
-          console.log("User info from storage:", userInfo);
-          console.log("Firebase user:", {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            emailVerified: firebaseUser.emailVerified
-          });
 
           if (userInfo) {
             // Dispatch user info to Redux
@@ -129,7 +119,7 @@ export default function Router() {
                 userId: userInfo.userId,
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
+                username: userInfo.username,
                 photoURL: firebaseUser.photoURL,
                 role: userInfo.role,
                 address: userInfo.address,
@@ -146,7 +136,7 @@ export default function Router() {
               setUser({
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
+                username: firebaseUser.displayName,
                 photoURL: firebaseUser.photoURL,
                 emailVerified: firebaseUser.emailVerified,
                 role: 'patient', // default role

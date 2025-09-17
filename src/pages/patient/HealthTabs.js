@@ -32,6 +32,7 @@ const Following = ({ user, nearestAppointment }) => {
     color: latestReading < 6 ? '#28a745' : latestReading < 7 ? '#ffc107' : '#dc3545',
     bgColor: latestReading < 6 ? '#d4edda' : latestReading < 7 ? '#fff3cd' : '#f8d7da',
   };
+console.log('ssssssssss ', user);
 
   return (
     <View style={styles.container}>
@@ -327,14 +328,14 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
       setLoading(true);
       try {
         // Fetch medications
-        const meds = await ApiBooking.getMedications(user?.userId);
-        if (meds) {
-          setMedicines({
-            sang: meds.filter((m) => m.time === 'sáng').map((m) => `${m.name} ${m.lieu_luong}`),
-            trua: meds.filter((m) => m.time === 'trưa').map((m) => `${m.name} ${m.lieu_luong}`),
-            toi: meds.filter((m) => m.time === 'tối').map((m) => `${m.name} ${m.lieu_luong}`),
-          });
-        }
+        // const meds = await ApiBooking.getMedications(user?.userId);
+        // if (meds) {
+        //   setMedicines({
+        //     sang: meds.filter((m) => m.time === 'sáng').map((m) => `${m.name} ${m.lieu_luong}`),
+        //     trua: meds.filter((m) => m.time === 'trưa').map((m) => `${m.name} ${m.lieu_luong}`),
+        //     toi: meds.filter((m) => m.time === 'tối').map((m) => `${m.name} ${m.lieu_luong}`),
+        //   });
+        // }
 
         // Fetch food
         const cached = await getWithExpiry('food');
@@ -499,7 +500,7 @@ const HealthTabs = () => {
   const [loading, setLoading] = useState(true);
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const user = useSelector((state) => state.auth.userInfo); // Standardized to userInfo
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     const fetchData = async () => {
