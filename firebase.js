@@ -1,8 +1,14 @@
 // src/firebase.js
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  initializeAuth, 
+  getReactNativePersistence  
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDcis3qmp7pQmd-pbnQ4ZhwcL9Q6SjDrSw",
@@ -16,13 +22,23 @@ const firebaseConfig = {
     "https://test-chat-firebase-8ef22-default-rtdb.asia-southeast1.firebasedatabase.app",
 };
 
-// Khởi tạo Firebase
+// Khởi tạo Firebase App (chỉ 1 lần)
 const app = initializeApp(firebaseConfig);
 
-// Export các dịch vụ cần dùng
-export const auth = getAuth(app);
+// 🚀 Fix: tránh lỗi "auth/already-initialized"
+let auth;
+try {
+  auth = getAuth(app); // thử lấy auth nếu đã có
+} catch (e) {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
+
+export { app };
+
+// Firebase services
+export { auth };
 export const db = getFirestore(app);
 export const provider = new GoogleAuthProvider();
-
-// Đây là Realtime Database
 export const dbCall = getDatabase(app);

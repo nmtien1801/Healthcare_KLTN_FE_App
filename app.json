@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "reactnative_zalo",
+    "name": "diateach_app",
     "slug": "snack-de4abce2-7deb-44a7-8255-b299a9869928",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,6 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "scheme": "diateach_app",
     "ios": {
       "supportsTablet": true
     },

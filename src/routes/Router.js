@@ -27,7 +27,7 @@ import AppointmentTab from "../pages/doctor/AppointmentTab";
 import PatientTab from "../pages/doctor/PatientTab";
 import SettingTabs from "../pages/doctor/SettingTabs";
 import Header from "../routes/Header";
-import { getAuth } from "firebase/auth";
+import { auth } from "../../firebase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Diagnosis from "../pages/patient/assistant/diagnosis";
 
@@ -103,53 +103,76 @@ export default function Router() {
   const user = useSelector((state) => state.auth.user);
   const [isLoading, setIsLoading] = useState(true);
 
-  const auth = getAuth();
-
   // authContext -> duy trì trạng thái đăng nhập của người dùng
   useEffect(() => {
-    const unsubscribe = auth.onIdTokenChanged(async (firebaseUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+      console.log("Firebase Auth State Changed:", firebaseUser ? "User logged in" : "User logged out");
+      
       if (firebaseUser) {
-        // Nếu đã có user trong Redux state, không cần làm gì thêm
-        if (user) {
-          setIsLoading(false);
-          return;
+        try {
+          // Lấy thông tin user từ AsyncStorage
+          const userInfoString = await AsyncStorage.getItem("userInfo");
+          const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+
+          console.log("User info from storage:", userInfo);
+          console.log("Firebase user:", {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            emailVerified: firebaseUser.emailVerified
+          });
+
+          if (userInfo) {
+            // Dispatch user info to Redux
+            dispatch(
+              setUser({
+                userId: userInfo.userId,
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                role: userInfo.role,
+                address: userInfo.address,
+                phone: userInfo.phone,
+                dob: userInfo.dob,
+                gender: userInfo.gender,
+                emailVerified: firebaseUser.emailVerified,
+              })
+            );
+          } else {
+            // Nếu không có userInfo trong storage, có thể user đăng nhập lần đầu
+            console.log("No user info in storage, user might need to complete registration");
+            dispatch(
+              setUser({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                emailVerified: firebaseUser.emailVerified,
+                role: 'patient', // default role
+              })
+            );
+          }
+
+          // Cập nhật access token
+          const token = await firebaseUser.getIdToken();
+          await AsyncStorage.setItem("access_Token", token);
+          
+        } catch (error) {
+          console.error("Error handling auth state:", error);
         }
-
-        // Nếu chưa có user trong Redux, thử lấy từ AsyncStorage
-        let userInfoString = await AsyncStorage.getItem("userInfo");
-        let userInfo = userInfoString ? JSON.parse(userInfoString) : null;
-
-        if (userInfo) {
-          dispatch(
-            setUser({
-              userId: userInfo.userId,
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-              role: userInfo.role,
-              address: userInfo.address,
-              phone: userInfo.phone,
-              dob: userInfo.dob,
-              gender: userInfo.gender,
-            })
-          );
-        }
-
-        // Cập nhật access token
-        await AsyncStorage.setItem("access_Token", firebaseUser.accessToken);
-        setIsLoading(false);
       } else {
         // User đã đăng xuất
-        console.log("User logged out");
-        setIsLoading(false);
-        dispatch(setUser(null));
+        console.log("User logged out, clearing state");
+        dispatch(clearUser());
         await AsyncStorage.clear();
       }
+      
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [auth, dispatch, user]);
+  }, [dispatch]);
 
   console.log("user ", user);
 
@@ -234,3 +257,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 });
+
+
