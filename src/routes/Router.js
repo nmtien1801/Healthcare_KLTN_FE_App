@@ -26,6 +26,7 @@ import InformationTab from "../pages/doctor/InformationTab";
 import AppointmentTab from "../pages/doctor/AppointmentTab";
 import PatientTab from "../pages/doctor/PatientTab";
 import SettingTabs from "../pages/doctor/SettingTabs";
+import AttendanceTab from "../pages/doctor/AttendanceTab";
 import Header from "../routes/Header";
 import { auth } from "../../firebase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -47,6 +48,7 @@ const DoctorTab = ({ route }) => {
                 : "chatbubble-ellipses-outline",
               "Bệnh nhân": focused ? "id-card" : "id-card-outline",
               "Lịch hẹn": focused ? "sparkles" : "sparkles-outline",
+              "Chấm công": focused ? "checkmark-done-circle" : "checkmark-done-circle-outline",
               "Thông tin": focused ? "person" : "person-outline",
               "Cài đặt": focused ? "person" : "person-outline",
             };
@@ -59,6 +61,7 @@ const DoctorTab = ({ route }) => {
         <Tab.Screen name="Tổng quan" component={OverviewTab} />
         <Tab.Screen name="Bệnh nhân" component={PatientTab} />
         <Tab.Screen name="Lịch hẹn" component={AppointmentTab} />
+        <Tab.Screen name="Chấm công" component={AttendanceTab} />
         <Tab.Screen name="Thông tin" component={InformationTab} />
         <Tab.Screen name="Cài đặt" component={SettingTabs} />
       </Tab.Navigator>
@@ -107,7 +110,7 @@ export default function Router() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       console.log("Firebase Auth State Changed:", firebaseUser ? "User logged in" : "User logged out");
-      
+
       if (firebaseUser) {
         try {
           // Lấy thông tin user từ AsyncStorage
@@ -157,7 +160,7 @@ export default function Router() {
           // Cập nhật access token
           const token = await firebaseUser.getIdToken();
           await AsyncStorage.setItem("access_Token", token);
-          
+
         } catch (error) {
           console.error("Error handling auth state:", error);
         }
@@ -167,7 +170,7 @@ export default function Router() {
         dispatch(clearUser());
         await AsyncStorage.clear();
       }
-      
+
       setIsLoading(false);
     });
 

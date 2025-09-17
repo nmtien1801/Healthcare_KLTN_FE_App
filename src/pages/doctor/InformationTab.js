@@ -1,40 +1,443 @@
-import React from 'react';
-import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { Edit } from "lucide-react-native";
+import ApiDoctor from "../../apis/ApiDoctor";
 
-const InformationTab = () => {
-  const handlePress = () => {
-    Alert.alert('Chào bạn!', 'Bạn đã nhấn nút.');
+// Hàm format ngày
+const formatDate = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  return d.toLocaleDateString("vi-VN");
+};
+
+// Component ProfileHeader
+const ProfileHeader = ({ doctor }) => (
+  <View style={styles.card}>
+    <Image
+      source={{ uri: doctor.avatar }}
+      style={styles.avatar}
+      resizeMode="cover"
+    />
+    <Text style={styles.name}>{doctor.name}</Text>
+    <Text style={styles.textMuted}>{doctor.specialty}</Text>
+    <Text style={styles.textMuted}>{doctor.hospital}</Text>
+  </View>
+);
+
+// Component InfoSection
+const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    fullName: doctor.basicInfo.fullName,
+    email: doctor.basicInfo.email,
+    phone: doctor.basicInfo.phone,
+    dob: doctor.basicInfo.dob,
+    specialty: doctor.professionalInfo.specialty,
+    hospital: doctor.professionalInfo.hospital,
+    experienceYears: doctor.professionalInfo.experienceYears,
+    license: doctor.professionalInfo.license,
+  });
+
+  const handleChange = (name, value) => {
+    setFormData({ ...formData, [name]: value });
   };
 
+  const handleSubmit = () => {
+    onSave(formData);
+  };
+
+  const fields = [
+    { label: "Họ và tên", name: "fullName", keyboardType: "default" },
+    { label: "Email", name: "email", keyboardType: "email-address" },
+    { label: "Số điện thoại", name: "phone", keyboardType: "phone-pad" },
+    { label: "Ngày sinh", name: "dob", keyboardType: "default" },
+    { label: "Chuyên khoa", name: "specialty", keyboardType: "default" },
+    { label: "Bệnh viện", name: "hospital", keyboardType: "default" },
+    { label: "Số năm kinh nghiệm", name: "experienceYears", keyboardType: "numeric" },
+    { label: "Số giấy phép", name: "license", keyboardType: "default" },
+  ];
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chào mừng đến với InformationTab!</Text>
-      <Text style={styles.text}>Đây là màn hình React Native cơ bản.</Text>
-      <Button title="Nhấn tôi" onPress={handlePress} color="#2196F3" />
+    <View style={styles.infoCard}>
+      <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
+      {isEditing ? (
+        <>
+          {fields.map((field, index) => (
+            <View style={styles.formGroup} key={index}>
+              <Text style={styles.label}>{field.label}</Text>
+              <TextInput
+                style={styles.input}
+                value={formData[field.name]}
+                onChangeText={(text) => handleChange(field.name, text)}
+                keyboardType={field.keyboardType}
+                placeholder={field.label}
+                placeholderTextColor="#999"
+              />
+            </View>
+          ))}
+          <View style={styles.buttonGroup}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+              <Text style={styles.buttonText}>Hủy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
+              <Text style={styles.buttonText}>Lưu</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : (
+        <View style={styles.infoContainer}>
+          {fields.map((field, index) => (
+            <View style={styles.infoRow} key={index}>
+              <Text style={styles.infoLabel}>{field.label}:</Text>
+              <Text style={styles.infoValue}>{formData[field.name]}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 };
 
+// Component SummaryCards
+const SummaryCards = ({ doctor }) => {
+  const cards = [
+    { title: "Chuyên khoa", value: doctor.professionalInfo.specialty, color: "#007bff" },
+    { title: "Bệnh viện", value: doctor.professionalInfo.hospital, color: "#28a745" },
+    { title: "Kinh nghiệm", value: doctor.professionalInfo.experienceYears, color: "#ffc107" },
+  ];
+
+  return (
+    <View style={styles.summaryContainer}>
+      {cards.map((item, index) => (
+        <View key={index} style={styles.summaryCard}>
+          <View style={[styles.iconContainer, { backgroundColor: `${item.color}20` }]}>
+            <Text style={[styles.icon, { color: item.color }]}>📋</Text>
+          </View>
+          <View>
+            <Text style={styles.summaryTitle}>{item.title}</Text>
+            <Text style={styles.summaryValue}>{item.value}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+// Component chính DoctorProfile
+export default function DoctorProfile() {
+  const [doctorData, setDoctorData] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDoctorInfo = async () => {
+      try {
+        const res = await ApiDoctor.getDoctorInfo();
+        const data = res;
+
+        const mappedData = {
+          avatar: data.userId.avatar,
+          name: data.userId.username,
+          specialty: `Bác sĩ chuyên khoa ${data.specialty || "Nội tiết"}`,
+          hospital: data.hospital,
+          basicInfo: {
+            fullName: data.userId.username,
+            email: data.userId.email,
+            phone: data.userId.phone,
+            dob: formatDate(data.userId.dob),
+          },
+          professionalInfo: {
+            specialty: data.specialty || "Nội tiết",
+            hospital: data.hospital,
+            experienceYears: `${data.exp} năm`,
+            license: data.giay_phep,
+          },
+        };
+
+        setDoctorData(mappedData);
+      } catch (error) {
+        console.error("Lỗi khi fetch doctor info:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctorInfo();
+  }, []);
+
+  const handleSave = async (updatedData) => {
+    try {
+      await ApiDoctor.updateDoctor({
+        username: updatedData.fullName,
+        email: updatedData.email,
+        phone: updatedData.phone,
+        dob: updatedData.dob.split("/").reverse().join("-"),
+        hospital: updatedData.hospital,
+        exp: parseInt(updatedData.experienceYears, 10),
+        giay_phep: updatedData.license,
+      });
+
+      setDoctorData((prevData) => ({
+        ...prevData,
+        basicInfo: {
+          ...prevData.basicInfo,
+          fullName: updatedData.fullName,
+          email: updatedData.email,
+          phone: updatedData.phone,
+          dob: updatedData.dob,
+        },
+        professionalInfo: {
+          ...prevData.professionalInfo,
+          specialty: updatedData.specialty,
+          hospital: updatedData.hospital,
+          experienceYears: updatedData.experienceYears,
+          license: updatedData.license,
+        },
+        name: updatedData.fullName,
+        specialty: `Bác sĩ chuyên khoa ${updatedData.specialty}`,
+        hospital: updatedData.hospital,
+      }));
+
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Lỗi khi cập nhật doctor info:", error);
+      Alert.alert("Lỗi", "Cập nhật thông tin thất bại!");
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007bff" />
+        <Text style={styles.loadingText}>Đang tải...</Text>
+      </View>
+    );
+  }
+
+  if (!doctorData) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Không có dữ liệu bác sĩ.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ProfileHeader doctor={doctorData} />
+      <InfoSection
+        doctor={doctorData}
+        isEditing={isEditing}
+        onSave={handleSave}
+        onCancel={handleCancel}
+      />
+      {!isEditing && (
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => setIsEditing(true)}
+        >
+          <Edit color="#fff" size={18} />
+          <Text style={styles.buttonText}>Chỉnh sửa thông tin</Text>
+        </TouchableOpacity>
+      )}
+      <SummaryCards doctor={doctorData} />
+    </ScrollView>
+  );
+}
+
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f8f9fa",
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
     padding: 20,
-    backgroundColor: '#fff',
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    alignItems: "center",
+    marginTop: 46,
   },
-  title: {
-    fontSize: 24,
-    color: '#2196F3',
-    marginBottom: 12,
-    fontWeight: 'bold',
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "#e9ecef",
   },
-  text: {
+  name: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#212529",
+  },
+  textMuted: {
     fontSize: 16,
-    color: '#333',
-    marginBottom: 24,
-    textAlign: 'center',
+    color: "#6c757d",
+    marginTop: 4,
+  },
+  infoCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#212529",
+    marginBottom: 16,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#495057",
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ced4da",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: "#fff",
+  },
+  buttonGroup: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 16,
+  },
+  cancelButton: {
+    backgroundColor: "#6c757d",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  saveButton: {
+    backgroundColor: "#007bff",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  infoContainer: {
+    flexDirection: "column",
+  },
+  infoRow: {
+    flexDirection: "row",
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  infoLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#495057",
+    flex: 1,
+  },
+  infoValue: {
+    fontSize: 16,
+    color: "#212529",
+    flex: 2,
+  },
+  editButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#007bff",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  summaryContainer: {
+    flexDirection: "column",
+  },
+  summaryCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  iconContainer: {
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 16,
+  },
+  icon: {
+    fontSize: 24,
+  },
+  summaryTitle: {
+    fontSize: 14,
+    color: "#6c757d",
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#212529",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: "#495057",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#dc3545",
   },
 });
-
-export default InformationTab;
