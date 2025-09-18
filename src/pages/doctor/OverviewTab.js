@@ -554,6 +554,7 @@ const styles = StyleSheet.create({
   },
   summaryContainer: {
     marginBottom: 16,
+    marginTop: 12,
   },
   summaryCard: {
     flexDirection: "row",
