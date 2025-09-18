@@ -9,6 +9,7 @@ import {
     ScrollView,
     Dimensions,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { User, Clock, CalendarDays, Stethoscope, FileText } from "lucide-react-native";
 import { TYPE_OPTIONS, STATUS_OPTIONS } from "../../../utils/appointmentConstants";
 
@@ -34,9 +35,9 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
         if (appointment) {
             setFormData({
                 patientName: appointment.patientName || "",
-                patientAge: appointment.patientAge?.toString() || "", // Chuyển sang string để hiển thị
+                patientAge: appointment.patientAge?.toString() || "",
                 patientDisease: appointment.patientDisease || "",
-                date: appointment.date || "", // Đảm bảo định dạng DD/MM/YYYY
+                date: appointment.date || "",
                 time: appointment.time || "",
                 type: appointment.type || "Tái khám",
                 reason: appointment.reason || "",
@@ -114,27 +115,15 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
             }
         } else if (field === "type") {
             if (!value) {
-                setFormData({ ...formData, type: "" });
-                delete newErrors.type;
+                newErrors.type = "Loại khám là bắt buộc";
             } else {
-                const validTypes = TYPE_OPTIONS.map(opt => opt.value);
-                if (!validTypes.includes(value)) {
-                    newErrors.type = "Loại khám phải là: Tái khám, Khám mới, hoặc Tư vấn";
-                } else {
-                    delete newErrors.type;
-                }
+                delete newErrors.type;
             }
         } else if (field === "status") {
             if (!value) {
-                setFormData({ ...formData, status: "" });
-                delete newErrors.status;
+                newErrors.status = "Tình trạng là bắt buộc";
             } else {
-                const validStatuses = STATUS_OPTIONS.map(opt => opt.value);
-                if (!validStatuses.includes(value)) {
-                    newErrors.status = "Tình trạng phải là: Đã xác nhận, Chờ xác nhận, Đã hủy, hoặc Hoàn thành";
-                } else {
-                    delete newErrors.status;
-                }
+                delete newErrors.status;
             }
         } else {
             if (errors[field]) {
@@ -188,7 +177,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                             <View style={styles.inputGroup}>
                                 <View style={styles.labelContainer}>
                                     <User size={16} color="#1a3c6e" />
-                                    <Text style={styles.label}>Tên bệnh nhân *</Text>
+                                    <Text style={styles.label}>Tên bệnh nhân</Text>
                                 </View>
                                 <TextInput
                                     style={[styles.input, errors.patientName && styles.inputError]}
@@ -204,7 +193,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
                                     <View style={styles.labelContainer}>
-                                        <Text style={styles.label}>Tuổi *</Text>
+                                        <Text style={styles.label}>Tuổi</Text>
                                     </View>
                                     <TextInput
                                         style={[styles.input, errors.patientAge && styles.inputError]}
@@ -220,7 +209,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                 </View>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
                                     <View style={styles.labelContainer}>
-                                        <Text style={styles.label}>Bệnh *</Text>
+                                        <Text style={styles.label}>Bệnh</Text>
                                     </View>
                                     <TextInput
                                         style={[styles.input, errors.patientDisease && styles.inputError]}
@@ -241,7 +230,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
                                     <View style={styles.labelContainer}>
                                         <CalendarDays size={16} color="#1a3c6e" />
-                                        <Text style={styles.label}>Ngày hẹn (DD/MM/YYYY) *</Text>
+                                        <Text style={styles.label}>Ngày hẹn</Text>
                                     </View>
                                     <TextInput
                                         style={[styles.input, errors.date && styles.inputError]}
@@ -256,7 +245,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
                                     <View style={styles.labelContainer}>
                                         <Clock size={16} color="#1a3c6e" />
-                                        <Text style={styles.label}>Giờ hẹn *</Text>
+                                        <Text style={styles.label}>Giờ hẹn</Text>
                                     </View>
                                     <TextInput
                                         style={[styles.input, errors.time && styles.inputError]}
@@ -272,21 +261,29 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
                                     <View style={styles.labelContainer}>
-                                        <Text style={styles.label}>Loại khám *</Text>
+                                        <Text style={styles.label}>Loại khám</Text>
                                     </View>
-                                    <TextInput
-                                        style={[styles.input, errors.type && styles.inputError]}
-                                        value={formData.type}
-                                        onChangeText={(value) => handleChange("type", value)}
-                                        placeholder="Tái khám, Khám mới, Tư vấn"
-                                        placeholderTextColor="#999"
-                                    />
+                                    <View style={[styles.pickerContainer, errors.type && styles.inputError]}>
+                                        <Picker
+                                            selectedValue={formData.type}
+                                            onValueChange={(value) => handleChange("type", value)}
+                                            style={styles.picker}
+                                        >
+                                            {TYPE_OPTIONS.map((option) => (
+                                                <Picker.Item
+                                                    key={option.value}
+                                                    label={option.label}
+                                                    value={option.value}
+                                                />
+                                            ))}
+                                        </Picker>
+                                    </View>
                                     {errors.type && <Text style={styles.errorText}>{errors.type}</Text>}
                                 </View>
                                 <View style={[styles.inputGroup, styles.halfWidth]}>
                                     <View style={styles.labelContainer}>
                                         <Stethoscope size={16} color="#1a3c6e" />
-                                        <Text style={styles.label}>Bác sĩ *</Text>
+                                        <Text style={styles.label}>Bác sĩ</Text>
                                     </View>
                                     <TextInput
                                         style={[styles.input, errors.doctor && styles.inputError]}
@@ -302,7 +299,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                             </View>
                             <View style={styles.inputGroup}>
                                 <View style={styles.labelContainer}>
-                                    <Text style={styles.label}>Lý do khám *</Text>
+                                    <Text style={styles.label}>Lý do khám</Text>
                                 </View>
                                 <TextInput
                                     style={[styles.textArea, errors.reason && styles.inputError]}
@@ -334,15 +331,23 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                             </View>
                             <View style={styles.inputGroup}>
                                 <View style={styles.labelContainer}>
-                                    <Text style={styles.label}>Tình trạng *</Text>
+                                    <Text style={styles.label}>Tình trạng</Text>
                                 </View>
-                                <TextInput
-                                    style={[styles.input, errors.status && styles.inputError]}
-                                    value={formData.status}
-                                    onChangeText={(value) => handleChange("status", value)}
-                                    placeholder="Đã xác nhận, Chờ xác nhận, Đã hủy, Hoàn thành"
-                                    placeholderTextColor="#999"
-                                />
+                                <View style={[styles.pickerContainer, errors.status && styles.inputError]}>
+                                    <Picker
+                                        selectedValue={formData.status}
+                                        onValueChange={(value) => handleChange("status", value)}
+                                        style={styles.picker}
+                                    >
+                                        {STATUS_OPTIONS.map((option) => (
+                                            <Picker.Item
+                                                key={option.value}
+                                                label={option.label}
+                                                value={option.value}
+                                            />
+                                        ))}
+                                    </Picker>
+                                </View>
                                 {errors.status && <Text style={styles.errorText}>{errors.status}</Text>}
                             </View>
                         </View>
@@ -446,6 +451,17 @@ const styles = StyleSheet.create({
     },
     inputError: {
         borderColor: "#dc3545",
+    },
+    pickerContainer: {
+        backgroundColor: "#f0f2f5",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#e0e4e8",
+        overflow: "hidden",
+    },
+    picker: {
+        fontSize: width * 0.04,
+        color: "#333",
     },
     textArea: {
         backgroundColor: "#f0f2f5",

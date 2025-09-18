@@ -10,17 +10,16 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
-  Linking,
   Dimensions,
 } from "react-native";
-import { Search, Filter, Eye, Edit, MessageSquare, Phone, ChevronDown, X, Bot, Send } from "lucide-react-native";
+import { Search, Filter, Eye, Edit, MessageSquare, Phone, ChevronDown, X, Bot, Send, ArrowLeft } from "lucide-react-native";
 import { Picker } from "@react-native-picker/picker";
 import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from "firebase/firestore";
 import { useSelector } from "react-redux";
 import { db } from "../../../firebase";
 import { acceptCall, endCall, createCall, generateJitsiUrl } from "../../components/call/functionCall";
 
-// Mock data với nhiều bệnh nhân hơn
+// Mock data với UID cho từng bệnh nhân để chat động
 const initialPatients = [
   {
     id: 1,
@@ -31,8 +30,8 @@ const initialPatients = [
     disease: "Tăng huyết áp, Tiểu đường type 2",
     patientId: "BHYT: BH123456789",
     status: "Cần theo dõi",
-    statusColor: "#dc2626",
-    statusTextColor: "#fff",
+    statusColor: "bg-danger",
+    statusTextColor: "text-white",
     lastVisit: "15/06/2025",
     lastVisitDate: new Date("2025-06-15"),
     phone: "0901234567",
@@ -45,215 +44,131 @@ const initialPatients = [
   },
   {
     id: 2,
-    name: "Nguyễn Thị Lan",
-    age: 45,
-    patientCount: "45 tuổi",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-    disease: "Viêm khớp dạng thấp",
+    name: "Nguyễn Thị Mai",
+    age: 52,
+    patientCount: "52 tuổi",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    disease: "Tiểu đường type 2",
     patientId: "BHYT: BH987654321",
     status: "Đang điều trị",
-    statusColor: "#f59e0b",
-    statusTextColor: "#1f2937",
-    lastVisit: "10/09/2025",
-    lastVisitDate: new Date("2025-09-10"),
+    statusColor: "bg-warning",
+    statusTextColor: "text-dark",
+    lastVisit: "20/06/2025",
+    lastVisitDate: new Date("2025-06-20"),
     phone: "0912345678",
-    email: "nguyenthilan@email.com",
-    address: "456 Đường XYZ, Quận 7, TP.HCM",
-    bloodType: "O",
-    allergies: "Không có",
-    emergencyContact: "Nguyễn Văn Hùng - 0932145678 (Chồng)",
-    notes: "Bệnh nhân đang dùng thuốc chống viêm, cần tái khám định kỳ",
+    email: "nguyenthimai@email.com",
+    address: "456 Đường DEF, Quận 3, TP.HCM",
+    bloodType: "B",
+    allergies: "",
+    emergencyContact: "Nguyễn Văn Nam - 0976543210 (Con trai)",
+    notes: "Đang điều trị insulin, cần kiểm tra định kỳ",
   },
   {
     id: 3,
     name: "Lê Minh Tuấn",
-    age: 30,
-    patientCount: "30 tuổi",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-    disease: "Viêm dạ dày mãn tính",
+    age: 35,
+    patientCount: "35 tuổi",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    disease: "Viêm phổi",
     patientId: "BHYT: BH456789123",
-    status: "Ổn định",
-    statusColor: "#16a34a",
-    statusTextColor: "#fff",
-    lastVisit: "01/08/2025",
-    lastVisitDate: new Date("2025-08-01"),
+    status: "Cần theo dõi",
+    statusColor: "bg-danger",
+    statusTextColor: "text-white",
+    lastVisit: "21/06/2025",
+    lastVisitDate: new Date("2025-06-21"),
     phone: "0923456789",
     email: "leminhtuan@email.com",
-    address: "789 Đường DEF, TP. Thủ Đức, TP.HCM",
-    bloodType: "B",
-    allergies: "Hải sản",
-    emergencyContact: "Lê Thị Hồng - 0943216789 (Mẹ)",
-    notes: "Bệnh nhân cần duy trì chế độ ăn uống lành mạnh",
+    address: "789 Đường GHI, Quận 5, TP.HCM",
+    bloodType: "O",
+    allergies: "Không có",
+    emergencyContact: "Lê Thị Lan - 0965432109 (Vợ)",
+    notes: "Đã hồi phục tốt, cần theo dõi thêm 1 tuần",
   },
   {
     id: 4,
     name: "Phạm Thị Hương",
-    age: 52,
-    patientCount: "52 tuổi",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-    disease: "Suy giáp",
+    age: 72,
+    patientCount: "72 tuổi",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    disease: "Suy tim, Tăng huyết áp",
     patientId: "BHYT: BH789123456",
-    status: "Đang điều trị",
-    statusColor: "#f59e0b",
-    statusTextColor: "#1f2937",
-    lastVisit: "20/08/2025",
-    lastVisitDate: new Date("2025-08-20"),
+    status: "Ổn định",
+    statusColor: "bg-success",
+    statusTextColor: "text-white",
+    lastVisit: "18/06/2025",
+    lastVisitDate: new Date("2025-06-18"),
     phone: "0934567890",
-    email: "phamthihuong@email.com",
-    address: "101 Đường GHI, Quận 3, TP.HCM",
+    email: "",
+    address: "321 Đường JKL, Quận 7, TP.HCM",
     bloodType: "AB",
-    allergies: "Không có",
-    emergencyContact: "Phạm Văn Nam - 0956789012 (Chồng)",
-    notes: "Bệnh nhân cần kiểm tra hormone định kỳ",
+    allergies: "Aspirin",
+    emergencyContact: "Phạm Văn Minh - 0954321098 (Con trai)",
+    notes: "Tình trạng ổn định, tiếp tục dùng thuốc theo đơn",
   },
   {
     id: 5,
-    name: "Võ Quốc Anh",
-    age: 27,
-    patientCount: "27 tuổi",
-    avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&h=150&fit=crop&crop=face",
-    disease: "Hen suyễn",
-    patientId: "BHYT: BH321654987",
+    name: "Phạm Thị Hương1",
+    age: 72,
+    patientCount: "72 tuổi",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    disease: "Suy tim, Tăng huyết áp",
+    patientId: "BHYT: BH789123456",
     status: "Ổn định",
-    statusColor: "#16a34a",
-    statusTextColor: "#fff",
-    lastVisit: "05/09/2025",
-    lastVisitDate: new Date("2025-09-05"),
-    phone: "0945678901",
-    email: "voquocanh@email.com",
-    address: "202 Đường JKL, Quận 5, TP.HCM",
-    bloodType: "A",
-    allergies: "Bụi, lông thú",
-    emergencyContact: "Võ Thị Ngọc - 0967890123 (Chị)",
-    notes: "Bệnh nhân cần tránh môi trường ô nhiễm",
+    statusColor: "bg-success",
+    statusTextColor: "text-white",
+    lastVisit: "18/06/2025",
+    lastVisitDate: new Date("2025-06-18"),
+    phone: "0934567890",
+    email: "",
+    address: "321 Đường JKL, Quận 7, TP.HCM",
+    bloodType: "AB",
+    allergies: "Aspirin",
+    emergencyContact: "Phạm Văn Minh - 0954321098 (Con trai)",
+    notes: "Tình trạng ổn định, tiếp tục dùng thuốc theo đơn",
   },
   {
     id: 6,
-    name: "Đỗ Thị Minh Thư",
-    age: 60,
-    patientCount: "60 tuổi",
-    avatar: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=150&h=150&fit=crop&crop=face",
-    disease: "Loãng xương, Tăng huyết áp",
-    patientId: "BHYT: BH654987321",
-    status: "Cần theo dõi",
-    statusColor: "#dc2626",
-    statusTextColor: "#fff",
-    lastVisit: "25/07/2025",
-    lastVisitDate: new Date("2025-07-25"),
-    phone: "0956789012",
-    email: "dothiminhthu@email.com",
-    address: "303 Đường MNO, Quận 10, TP.HCM",
-    bloodType: "O",
-    allergies: "Không có",
-    emergencyContact: "Đỗ Văn Hùng - 0978901234 (Con trai)",
-    notes: "Bệnh nhân cần bổ sung canxi và tái khám định kỳ",
+    name: "Phạm Thị Hương12",
+    age: 72,
+    patientCount: "72 tuổi",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    disease: "Suy tim, Tăng huyết áp",
+    patientId: "BHYT: BH789123456",
+    status: "Ổn định",
+    statusColor: "bg-success",
+    statusTextColor: "text-white",
+    lastVisit: "18/06/2025",
+    lastVisitDate: new Date("2025-06-18"),
+    phone: "0934567890",
+    email: "",
+    address: "321 Đường JKL, Quận 7, TP.HCM",
+    bloodType: "AB",
+    allergies: "Aspirin",
+    emergencyContact: "Phạm Văn Minh - 0954321098 (Con trai)",
+    notes: "Tình trạng ổn định, tiếp tục dùng thuốc theo đơn",
   },
   {
     id: 7,
-    name: "Hoàng Văn Đức",
-    age: 39,
-    patientCount: "39 tuổi",
-    avatar: "https://images.unsplash.com/photo-1522552557456-20e6e4c00b6b?w=150&h=150&fit=crop&crop=face",
-    disease: "Viêm gan B",
-    patientId: "BHYT: BH147258369",
-    status: "Đang điều trị",
-    statusColor: "#f59e0b",
-    statusTextColor: "#1f2937",
-    lastVisit: "12/09/2025",
-    lastVisitDate: new Date("2025-09-12"),
-    phone: "0967890123",
-    email: "hoangvanduc@email.com",
-    address: "404 Đường PQR, Quận Bình Thạnh, TP.HCM",
-    bloodType: "B",
-    allergies: "Không có",
-    emergencyContact: "Hoàng Thị Lan - 0989012345 (Vợ)",
-    notes: "Bệnh nhân đang dùng thuốc kháng virus",
-  },
-  {
-    id: 8,
-    name: "Trương Thị Kim Ngân",
-    age: 33,
-    patientCount: "33 tuổi",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-    disease: "Thiếu máu",
-    patientId: "BHYT: BH258369147",
-    status: "Ổn định",
-    statusColor: "#16a34a",
-    statusTextColor: "#fff",
-    lastVisit: "30/08/2025",
-    lastVisitDate: new Date("2025-08-30"),
-    phone: "0978901234",
-    email: "truongthikimngan@email.com",
-    address: "505 Đường STU, Quận Gò Vấp, TP.HCM",
-    bloodType: "A",
-    allergies: "Thuốc sulfa",
-    emergencyContact: "Trương Văn Hòa - 0990123456 (Chồng)",
-    notes: "Bệnh nhân cần bổ sung sắt và vitamin B12",
-  },
-  {
-    id: 9,
-    name: "Bùi Văn Hùng",
-    age: 55,
-    patientCount: "55 tuổi",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    disease: "Bệnh phổi tắc nghẽn mãn tính (COPD)",
-    patientId: "BHYT: BH369147258",
-    status: "Cần theo dõi",
-    statusColor: "#dc2626",
-    statusTextColor: "#fff",
-    lastVisit: "18/08/2025",
-    lastVisitDate: new Date("2025-08-18"),
-    phone: "0989012345",
-    email: "buivanhung@email.com",
-    address: "606 Đường VWX, Quận 12, TP.HCM",
-    bloodType: "AB",
-    allergies: "Không có",
-    emergencyContact: "Bùi Thị Mai - 0902345678 (Vợ)",
-    notes: "Bệnh nhân cần sử dụng máy thở định kỳ",
-  },
-  {
-    id: 10,
-    name: "Lý Thị Hồng Nhung",
-    age: 29,
-    patientCount: "29 tuổi",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-    disease: "Suy thận mạn giai đoạn 2",
-    patientId: "BHYT: BH741852963",
-    status: "Đang điều trị",
-    statusColor: "#f59e0b",
-    statusTextColor: "#1f2937",
-    lastVisit: "05/09/2025",
-    lastVisitDate: new Date("2025-09-05"),
-    phone: "0990123456",
-    email: "lythihongnhung@email.com",
-    address: "707 Đường YZA, Quận Tân Bình, TP.HCM",
-    bloodType: "O",
-    allergies: "Không có",
-    emergencyContact: "Lý Văn Minh - 0913456789 (Anh trai)",
-    notes: "Bệnh nhân cần kiểm soát chế độ ăn và tái khám hàng tháng",
-  },
-  {
-    id: 11,
-    name: "Ngô Văn Tâm",
+    name: "Phạm Thị Hương3",
     age: 72,
     patientCount: "72 tuổi",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-    disease: "Suy tim độ II, Tiểu đường type 2",
-    patientId: "BHYT: BH852963741",
-    status: "Cần theo dõi",
-    statusColor: "#dc2626",
-    statusTextColor: "#fff",
-    lastVisit: "01/09/2025",
-    lastVisitDate: new Date("2025-09-01"),
-    phone: "0902345678",
-    email: "ngovantam@email.com",
-    address: "808 Đường BCD, Quận 9, TP.HCM",
-    bloodType: "B",
-    allergies: "Không có",
-    emergencyContact: "Ngô Thị Lan - 0924567890 (Con gái)",
-    notes: "Bệnh nhân cần dùng thuốc lợi tiểu và kiểm tra đường huyết",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    disease: "Suy tim, Tăng huyết áp",
+    patientId: "BHYT: BH789123456",
+    status: "Ổn định",
+    statusColor: "bg-success",
+    statusTextColor: "text-white",
+    lastVisit: "18/06/2025",
+    lastVisitDate: new Date("2025-06-18"),
+    phone: "0934567890",
+    email: "",
+    address: "321 Đường JKL, Quận 7, TP.HCM",
+    bloodType: "AB",
+    allergies: "Aspirin",
+    emergencyContact: "Phạm Văn Minh - 0954321098 (Con trai)",
+    notes: "Tình trạng ổn định, tiếp tục dùng thuốc theo đơn",
   },
-];
+]
 
 // ViewPatientModal
 const ViewPatientModal = ({ show, onHide, patient, onEdit }) => (
@@ -316,6 +231,12 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
   const [formData, setFormData] = useState(patient || {});
   const handleChange = (key, value) => setFormData({ ...formData, [key]: value });
 
+  useEffect(() => {
+    if (patient) {
+      setFormData(patient);
+    }
+  }, [patient]);
+
   return (
     <Modal visible={show} animationType="slide" transparent={true}>
       <View style={styles.modalContainer}>
@@ -326,39 +247,39 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
               <X color="#6b7280" size={24} />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody}>
+          <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
             <TextInput
               style={styles.modalInput}
-              value={formData.name}
+              value={formData.name || ""}
               onChangeText={(text) => handleChange("name", text)}
               placeholder="Tên bệnh nhân"
               placeholderTextColor="#9ca3af"
             />
             <TextInput
               style={styles.modalInput}
-              value={String(formData.age)}
-              onChangeText={(text) => handleChange("age", Number(text))}
+              value={formData.age ? String(formData.age) : ""}
+              onChangeText={(text) => handleChange("age", text ? parseInt(text, 10) : "")}
               placeholder="Tuổi"
               keyboardType="numeric"
               placeholderTextColor="#9ca3af"
             />
             <TextInput
               style={styles.modalInput}
-              value={formData.disease}
+              value={formData.disease || ""}
               onChangeText={(text) => handleChange("disease", text)}
               placeholder="Bệnh lý"
               placeholderTextColor="#9ca3af"
             />
             <TextInput
               style={styles.modalInput}
-              value={formData.patientId}
+              value={formData.patientId || ""}
               onChangeText={(text) => handleChange("patientId", text)}
               placeholder="Mã BHYT"
               placeholderTextColor="#9ca3af"
             />
             <TextInput
               style={styles.modalInput}
-              value={formData.phone}
+              value={formData.phone || ""}
               onChangeText={(text) => handleChange("phone", text)}
               placeholder="Số điện thoại"
               keyboardType="phone-pad"
@@ -366,7 +287,7 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
             />
             <TextInput
               style={styles.modalInput}
-              value={formData.email}
+              value={formData.email || ""}
               onChangeText={(text) => handleChange("email", text)}
               placeholder="Email"
               keyboardType="email-address"
@@ -374,35 +295,35 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
             />
             <TextInput
               style={styles.modalInput}
-              value={formData.address}
+              value={formData.address || ""}
               onChangeText={(text) => handleChange("address", text)}
               placeholder="Địa chỉ"
               placeholderTextColor="#9ca3af"
             />
             <TextInput
               style={styles.modalInput}
-              value={formData.bloodType}
+              value={formData.bloodType || ""}
               onChangeText={(text) => handleChange("bloodType", text)}
               placeholder="Nhóm máu"
               placeholderTextColor="#9ca3af"
             />
             <TextInput
               style={styles.modalInput}
-              value={formData.allergies}
+              value={formData.allergies || ""}
               onChangeText={(text) => handleChange("allergies", text)}
               placeholder="Dị ứng"
               placeholderTextColor="#9ca3af"
             />
             <TextInput
               style={styles.modalInput}
-              value={formData.emergencyContact}
+              value={formData.emergencyContact || ""}
               onChangeText={(text) => handleChange("emergencyContact", text)}
               placeholder="Liên hệ khẩn cấp"
               placeholderTextColor="#9ca3af"
             />
             <TextInput
               style={styles.modalInput}
-              value={formData.notes}
+              value={formData.notes || ""}
               onChangeText={(text) => handleChange("notes", text)}
               placeholder="Ghi chú"
               multiline
@@ -410,7 +331,7 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
               placeholderTextColor="#9ca3af"
             />
             <Picker
-              selectedValue={formData.status}
+              selectedValue={formData.status || "Ổn định"}
               onValueChange={(value) => handleChange("status", value)}
               style={styles.modalPicker}
             >
@@ -447,46 +368,56 @@ export default function PatientTab({ handleStartCall }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showChatModal, setShowChatModal] = useState(false);
+  const [chatPatient, setChatPatient] = useState(null);
+  const [showChatbot, setShowChatbot] = useState(false); // chat với bệnh nhân
   const [messageInput, setMessageInput] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const [isSending, setIsSending] = useState(false);
   const user = useSelector((state) => state.auth.userInfo);
   const senderId = user?.uid;
   const receiverId = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
-  const roomChats = [senderId, receiverId].sort().join("_");
   const flatListRef = useRef(null);
 
-  // Firebase chat
+
+  const roomChats = [senderId, receiverId].sort().join('_');
   useEffect(() => {
     if (!senderId) return;
 
-    const q = query(collection(db, "chats", roomChats, "messages"), orderBy("timestamp", "asc"));
-    const unsub = onSnapshot(
-      q,
-      (snapshot) => {
-        const messages = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            text: data.message || data.text || "",
-            sender: data.senderId === senderId ? "doctor" : "patient",
-            timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
-          };
-        });
-        setChatMessages(messages);
-      },
-      (error) => console.error("Firebase listener error:", error)
+    const q = query(
+      collection(db, 'chats', roomChats, 'messages'),
+      orderBy('timestamp', 'asc')
     );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const messages = snapshot.docs.map(doc => {
+        const data = doc.data();
+
+        return {
+          id: doc.id,
+          text: data.message || data.text || '', // Hỗ trợ cả 'message' và 'text'
+          sender: data.senderId === senderId ? "doctor" : "patient",
+          timestamp: data.timestamp ? data.timestamp.toDate() : new Date(), // Chuyển đổi Firestore timestamp
+          originalData: data // Lưu trữ dữ liệu gốc để debug
+        };
+      });
+
+      setChatMessages(messages);
+    }, (error) => {
+      console.error('Firebase listener error:', error);
+    });
 
     return () => unsub();
   }, [senderId, roomChats]);
 
   // Scroll to bottom khi có tin nhắn mới
   useEffect(() => {
-    if (showChatModal && chatMessages.length > 0 && flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: true });
+    if (showChatbot && chatMessages.length > 0) {
+      const chatContainer = document.querySelector('.chat-messages');
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
     }
-  }, [chatMessages, showChatModal]);
+  }, [chatMessages, showChatbot]);
 
   const sendMessage = async () => {
     if (messageInput.trim() === "") return;
@@ -495,12 +426,13 @@ export default function PatientTab({ handleStartCall }) {
     const userMessage = messageInput.trim();
     setMessageInput("");
 
+    // Thêm tin nhắn vào UI ngay lập tức
     const tempMessage = {
-      id: Date.now().toString(),
+      id: Date.now().toString(), // Tạo ID tạm thời
       text: userMessage,
       sender: "doctor",
       timestamp: new Date(),
-      isTemp: true,
+      isTemp: true // Đánh dấu là tin nhắn tạm thời
     };
 
     setChatMessages((prev) => [...prev, tempMessage]);
@@ -509,16 +441,23 @@ export default function PatientTab({ handleStartCall }) {
       const docRef = await addDoc(collection(db, "chats", roomChats, "messages"), {
         senderId,
         receiverId,
-        message: userMessage,
-        timestamp: serverTimestamp(),
+        message: userMessage, // Sử dụng 'message' để nhất quán
+        timestamp: serverTimestamp()
       });
 
-      setChatMessages((prev) =>
-        prev.map((msg) => (msg.isTemp && msg.text === userMessage ? { ...msg, id: docRef.id, isTemp: false } : msg))
-      );
+      // Cập nhật tin nhắn tạm thời thành tin nhắn thật
+      setChatMessages((prev) => prev.map(msg =>
+        msg.isTemp && msg.text === userMessage
+          ? { ...msg, id: docRef.id, isTemp: false }
+          : msg
+      ));
+
     } catch (err) {
-      console.error("Error sending message:", err);
-      setChatMessages((prev) => prev.filter((msg) => !msg.isTemp || msg.text !== userMessage));
+      console.error('Error sending message:', err);
+      // Xóa tin nhắn khỏi UI nếu gửi thất bại
+      setChatMessages((prev) => prev.filter(msg => !msg.isTemp || msg.text !== userMessage));
+      // Có thể thay thế bằng toast notification sau này
+      console.error("Lỗi kết nối đến máy chủ:", err);
     } finally {
       setIsSending(false);
     }
@@ -568,12 +507,13 @@ export default function PatientTab({ handleStartCall }) {
       "Ổn định": { color: "#16a34a", textColor: "#fff" },
     };
 
+    // Parse lastVisit nếu cần, nhưng giả sử giữ nguyên string
     const updated = {
       ...updatedPatient,
       patientCount: `${updatedPatient.age} tuổi`,
-      statusColor: statusColors[updatedPatient.status].color,
-      statusTextColor: statusColors[updatedPatient.status].textColor,
-      lastVisitDate: new Date(updatedPatient.lastVisit),
+      statusColor: statusColors[updatedPatient.status]?.color || "#16a34a",
+      statusTextColor: statusColors[updatedPatient.status]?.textColor || "#fff",
+      lastVisitDate: updatedPatient.lastVisitDate || new Date(),
     };
 
     setPatientList(patientList.map((p) => (p.id === updated.id ? updated : p)));
@@ -592,6 +532,20 @@ export default function PatientTab({ handleStartCall }) {
     setShowEditModal(true);
   };
 
+  // Mở chat với bệnh nhân cụ thể
+  const handleOpenChat = (patient) => {
+    setChatPatient(patient);
+    setShowChatModal(true);
+  };
+
+  // Đóng chat
+  const handleCloseChat = () => {
+    setShowChatModal(false);
+    setChatPatient(null);
+    setChatMessages([]);
+    setMessageInput("");
+  };
+
   // Điều hướng trang
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -600,7 +554,7 @@ export default function PatientTab({ handleStartCall }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Quản lý bệnh nhân</Text>
 
       {/* Thống kê */}
@@ -679,7 +633,7 @@ export default function PatientTab({ handleStartCall }) {
             <View key={patient.id} style={styles.patientRow}>
               <View style={styles.patientInfo}>
                 <Image source={{ uri: patient.avatar }} style={styles.avatar} />
-                <View>
+                <View style={styles.patientDetails}>
                   <Text style={styles.patientName}>{patient.name}</Text>
                   <Text style={styles.patientAge}>{patient.patientCount}</Text>
                   <Text style={styles.patientDetail}>{patient.disease}</Text>
@@ -705,13 +659,13 @@ export default function PatientTab({ handleStartCall }) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => setShowChatModal(true)}
+                  onPress={() => handleOpenChat(patient)}
                 >
                   <MessageSquare color="#2563eb" size={20} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => handleStartCall(user, { uid: "cq6SC0A1RZXdLwFE1TKGRJG8fgl2" }, "doctor")}
+                  onPress={() => handleStartCall(user, { uid: patient.uid }, "doctor")}
                 >
                   <Phone color="#f59e0b" size={20} />
                 </TouchableOpacity>
@@ -722,7 +676,7 @@ export default function PatientTab({ handleStartCall }) {
       </View>
 
       {/* Pagination */}
-      {filteredAndSortedPatients.length > 0 && (
+      {filteredAndSortedPatients.length > patientsPerPage && (
         <View style={styles.paginationContainer}>
           <TouchableOpacity
             style={[styles.pageButton, currentPage === 1 && styles.disabledButton]}
@@ -750,25 +704,41 @@ export default function PatientTab({ handleStartCall }) {
         </View>
       )}
 
-      {/* Chat Modal */}
+      {/* Chat Modal - Cải thiện UI mobile: full height, bottom sheet style, better bubbles */}
       <Modal visible={showChatModal} animationType="slide" transparent={true}>
-        <View style={styles.modalContainer}>
+        <View style={styles.chatModalOverlay}>
+          <TouchableOpacity style={styles.chatModalBackdrop} activeOpacity={1} onPress={handleCloseChat} />
           <View style={styles.chatModalContent}>
             <View style={styles.chatHeader}>
-              <Text style={styles.chatHeaderTitle}>Chat với bệnh nhân</Text>
-              <TouchableOpacity onPress={() => setShowChatModal(false)}>
-                <X color="#fff" size={24} />
+              <TouchableOpacity onPress={handleCloseChat} style={styles.backButton}>
+                <ArrowLeft color="#fff" size={24} />
               </TouchableOpacity>
+              <Text style={styles.chatHeaderTitle}>{chatPatient?.name || "Bệnh nhân"}</Text>
+              <View style={styles.headerSpacer} />
             </View>
             <FlatList
               ref={flatListRef}
               data={chatMessages}
               renderItem={({ item }) => (
-                <View style={[styles.chatMessage, item.sender === "doctor" ? styles.doctorMessage : styles.patientMessage]}>
-                  <Text style={[styles.messageText, item.sender === "doctor" ? styles.doctorMessageText : styles.patientMessageText]}>
-                    {item.text}
-                  </Text>
-                  <Text style={styles.messageTime}>
+                <View style={[
+                  styles.chatMessageContainer,
+                  item.sender === "doctor" ? styles.doctorMessageContainer : styles.patientMessageContainer
+                ]}>
+                  <View style={[
+                    styles.messageBubble,
+                    item.sender === "doctor" ? styles.doctorBubble : styles.patientBubble
+                  ]}>
+                    <Text style={[
+                      styles.messageText,
+                      item.sender === "doctor" ? styles.doctorMessageText : styles.patientMessageText
+                    ]}>
+                      {item.text}
+                    </Text>
+                  </View>
+                  <Text style={[
+                    styles.messageTime,
+                    item.sender === "doctor" ? styles.doctorTime : styles.patientTime
+                  ]}>
                     {item.timestamp instanceof Date
                       ? item.timestamp.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
                       : new Date(item.timestamp).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
@@ -777,6 +747,7 @@ export default function PatientTab({ handleStartCall }) {
               )}
               keyExtractor={(item) => item.id}
               style={styles.chatMessages}
+              contentContainerStyle={styles.chatMessagesContent}
               ListEmptyComponent={
                 <View style={styles.emptyChat}>
                   <Bot color="#6b7280" size={32} />
@@ -784,6 +755,7 @@ export default function PatientTab({ handleStartCall }) {
                   <Text style={styles.emptyChatSubText}>Bắt đầu cuộc trò chuyện với bệnh nhân</Text>
                 </View>
               }
+              showsVerticalScrollIndicator={false}
             />
             <View style={styles.chatInputContainer}>
               <TextInput
@@ -791,16 +763,25 @@ export default function PatientTab({ handleStartCall }) {
                 placeholder="Nhập tin nhắn..."
                 value={messageInput}
                 onChangeText={setMessageInput}
-                onSubmitEditing={() => !isSending && sendMessage()}
+                onSubmitEditing={sendMessage}
                 editable={!isSending}
                 placeholderTextColor="#9ca3af"
+                multiline
+                maxLength={500}
               />
               <TouchableOpacity
-                style={[styles.sendButton, (!messageInput.trim() || isSending) && styles.disabledSendButton]}
+                style={[
+                  styles.sendButton,
+                  (!messageInput.trim() || isSending) && styles.disabledSendButton
+                ]}
                 onPress={sendMessage}
                 disabled={isSending || !messageInput.trim()}
               >
-                {isSending ? <ActivityIndicator size="small" color="#fff" /> : <Send color="#fff" size={20} />}
+                {isSending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Send color="#fff" size={20} />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -946,8 +927,11 @@ const styles = StyleSheet.create({
   },
   patientInfo: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 12,
+  },
+  patientDetails: {
+    flex: 1,
   },
   avatar: {
     width: 48,
@@ -974,10 +958,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statusBadge: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     alignSelf: "flex-start",
+    marginTop: 4,
   },
   statusText: {
     fontSize: 12,
@@ -987,13 +972,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#4b5563",
     marginBottom: 12,
+    textAlign: "right",
   },
   actionButtons: {
     flexDirection: "row",
     justifyContent: "flex-end",
   },
   actionButton: {
-    padding: 10,
+    padding: 8,
     borderRadius: 8,
     backgroundColor: "#f3f4f6",
     marginLeft: 8,
@@ -1133,94 +1119,135 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  chatModalContent: {
+  // Chat UI cải thiện cho mobile
+  chatModalOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  chatModalBackdrop: {
+    flex: 1,
+  },
+  chatModalContent: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "100%",
     backgroundColor: "#fff",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    paddingTop: 16,
-    marginTop: 80,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   chatHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#2563eb",
-    padding: 16,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerSpacer: {
+    width: 24,
   },
   chatHeaderTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: "600",
     color: "#fff",
+    textAlign: "center",
   },
   chatMessages: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingVertical: 8,
   },
-  chatMessage: {
-    marginBottom: 16,
-    maxWidth: "80%",
-    padding: 8,
+  chatMessagesContent: {
+    paddingBottom: 16,
   },
-  doctorMessage: {
-    alignSelf: "flex-end",
+  chatMessageContainer: {
+    marginVertical: 4,
+    alignItems: "flex-end",
   },
-  patientMessage: {
-    alignSelf: "flex-start",
+  doctorMessageContainer: {
+    alignItems: "flex-end",
+  },
+  patientMessageContainer: {
+    alignItems: "flex-start",
+  },
+  messageBubble: {
+    maxWidth: "75%",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+  },
+  doctorBubble: {
+    backgroundColor: "#2563eb",
+    borderBottomRightRadius: 4,
+  },
+  patientBubble: {
+    backgroundColor: "#e5e7eb",
+    borderBottomLeftRadius: 4,
   },
   messageText: {
     fontSize: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    lineHeight: 20,
   },
   doctorMessageText: {
-    backgroundColor: "#2563eb",
     color: "#fff",
   },
   patientMessageText: {
-    backgroundColor: "#e5e7eb",
     color: "#1f2937",
   },
   messageTime: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 2,
+    opacity: 0.7,
+  },
+  doctorTime: {
     textAlign: "right",
+  },
+  patientTime: {
+    textAlign: "left",
   },
   chatInputContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     padding: 16,
+    backgroundColor: "#f8fafc",
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
-    backgroundColor: "#fff",
   },
   chatInput: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#fff",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    marginRight: 12,
+    marginRight: 8,
+    maxHeight: 100,
     color: "#1f2937",
+    borderWidth: 1,
+    borderColor: "#d1d5db",
   },
   sendButton: {
     backgroundColor: "#2563eb",
     padding: 12,
     borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   disabledSendButton: {
-    backgroundColor: "#6b7280",
+    backgroundColor: "#9ca3af",
   },
   emptyChat: {
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
+    paddingVertical: 40,
   },
   emptyChatText: {
     fontSize: 16,
@@ -1232,5 +1259,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
     marginTop: 4,
+    textAlign: "center",
   },
 });
