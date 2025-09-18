@@ -24,14 +24,8 @@ export const STATUS_OPTIONS = [
 
 // Badge màu
 export const STATUS_COLORS = {
-    [APPOINTMENT_STATUS.PENDING]: { bg: "warning", text: "dark" },
-    [APPOINTMENT_STATUS.CONFIRMED]: { bg: "success", text: "white" },
-    [APPOINTMENT_STATUS.CANCELED]: { bg: "danger", text: "white" },
-    [APPOINTMENT_STATUS.COMPLETED]: { bg: "primary", text: "white" },
-}
-
-
-export const getLabelFromOptions = (options, value) => {
-    const found = options.find(opt => opt.value === value);
-    return found ? found.label : value;
+    [APPOINTMENT_STATUS.PENDING]: { bg: "#ffc107", text: "#212529" }, // warning, dark
+    [APPOINTMENT_STATUS.CONFIRMED]: { bg: "#198754", text: "#ffffff" }, // success, white
+    [APPOINTMENT_STATUS.CANCELED]: { bg: "#dc3545", text: "#ffffff" }, // danger, white
+    [APPOINTMENT_STATUS.COMPLETED]: { bg: "#0d6efd", text: "#ffffff" }, // primary, white
 };

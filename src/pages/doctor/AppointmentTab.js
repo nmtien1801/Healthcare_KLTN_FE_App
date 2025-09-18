@@ -23,6 +23,18 @@ import { STATUS_COLORS, STATUS_OPTIONS, TYPE_OPTIONS } from "../../utils/appoint
 const { width, height } = Dimensions.get("window");
 const itemsPerPage = 5;
 
+// Hàm formatDate để chuyển đổi ngày từ YYYY-MM-DD sang DD/MM/YYYY
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  // Kiểm tra nếu dateStr đã ở định dạng DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    return dateStr;
+  }
+  // Chuyển đổi từ YYYY-MM-DD sang DD/MM/YYYY
+  const [year, month, day] = dateStr.split("-");
+  return `${day}/${month}/${year}`;
+};
+
 export default function AppointmentTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDate, setFilterDate] = useState(null);
@@ -68,7 +80,7 @@ export default function AppointmentTab() {
       patientAvatar:
         item.patientId?.userId?.avatar ||
         "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
-      date: new Date(item.date).toLocaleDateString("vi-VN"),
+      date: formatDate(new Date(item.date).toISOString().split("T")[0]), // Sử dụng formatDate
       time: item.time,
       type: item.type,
       reason: item.reason || "Tạm thời chưa có",
@@ -76,21 +88,6 @@ export default function AppointmentTab() {
       notes: item.notes || "Tạm thời chưa có",
       status: item.status,
     };
-  };
-
-  const getStatusColors = (status) => {
-    switch (status) {
-      case "Đã xác nhận":
-        return { bg: "#28a745", text: "#fff" };
-      case "Chờ xác nhận":
-        return { bg: "#ffc107", text: "#000" };
-      case "Đã hủy":
-        return { bg: "#dc3545", text: "#fff" };
-      case "Hoàn thành":
-        return { bg: "#007bff", text: "#fff" };
-      default:
-        return { bg: "#6c757d", text: "#fff" };
-    }
   };
 
   const handleDateChange = (text) => {
@@ -125,7 +122,7 @@ export default function AppointmentTab() {
         a.patientDisease.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.reason.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchDate = filterDate ? a.date === new Date(filterDate).toLocaleDateString("vi-VN") : true;
+      const matchDate = filterDate ? a.date === formatDate(new Date(filterDate).toISOString().split("T")[0]) : true;
       return matchSearch && matchDate;
     });
   }, [todayAppointments, searchTerm, filterDate]);
@@ -137,7 +134,7 @@ export default function AppointmentTab() {
         a.patientDisease.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.reason.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchDate = filterDate ? a.date === new Date(filterDate).toLocaleDateString("vi-VN") : true;
+      const matchDate = filterDate ? a.date === formatDate(new Date(filterDate).toISOString().split("T")[0]) : true;
       return matchSearch && matchDate;
     });
   }, [upcomingAppointments, searchTerm, filterDate]);
@@ -149,6 +146,7 @@ export default function AppointmentTab() {
         newAppointmentData.patientName
       )}&size=150&background=random`,
       ...newAppointmentData,
+      date: formatDate(newAppointmentData.date), // Đảm bảo định dạng ngày
     };
     setUpcomingAppointments((prev) => [...prev, newAppointment]);
     setShowAddModal(false);
@@ -183,17 +181,21 @@ export default function AppointmentTab() {
     try {
       const payload = {
         ...updatedAppointment,
-        date: new Date(updatedAppointment.date).toISOString().split("T")[0],
+        date: new Date(updatedAppointment.date).toISOString().split("T")[0], // Lưu trữ dưới dạng YYYY-MM-DD
       };
       await ApiDoctor.updateAppointment(updatedAppointment.id, payload);
+      const updatedMapped = {
+        ...updatedAppointment,
+        date: formatDate(updatedAppointment.date), // Chuyển đổi sang DD/MM/YYYY khi lưu vào state
+      };
       setUpcomingAppointments((prev) =>
-        prev.map((app) => (app.id === updatedAppointment.id ? updatedAppointment : app))
+        prev.map((app) => (app.id === updatedAppointment.id ? updatedMapped : app))
       );
       setTodayAppointments((prev) =>
-        prev.map((app) => (app.id === updatedAppointment.id ? updatedAppointment : app))
+        prev.map((app) => (app.id === updatedAppointment.id ? updatedMapped : app))
       );
       setShowEditModal(false);
-      setSelectedAppointment(updatedAppointment);
+      setSelectedAppointment(updatedMapped);
     } catch (error) {
       console.error("Lỗi khi cập nhật lịch hẹn:", error);
       Alert.alert("Lỗi", "Cập nhật lịch hẹn thất bại. Vui lòng thử lại.");
@@ -233,22 +235,22 @@ export default function AppointmentTab() {
   const paginatedUpcoming = paginate(filteredUpcoming, upcomingPage);
 
   const renderAppointmentCard = (appointment) => {
-    const statusColors = getStatusColors(appointment.status);
     return (
       <View style={styles.cardItem}>
         <View style={styles.cardHeader}>
           <Image source={{ uri: appointment.patientAvatar }} style={styles.avatar} />
           <View style={styles.patientInfo}>
-            <Text style={styles.patientName} numberOfLines={1} ellipsizeMode="tail">
+            <Text style={styles.patientName}  >
               {appointment.patientName}
             </Text>
             <Text style={styles.patientAge}>{appointment.patientAge} tuổi</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
-            <Text style={[styles.statusText, { color: statusColors.text }]} numberOfLines={1}>
+          <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[appointment.status]?.bg }]}>
+            <Text style={[styles.statusText, { color: STATUS_COLORS[appointment.status]?.text }]} numberOfLines={1}>
               {getLabelFromOptions(STATUS_OPTIONS, appointment.status)}
             </Text>
           </View>
+
         </View>
         <View style={styles.cardBody}>
           <Text style={styles.cardText}>

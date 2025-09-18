@@ -8,11 +8,11 @@ import {
   StyleSheet,
   Linking,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { ECharts } from "react-native-echarts-wrapper";
-import ApiDoctor from "../../apis/ApiDoctor";
 
-// Mock data với nhiều bệnh nhân hơn
+// Mock data (giữ nguyên như code gốc, nhưng đảm bảo dữ liệu hợp lệ)
 const mockData = {
   revenue: {
     week: {
@@ -40,7 +40,7 @@ const mockData = {
         image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
         phone: "0123456789",
         status: "Cần theo dõi",
-        statusColor: "#ef4444",
+        statusColor: "#dc2626",
         week: {
           xAxisData: ["19/06", "20/06", "21/06", "22/06", "23/06", "24/06", "25/06"],
           bloodPressureData: [160, 162, 158, 165, 160, 163, 159],
@@ -236,12 +236,9 @@ export default function OverviewTab() {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const [todayRes, nextRes] = await Promise.all([
-          ApiDoctor.getAppointmentsToday(),
-          ApiDoctor.getAppointments(),
-        ]);
-        setAppointmentToday(todayRes.length);
-        setAppointmentNext(nextRes.length);
+        // Giả lập API call, thay thế bằng ApiDoctor thực tế
+        setAppointmentToday(mockData.summary.appointmentsToday);
+        setAppointmentNext(mockData.summary.upcomingAppointments);
       } catch (err) {
         console.error("Lỗi khi lấy dữ liệu cuộc hẹn:", err);
       } finally {
@@ -267,16 +264,26 @@ export default function OverviewTab() {
   // Chart options for revenue
   const getRevenueChartOptions = (period) => ({
     tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-    grid: { left: "5%", right: "5%", bottom: "10%", containLabel: true },
-    xAxis: { type: "category", data: mockData.revenue[period]?.xAxisData || [], axisTick: { alignWithLabel: true } },
-    yAxis: { type: "value" },
+    grid: { left: "5%", right: "5%", bottom: "15%", top: "10%", containLabel: true },
+    xAxis: {
+      type: "category",
+      data: mockData.revenue[period]?.xAxisData || [],
+      axisLabel: { rotate: 45, fontSize: 10 },
+      axisTick: { alignWithLabel: true },
+    },
+    yAxis: {
+      type: "value",
+      axisLabel: {
+        formatter: (value) => `${(value / 1000000).toFixed(1)}M`,
+      },
+    },
     series: [
       {
         name: "Doanh thu",
         type: "bar",
         barWidth: "60%",
         data: mockData.revenue[period]?.data || [],
-        itemStyle: { color: "#3b82f6" },
+        itemStyle: { color: "#2563eb" },
       },
     ],
   });
@@ -284,36 +291,67 @@ export default function OverviewTab() {
   // Chart options for health
   const getHealthChartOptions = (period, patient) => ({
     tooltip: { trigger: "axis" },
-    legend: { data: ["Huyết áp", "Nhịp tim", "Đường huyết"], top: "5%" },
-    grid: { left: "5%", right: "5%", bottom: "10%", top: "20%", containLabel: true },
-    xAxis: { type: "category", boundaryGap: false, data: patient[period]?.xAxisData || [] },
-    yAxis: { type: "value" },
+    legend: {
+      data: ["Huyết áp", "Nhịp tim", "Đường huyết"],
+      top: "5%",
+      textStyle: { fontSize: 12, color: "#1f2937" },
+    },
+    grid: { left: "5%", right: "5%", bottom: "15%", top: "20%", containLabel: true },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: patient[period]?.xAxisData || [],
+      axisLabel: { rotate: 45, fontSize: 10 },
+    },
+    yAxis: {
+      type: "value",
+      axisLabel: { fontSize: 10 },
+    },
     series: [
-      { name: "Huyết áp", type: "line", data: patient[period]?.bloodPressureData || [], itemStyle: { color: "#ef4444" } },
-      { name: "Nhịp tim", type: "line", data: patient[period]?.heartRateData || [], itemStyle: { color: "#8b5cf6" } },
-      { name: "Đường huyết", type: "line", data: patient[period]?.bloodSugarData || [], itemStyle: { color: "#10b981" } },
+      {
+        name: "Huyết áp",
+        type: "line",
+        data: patient[period]?.bloodPressureData || [],
+        itemStyle: { color: "#dc2626" },
+      },
+      {
+        name: "Nhịp tim",
+        type: "line",
+        data: patient[period]?.heartRateData || [],
+        itemStyle: { color: "#7c3aed" },
+      },
+      {
+        name: "Đường huyết",
+        type: "line",
+        data: patient[period]?.bloodSugarData || [],
+        itemStyle: { color: "#059669" },
+      },
     ],
   });
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
+        <ActivityIndicator size="large" color="#2563eb" />
         <Text style={styles.loadingText}>Đang tải...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.title}>Tổng quan</Text>
 
       {/* Summary Cards */}
       <View style={styles.summaryContainer}>
         {[
-          { icon: "👤", title: "Bệnh nhân mới", value: mockData.summary.newPatients, change: mockData.summary.newPatientsChange, color: "#007bff" },
-          { icon: "📅", title: "Cuộc hẹn hôm nay", value: appointmentToday, change: `${appointmentNext} cuộc hẹn sắp tới`, color: "#ffc107" },
-          { icon: "💰", title: "Doanh thu tháng", value: mockData.summary.monthlyRevenue, change: mockData.summary.monthlyRevenueChange, color: "#28a745" },
+          { icon: "👤", title: "Bệnh nhân mới", value: mockData.summary.newPatients, change: mockData.summary.newPatientsChange, color: "#2563eb" },
+          { icon: "📅", title: "Cuộc hẹn hôm nay", value: appointmentToday, change: `${appointmentNext} cuộc hẹn sắp tới`, color: "#d97706" },
+          { icon: "💰", title: "Doanh thu tháng", value: mockData.summary.monthlyRevenue, change: mockData.summary.monthlyRevenueChange, color: "#059669" },
         ].map((item, index) => (
           <View key={index} style={styles.summaryCard}>
             <View style={[styles.iconContainer, { backgroundColor: `${item.color}20` }]}>
@@ -339,14 +377,16 @@ export default function OverviewTab() {
                 style={[styles.chartButton, revenuePeriod === period ? styles.activeButton : styles.inactiveButton]}
                 onPress={() => setRevenuePeriod(period)}
               >
-                <Text style={styles.buttonText}>
+                <Text style={[styles.buttonText, revenuePeriod === period ? styles.activeButtonText : styles.inactiveButtonText]}>
                   {period === "week" ? "Tuần này" : period === "month" ? "Tháng này" : "Năm nay"}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
-        <ECharts option={getRevenueChartOptions(revenuePeriod)} style={styles.chart} />
+        <View style={styles.chartContainer}>
+          <ECharts option={getRevenueChartOptions(revenuePeriod)} style={styles.chart} />
+        </View>
       </View>
 
       {/* Health Chart and Patient List */}
@@ -360,14 +400,16 @@ export default function OverviewTab() {
                 style={[styles.chartButton, healthPeriod === period ? styles.activeButton : styles.inactiveButton]}
                 onPress={() => setHealthPeriod(period)}
               >
-                <Text style={styles.buttonText}>
+                <Text style={[styles.buttonText, healthPeriod === period ? styles.activeButtonText : styles.inactiveButtonText]}>
                   {period === "week" ? "Tuần này" : period === "month" ? "Tháng này" : "Năm nay"}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
-        <ECharts option={getHealthChartOptions(healthPeriod, selectedPatient)} style={styles.chart} />
+        <View style={styles.chartContainer}>
+          <ECharts option={getHealthChartOptions(healthPeriod, selectedPatient)} style={styles.chart} />
+        </View>
       </View>
 
       {/* Patient List */}
@@ -381,13 +423,13 @@ export default function OverviewTab() {
             <Text style={styles.viewAllText}>Xem tất cả</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.patientListContainer}>
-          {displayedPatients.map((patient, index) => (
+          {displayedPatients.map((patient) => (
             <TouchableOpacity
               key={patient.id}
               style={[
-                styles.patientRow, 
+                styles.patientRow,
                 patient.name === selectedPatient.name ? styles.selectedPatient : null
               ]}
               onPress={() => setSelectedPatient(patient)}
@@ -406,11 +448,12 @@ export default function OverviewTab() {
                     <Text style={styles.metricLabel}>Huyết áp:</Text>
                     <Text style={[
                       styles.metricValue,
-                      patient.bloodPressure.includes('160') || patient.bloodPressure.includes('150') || patient.bloodPressure.includes('145') || patient.bloodPressure.includes('140') 
-                        ? styles.dangerText 
-                        : patient.bloodPressure.includes('120') 
-                        ? styles.goodText 
-                        : styles.warningText
+                      patient.bloodPressure.includes("160") || patient.bloodPressure.includes("150") ||
+                        patient.bloodPressure.includes("145") || patient.bloodPressure.includes("140")
+                        ? styles.dangerText
+                        : patient.bloodPressure.includes("120")
+                          ? styles.goodText
+                          : styles.warningText
                     ]}>{patient.bloodPressure}</Text>
                   </View>
                   <View style={styles.metricItem}>
@@ -451,7 +494,7 @@ export default function OverviewTab() {
             >
               <Text style={[styles.paginationText, currentPage === 1 && styles.disabledText]}>‹</Text>
             </TouchableOpacity>
-            
+
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <TouchableOpacity
                 key={page}
@@ -467,7 +510,7 @@ export default function OverviewTab() {
                 ]}>{page}</Text>
               </TouchableOpacity>
             ))}
-            
+
             <TouchableOpacity
               style={[styles.paginationButton, currentPage === totalPages && styles.disabledButton]}
               onPress={() => handlePageChange(currentPage + 1)}
@@ -486,7 +529,7 @@ export default function OverviewTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#f3f4f6",
   },
   contentContainer: {
     padding: 16,
@@ -495,92 +538,105 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#212529",
+    color: "#1f2937",
     marginBottom: 16,
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 4,
+    elevation: 3,
   },
   summaryContainer: {
     marginBottom: 16,
-    marginTop: 16,
   },
   summaryCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff",
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     marginBottom: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 4,
+    elevation: 3,
   },
   iconContainer: {
-    padding: 12,
-    borderRadius: 12,
-    marginRight: 16,
+    padding: 10,
+    borderRadius: 10,
+    marginRight: 12,
   },
   icon: {
     fontSize: 24,
   },
   summaryTitle: {
     fontSize: 14,
-    color: "#6c757d",
+    color: "#6b7280",
+    fontWeight: "500",
   },
   summaryValue: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#212529",
+    color: "#1f2937",
   },
   summaryChange: {
     fontSize: 12,
-    color: "#28a745",
+    color: "#059669",
   },
   chartHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#212529",
+    fontWeight: "600",
+    color: "#1f2937",
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#6b7280",
   },
   buttonGroup: {
     flexDirection: "row",
   },
   chartButton: {
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
     marginLeft: 8,
   },
   activeButton: {
-    backgroundColor: "#007bff",
+    backgroundColor: "#2563eb",
   },
   inactiveButton: {
-    backgroundColor: "#e9ecef",
+    backgroundColor: "#e5e7eb",
   },
   buttonText: {
-    color: "#fff",
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
+  },
+  activeButtonText: {
+    color: "#ffffff",
+  },
+  inactiveButtonText: {
+    color: "#4b5563",
+  },
+  chartContainer: {
+    width: "100%",
+    height: 280,
   },
   chart: {
-    height: 250,
-    width: "100%",
+    width: Dimensions.get("window").width - 32, // Đảm bảo biểu đồ không vượt quá chiều rộng màn hình
+    height: 260,
   },
   patientRow: {
     flexDirection: "row",
@@ -588,14 +644,15 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
+    backgroundColor: "#f9fafb",
   },
   selectedPatient: {
-    backgroundColor: "#f0f4ff",
+    backgroundColor: "#eff6ff",
   },
   patientImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     marginRight: 12,
   },
   patientInfo: {
@@ -604,70 +661,12 @@ const styles = StyleSheet.create({
   patientName: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#212529",
+    color: "#1f2937",
   },
   patientAge: {
     fontSize: 14,
-    color: "#6c757d",
+    color: "#6b7280",
     marginBottom: 4,
-  },
-  patientDetail: {
-    fontSize: 14,
-    color: "#495057",
-    marginBottom: 2,
-  },
-  dangerText: {
-    color: "#ef4444",
-    fontWeight: "600",
-  },
-  warningText: {
-    color: "#dc3545",
-    fontWeight: "600",
-  },
-  actionButtons: {
-    flexDirection: "row",
-  },
-  actionButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  actionIcon: {
-    fontSize: 20,
-    color: "#007bff",
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: "#007bff",
-    fontWeight: "600",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f8f9fa",
-  },
-  loadingText: {
-    marginTop: 8,
-    fontSize: 16,
-    color: "#495057",
-  },
-  patientListContainer: {
-    marginTop: 8,
-  },
-  patientImageContainer: {
-    position: "relative",
-    marginRight: 16,
-  },
-  selectedIndicator: {
-    position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#10b981",
-    borderWidth: 2,
-    borderColor: "#ffffff",
   },
   healthMetrics: {
     marginBottom: 8,
@@ -679,27 +678,34 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 13,
-    color: "#64748b",
+    color: "#6b7280",
     fontWeight: "500",
     marginRight: 8,
     minWidth: 70,
   },
   metricValue: {
     fontSize: 13,
-    color: "#0f172a",
+    color: "#1f2937",
     fontWeight: "600",
   },
   goodText: {
-    color: "#10b981",
-    fontWeight: "700",
-    fontSize: 13,
+    color: "#059669",
+    fontWeight: "600",
+  },
+  dangerText: {
+    color: "#dc2626",
+    fontWeight: "600",
+  },
+  warningText: {
+    color: "#d97706",
+    fontWeight: "600",
   },
   statusContainer: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
     alignSelf: "flex-start",
   },
   statusDot: {
@@ -712,12 +718,60 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  actionButtons: {
+    flexDirection: "row",
+  },
+  actionButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  actionIcon: {
+    fontSize: 20,
+    color: "#2563eb",
+  },
+  viewAllButton: {
+    padding: 8,
+  },
+  viewAllText: {
+    fontSize: 14,
+    color: "#2563eb",
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f3f4f6",
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: "#4b5563",
+  },
+  patientListContainer: {
+    marginTop: 8,
+  },
+  patientImageContainer: {
+    position: "relative",
+    marginRight: 12,
+  },
+  selectedIndicator: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#059669",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+  },
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     marginTop: 16,
-    paddingTop: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: "#e5e7eb",
   },
@@ -731,8 +785,8 @@ const styles = StyleSheet.create({
     borderColor: "#d1d5db",
   },
   activePaginationButton: {
-    backgroundColor: "#6366f1",
-    borderColor: "#6366f1",
+    backgroundColor: "#2563eb",
+    borderColor: "#2563eb",
   },
   disabledButton: {
     backgroundColor: "#f9fafb",

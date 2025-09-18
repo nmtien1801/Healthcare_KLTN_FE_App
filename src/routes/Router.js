@@ -25,7 +25,6 @@ import OverviewTab from "../pages/doctor/OverviewTab";
 import InformationTab from "../pages/doctor/InformationTab";
 import AppointmentTab from "../pages/doctor/AppointmentTab";
 import PatientTab from "../pages/doctor/PatientTab";
-import SettingTabs from "../pages/doctor/SettingTabs";
 import AttendanceTab from "../pages/doctor/AttendanceTab";
 import Header from "../routes/Header";
 import { auth } from "../../firebase";
@@ -63,7 +62,6 @@ const DoctorTab = ({ route }) => {
         <Tab.Screen name="Lịch hẹn" component={AppointmentTab} />
         <Tab.Screen name="Chấm công" component={AttendanceTab} />
         <Tab.Screen name="Thông tin" component={InformationTab} />
-        <Tab.Screen name="Cài đặt" component={SettingTabs} />
       </Tab.Navigator>
     </View>
   );
