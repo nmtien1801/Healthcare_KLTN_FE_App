@@ -339,6 +339,7 @@ const MealSection = ({
           <Text style={[styles.mealTip, { color: currentMealColor.text }]}>
             {mealTime.tip}
           </Text>
+
           <View style={styles.mealAdviceRow}>
             <Text style={[styles.mealAdviceIcon, { color: currentMealColor.text }]}>
               💡
@@ -349,24 +350,7 @@ const MealSection = ({
           </View>
         </View>
 
-        <View style={styles.mealStats}>
-          <Text style={[styles.mealCalories, { color: currentMealColor.text }]}>
-            {mealCalories}
-          </Text>
-          <Text style={[styles.mealCaloriesLabel, { color: currentMealColor.text }]}>
-            calories
-          </Text>
-          <View style={[
-            styles.mealCountBadge,
-            { backgroundColor: currentMealColor.border }
-          ]}>
-            <Text style={styles.mealCountText}>{mealCount} món</Text>
-          </View>
-        </View>
-      </View>
-
-      {expandedMeals[mealLabel] && (
-        <>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
           <View style={styles.nutritionGrid}>
             <View style={[
               styles.nutritionCard,
@@ -412,18 +396,43 @@ const MealSection = ({
                 Fat
               </Text>
             </View>
+          </View>
 
-            <View style={[
-              styles.nutritionCard,
-              {
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                borderColor: currentMealColor.border
-              }
-            ]}>
-              <Text style={[styles.diabetesRating, { color: currentMealColor.text }]}>
-                {diabetesRating.text}
+          <View style={styles.mealStats}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: '' }}>
+              <Text style={[styles.mealCalories, { color: currentMealColor.text }]}>
+                {mealCalories}
+              </Text>
+              <Text style={[styles.mealCaloriesLabel, { color: currentMealColor.text }]}>
+                calories
               </Text>
             </View>
+
+            <View style={[
+              styles.mealCountBadge,
+              { backgroundColor: currentMealColor.border }
+            ]}>
+              <Text style={styles.mealCountText}>{mealCount} món</Text>
+            </View>
+          </View>
+        </View>
+
+
+      </View>
+
+      {expandedMeals[mealLabel] && (
+        <>
+          <View style={[
+            styles.diabetesRatingCard,
+            {
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              borderColor: currentMealColor.border,
+              marginBottom: 12,
+            }
+          ]}>
+            <Text style={[styles.diabetesRating, { color: currentMealColor.text }]}>
+              {diabetesRating.text}
+            </Text>
           </View>
 
           {mealFoods.length > 0 ? (
@@ -511,30 +520,38 @@ export default function FoodTrackerApp() {
 
   useEffect(() => {
     const loadFood = async () => {
-      let food = await getWithExpiry("food");
-      if (food && food?.chosen?.length > 0) {
-        setFood(food)
-        const mappedFoods = food.chosen.map((food) => ({
-          image: food.image ?? '🍅',
-          name: food.name,
-          details: `${food.weight}g • ${food.calo}cal`,
-          macros: [
-            `${food.chat_dam}g`,
-            `${food.duong_bot}g`,
-            `${food.chat_beo}g`
-          ],
-          colors: ['success', 'warning', 'danger'],
-          checked: false,
-          meal: 'sáng'
-        }));
+      let f = await getWithExpiry("food");
 
-        // Phân bổ thực phẩm vào bữa ăn hợp lý
-        const foodsWithMeals = assignMealsToFoods(mappedFoods);
-        setFoods(foodsWithMeals);
+      if (f && f?.chosen?.length > 0) {
+        setFood(f)
       }
     }
+
     loadFood();
   }, []);
+
+  useEffect(() => {
+    if (food && food?.chosen?.length > 0) {
+      const mappedFoods = food.chosen.map((food) => ({
+        image: food.image ?? '🍅',
+        name: food.name,
+        details: `${food.weight}g • ${food.calo}cal`,
+        macros: [
+          `${food.chat_dam}g`,
+          `${food.duong_bot}g`,
+          `${food.chat_beo}g`
+        ],
+        colors: ['success', 'warning', 'danger'],
+        checked: false,
+        meal: 'sáng'
+      }));
+
+      // Phân bổ thực phẩm vào bữa ăn hợp lý
+      const foodsWithMeals = assignMealsToFoods(mappedFoods);
+
+      setFoods(foodsWithMeals);
+    }
+  }, [food]);
 
   const toggleChecked = (index) => {
     const updatedFoods = [...foods];
@@ -556,6 +573,7 @@ export default function FoodTrackerApp() {
     }
     return result;
   }, {});
+  console.log('sssssssssss ', foods);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -782,7 +800,7 @@ const styles = StyleSheet.create({
   },
   mealCaloriesLabel: {
     fontSize: 12,
-    marginTop: 4,
+    marginLeft: 3,
   },
   mealCountBadge: {
     paddingHorizontal: 8,
@@ -803,7 +821,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   nutritionCard: {
-    width: (width - 48) / 2,
+    width: (width - 500) / 2,
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    margin: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  diabetesRatingCard: {
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 8,

@@ -7,6 +7,8 @@ import {
   Text,
   Platform,
   ActivityIndicator,
+  Modal,
+  Alert,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -27,14 +29,27 @@ import AppointmentTab from "../pages/doctor/AppointmentTab";
 import PatientTab from "../pages/doctor/PatientTab";
 import SettingTabs from "../pages/doctor/SettingTabs";
 import Header from "../routes/Header";
-import { auth } from "../../firebase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Diagnosis from "../pages/patient/assistant/diagnosis";
+import { auth } from "../../firebase";
+import { dbCall } from "../../firebase";
+import VideoCallModal from '../components/call/videoModalCall';
+import {
+  ref,
+  onValue,
+  off,
+} from "firebase/database";
+import {
+  acceptCall,
+  endCall,
+  createCall,
+  generateJitsiUrl,
+} from '../components/call/functionCall';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-const DoctorTab = ({ route }) => {
+const DoctorTab = ({ route, handleStartCall }) => {
   return (
     <View style={{ flex: 1 }}>
       <Tab.Navigator
@@ -45,10 +60,10 @@ const DoctorTab = ({ route }) => {
               "Tổng quan": focused
                 ? "chatbubble-ellipses"
                 : "chatbubble-ellipses-outline",
-              "Bệnh nhân": focused ? "id-card" : "id-card-outline",
-              "Lịch hẹn": focused ? "sparkles" : "sparkles-outline",
-              "Thông tin": focused ? "person" : "person-outline",
-              "Cài đặt": focused ? "person" : "person-outline",
+              "Bệnh nhân": focused ? "people" : "people-outline", // Changed icon
+              "Lịch hẹn": focused ? "calendar" : "calendar-outline", // Changed icon
+              "Thông tin": focused ? "information-circle" : "information-circle-outline", // Changed icon
+              "Cài đặt": focused ? "settings" : "settings-outline", // Changed icon
             };
             return <Icon name={icons[route.name]} size={size} color={color} />;
           },
@@ -57,7 +72,9 @@ const DoctorTab = ({ route }) => {
         })}
       >
         <Tab.Screen name="Tổng quan" component={OverviewTab} />
-        <Tab.Screen name="Bệnh nhân" component={PatientTab} />
+        <Tab.Screen name="Bệnh nhân">
+          {(props) => <PatientTab {...props} handleStartCall={handleStartCall} />}
+        </Tab.Screen>
         <Tab.Screen name="Lịch hẹn" component={AppointmentTab} />
         <Tab.Screen name="Thông tin" component={InformationTab} />
         <Tab.Screen name="Cài đặt" component={SettingTabs} />
@@ -66,7 +83,7 @@ const DoctorTab = ({ route }) => {
   );
 };
 
-const PatientTabs = ({ route }) => {
+const PatientTabs = ({ route, handleStartCall }) => {
   return (
     <View style={{ flex: 1, marginTop: 65 }}>
       <Tab.Navigator
@@ -74,12 +91,10 @@ const PatientTabs = ({ route }) => {
           headerShown: false,
           tabBarIcon: ({ focused, color, size }) => {
             const icons = {
-              "Trang chủ": focused
-                ? "chatbubble-ellipses"
-                : "chatbubble-ellipses-outline",
-              "Sức khỏe": focused ? "id-card" : "id-card-outline",
-              "Dinh dưỡng": focused ? "nutrition" : "nutrition-outline",
-              "Đặt lịch": focused ? "sparkles" : "sparkles-outline",
+              "Trang chủ": focused ? "home" : "home-outline", // Changed icon
+              "Sức khỏe": focused ? "fitness" : "fitness-outline", // Changed icon
+              "Dinh dưỡng": focused ? "restaurant" : "restaurant-outline", // Changed icon
+              "Đặt lịch": focused ? "calendar" : "calendar-outline", // Changed icon
               "Trợ lý AI": focused ? "chatbubble" : "chatbubble-outline",
             };
             return <Icon name={icons[route.name]} size={size} color={color} />;
@@ -91,7 +106,9 @@ const PatientTabs = ({ route }) => {
         <Tab.Screen name="Trang chủ" component={Home} />
         <Tab.Screen name="Sức khỏe" component={HealthTabs} />
         <Tab.Screen name="Dinh dưỡng" component={NutritionTabs} />
-        <Tab.Screen name="Đặt lịch" component={BookingTabs} />
+        <Tab.Screen name="Đặt lịch">
+          {(props) => <BookingTabs {...props} handleStartCall={handleStartCall} />}
+        </Tab.Screen>
         <Tab.Screen name="Trợ lý AI" component={Diagnosis} />
       </Tab.Navigator>
     </View>
@@ -103,12 +120,211 @@ export default function Router() {
   const user = useSelector((state) => state.auth.user);
   const [isLoading, setIsLoading] = useState(true);
 
-  // authContext -> duy trì trạng thái đăng nhập của người dùng
+  // Call states
+  const [isCalling, setIsCalling] = useState(false);
+  const [jitsiUrl, setJitsiUrl] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [receiver, setReceiver] = useState(null);
+  const [isInitiator, setIsInitiator] = useState(false);
+  const [callTimeout, setCallTimeout] = useState(null);
+
+  // Refs for cleanup
+  const callListenerRef = useRef(null);
+  const initiatorListenerRef = useRef(null);
+
+  const handleStartCall = async (caller, callee, role) => {
+    try {
+      if (!caller?.uid || !callee?.uid) {
+        Alert.alert("Lỗi", "Không thể bắt đầu cuộc gọi. Thiếu thông tin người dùng.");
+        return;
+      }
+
+      const setCallStates = {
+        setIsCalling,
+        setIsInitiator,
+        setReceiver,
+      };
+
+      const callerWithRole = { ...caller, role };
+      await createCall(callerWithRole, callee, dbCall, setCallStates);
+
+      // Set timeout for call (30 seconds)
+      const timeout = setTimeout(() => {
+        if (isInitiator && !jitsiUrl) {
+          Alert.alert("Hết thời gian", "Người nhận không trả lời.");
+          handleEndCall();
+        }
+      }, 30000);
+      setCallTimeout(timeout);
+
+    } catch (error) {
+      console.error("Error starting call:", error);
+      Alert.alert("Lỗi", "Không thể bắt đầu cuộc gọi.");
+    }
+  };
+
+  const handleAcceptCall = async () => {
+    try {
+      if (!incomingCall || !user) return;
+
+      const setCallStates = {
+        setIsCalling,
+        setIncomingCall,
+        setReceiver,
+        setJitsiUrl,
+      };
+
+      await acceptCall(incomingCall, user, dbCall, setCallStates);
+    } catch (error) {
+      console.error("Error accepting call:", error);
+      Alert.alert("Lỗi", "Không thể chấp nhận cuộc gọi.");
+    }
+  };
+
+  const handleEndCall = async () => {
+    try {
+      // Clear timeout
+      if (callTimeout) {
+        clearTimeout(callTimeout);
+        setCallTimeout(null);
+      }
+
+      const setCallStates = {
+        setIsCalling,
+        setIncomingCall,
+        setIsInitiator,
+        setReceiver,
+        setJitsiUrl,
+      };
+
+      await endCall(receiver, isInitiator, user, dbCall, setCallStates);
+    } catch (error) {
+      console.error("Error ending call:", error);
+      // Force reset states even if Firebase call fails
+      setIsCalling(false);
+      setIncomingCall(null);
+      setIsInitiator(false);
+      setReceiver(null);
+      setJitsiUrl(null);
+    }
+  };
+
+  const handleDeclineCall = async () => {
+    try {
+      await handleEndCall();
+    } catch (error) {
+      console.error("Error declining call:", error);
+    }
+  };
+
+  // Listen for call status when initiator
+  useEffect(() => {
+    if (isInitiator && receiver?.uid && user?.uid) {
+      const callRef = ref(dbCall, `calls/${receiver.uid.replace(/[.#$[\]]/g, '_')}`);
+
+      const unsubscribe = onValue(
+        callRef,
+        (snapshot) => {
+          try {
+            const callData = snapshot.val();
+            if (callData && callData.status === "accepted") {
+              const { from, to } = callData;
+              if (from?.uid && to?.uid) {
+                const url = generateJitsiUrl(from.uid, to.uid);
+                setJitsiUrl(url);
+                setIsCalling(true);
+
+                // Clear timeout when call is accepted
+                if (callTimeout) {
+                  clearTimeout(callTimeout);
+                  setCallTimeout(null);
+                }
+              }
+            } else if (callData && callData.status === "declined") {
+              Alert.alert("Cuộc gọi bị từ chối", "Người nhận đã từ chối cuộc gọi.");
+              handleEndCall();
+            } else if (!callData) {
+              // Call was ended by receiver
+              handleEndCall();
+            }
+          } catch (error) {
+            console.error("Error processing call status:", error);
+          }
+        },
+        (error) => {
+          console.error("Error listening to call status:", error);
+        }
+      );
+
+      initiatorListenerRef.current = unsubscribe;
+
+      return () => {
+        if (initiatorListenerRef.current) {
+          off(callRef);
+          initiatorListenerRef.current = null;
+        }
+      };
+    }
+  }, [isInitiator, receiver, user, callTimeout]);
+
+  // Listen for incoming calls
+  useEffect(() => {
+    if (user?.uid) {
+      const callListener = ref(dbCall, `calls/${user.uid.replace(/[.#$[\]]/g, '_')}`);
+
+      const unsubscribe = onValue(
+        callListener,
+        (snapshot) => {
+          try {
+            const callData = snapshot.val();
+
+            if (callData && callData.status === "pending") {
+              const { from, to } = callData;
+              if (from?.uid && to?.uid && to.uid === user.uid) {
+                setIncomingCall(from);
+                setReceiver(to);
+              }
+            } else if (callData && callData.status === "accepted") {
+              const { from, to } = callData;
+              if (from?.uid && to?.uid) {
+                const url = generateJitsiUrl(from.uid, to.uid);
+                setJitsiUrl(url);
+                setIsCalling(true);
+              }
+            } else if (!callData || callData.status === "ended") {
+              // Call was ended or doesn't exist
+              if (isCalling || incomingCall) {
+                setIncomingCall(null);
+                setJitsiUrl(null);
+                setIsCalling(false);
+              }
+            }
+          } catch (error) {
+            console.error("Error processing incoming call:", error);
+          }
+        },
+        (error) => {
+          console.error("Error listening to incoming calls:", error);
+        }
+      );
+
+      callListenerRef.current = unsubscribe;
+
+      return () => {
+        if (callListenerRef.current) {
+          off(callListener);
+          callListenerRef.current = null;
+        }
+      };
+    }
+  }, [user, isCalling, incomingCall]);
+
+  // Authentication state management
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          // Lấy thông tin user từ AsyncStorage
+      try {
+        if (firebaseUser) {
+          // Get user info from AsyncStorage
           const userInfoString = await AsyncStorage.getItem("userInfo");
           const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
 
@@ -130,13 +346,13 @@ export default function Router() {
               })
             );
           } else {
-            // Nếu không có userInfo trong storage, có thể user đăng nhập lần đầu
-            console.log("No user info in storage, user might need to complete registration");
+            // If no userInfo in storage, user might need to complete registration
+            console.log("No user info in storage, setting default user data");
             dispatch(
               setUser({
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
-                username: firebaseUser.displayName,
+                username: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
                 photoURL: firebaseUser.photoURL,
                 emailVerified: firebaseUser.emailVerified,
                 role: 'patient', // default role
@@ -144,32 +360,46 @@ export default function Router() {
             );
           }
 
-          // Cập nhật access token
+          // Update access token
           const token = await firebaseUser.getIdToken();
           await AsyncStorage.setItem("access_Token", token);
-          
-        } catch (error) {
-          console.error("Error handling auth state:", error);
+
+        } else {
+          // User logged out
+          console.log("User logged out, clearing state");
+          dispatch(clearUser());
+          await AsyncStorage.clear();
         }
-      } else {
-        // User đã đăng xuất
-        console.log("User logged out, clearing state");
-        dispatch(clearUser());
-        await AsyncStorage.clear();
+      } catch (error) {
+        console.error("Error handling auth state:", error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, [dispatch]);
 
-  console.log("user ", user);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (callTimeout) {
+        clearTimeout(callTimeout);
+      }
+      if (callListenerRef.current) {
+        callListenerRef.current();
+      }
+      if (initiatorListenerRef.current) {
+        initiatorListenerRef.current();
+      }
+    };
+  }, []);
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2196F3" />
+        <Text style={styles.loadingText}>Đang tải...</Text>
       </View>
     );
   }
@@ -178,24 +408,71 @@ export default function Router() {
     <SafeAreaView style={{ flex: 1 }}>
       {user && <Header />}
 
+      {/* Incoming call popup */}
+      {!isInitiator && incomingCall && (
+        <Modal transparent animationType="fade" visible>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  {incomingCall.username || incomingCall.email || 'Người dùng'} đang gọi bạn...
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  {incomingCall.role === 'doctor' ? 'Bác sĩ' : 'Bệnh nhân'}
+                </Text>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    onPress={handleAcceptCall}
+                    style={[styles.button, styles.primaryButton]}
+                  >
+                    <Text style={styles.buttonText}>Chấp nhận</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleDeclineCall}
+                    style={[styles.button, styles.dangerButton]}
+                  >
+                    <Text style={styles.buttonText}>Từ chối</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Video call modal */}
+      {isCalling && (
+        <VideoCallModal
+          jitsiUrl={jitsiUrl}
+          onClose={handleEndCall}
+        />
+      )}
+
       <Stack.Navigator>
         {user ? (
           user.role === 'doctor' ? (
             <Stack.Screen
               name="DoctorTab"
-              component={DoctorTab}
               options={{ headerShown: false }}
-            />
+            >
+              {(props) => <DoctorTab {...props} handleStartCall={handleStartCall} />}
+            </Stack.Screen>
           ) : (
             <>
               <Stack.Screen
                 name="PatientTabs"
-                component={PatientTabs}
                 options={{ headerShown: false }}
-              />
+              >
+                {(props) => <PatientTabs {...props} handleStartCall={handleStartCall} />}
+              </Stack.Screen>
               <Stack.Screen
                 name="PersonalTabs"
                 component={PersonalTabs}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Diagnosis"
+                component={Diagnosis}
                 options={{ headerShown: false }}
               />
             </>
@@ -225,27 +502,76 @@ export default function Router() {
 }
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    backgroundColor: "white",
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
-    borderRadius: 10,
-    width: "90%",
-    maxHeight: "80%",
   },
   modalContainer: {
     backgroundColor: "white",
-    padding: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     width: "90%",
-    maxHeight: "80%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-
+  modalContent: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+    color: '#333',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  button: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
+  },
+  primaryButton: {
+    backgroundColor: '#007bff',
+  },
+  dangerButton: {
+    backgroundColor: '#dc3545',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#fff",
   },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
 });
-
-

@@ -32,7 +32,17 @@ export const getWithExpiry = async (key) => {
       return null;
     }
 
-    return item.value; // trả về value gốc luôn
+    let value = item.value;
+    // nếu value là string JSON thì parse ra object
+    if (typeof value === "string") {
+      try {
+        value = JSON.parse(value);
+      } catch (e) {
+        // không parse được thì giữ nguyên
+      }
+    }
+
+    return value;
   } catch (err) {
     console.error("AsyncStorage getWithExpiry error:", err);
     return null;

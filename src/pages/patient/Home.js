@@ -14,7 +14,7 @@ import ApiBooking from '../../apis/ApiBooking';
 
 const Home = () => {
   const navigation = useNavigation();
-  const user = useSelector((state) => state.auth.userInfo);
+  const user = useSelector((state) => state.auth.user);
   const bloodSugar = useSelector((state) => state.patient.bloodSugar);
   const [nearestAppointment, setNearestAppointment] = useState(null);
   const [medications, setMedications] = useState([]);
@@ -32,7 +32,7 @@ const Home = () => {
     return age;
   };
 
-  // Fetch nearest appointment
+  // lấy lịch hẹn gần nhất
   useEffect(() => {
     const fetchNearestAppointment = async () => {
       try {
@@ -136,7 +136,7 @@ const Home = () => {
           <Text style={styles.cardTitle}>Đường huyết hôm nay</Text>
           <TouchableOpacity
             style={styles.detailButton}
-            onPress={() => navigation.navigate('HealthTabs')}
+            onPress={() => navigation.navigate('Sức khỏe')}
           >
             <Text style={styles.detailButtonText}>Xem Chi tiết</Text>
           </TouchableOpacity>
@@ -191,7 +191,7 @@ const Home = () => {
         </View>
         <TouchableOpacity
           style={styles.chatButton}
-          onPress={() => navigation.navigate('Assistant')}
+          onPress={() => navigation.navigate('Trợ lý AI')}
         >
           <Icon name="chat" size={16} color="#3B82F6" />
           <Text style={styles.chatButtonText}>Chat ngay</Text>

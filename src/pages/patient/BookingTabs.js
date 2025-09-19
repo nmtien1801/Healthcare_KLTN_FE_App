@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useSelector } from "react-redux";
 import { db } from "../../../firebase";
+import { useSelector } from "react-redux";
 import ApiBooking from "../../apis/ApiBooking";
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -97,14 +97,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionButton: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  primaryButton: {
-    backgroundColor: '#007bff',
   },
   warningButton: {
     backgroundColor: '#ffc107',
@@ -129,7 +126,7 @@ const styles = StyleSheet.create({
   },
   statusRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   cancelButton: {
     backgroundColor: 'transparent',
@@ -365,7 +362,7 @@ const styles = StyleSheet.create({
   bookingContainer: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    padding: 16,
+    padding: 16 ,
   },
   bookingCard: {
     backgroundColor: '#ffffff',
@@ -635,7 +632,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isCanceling, setIsCanceling] = useState(false); // Fixed variable name
-  const user = useSelector((state) => state.auth.userInfo);
+  const user = useSelector((state) => state.auth.user);
   const [currentPage, setCurrentPage] = useState(0);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showCancelErrorModal, setShowCancelErrorModal] = useState(false);
@@ -683,7 +680,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
   }, [onNewAppointment]);
 
   // Pagination functions
-  const itemsPerPage = 2;
+  const itemsPerPage = 1;
   const totalPages = Math.ceil(appointments.length / itemsPerPage);
   const startIndex = currentPage * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -731,7 +728,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
     }
   };
 
-  // Chat functionality
+  // Chat với bác sĩ
   const [showChatbot, setShowChatbot] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -772,6 +769,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
         };
       });
 
+      // Giữ lại tin nhắn chào mừng nếu không có tin nhắn từ Firebase
       if (firebaseMessages.length === 0) {
         setChatMessages(prev => prev.filter(msg => msg.isWelcome));
       } else {
@@ -845,14 +843,14 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
           </View>
         )}
 
-        {!loading && currentAppointments.length > 0 && (
+        {!loading && currentAppointments && currentAppointments.length > 0 && (
           <View>
             {currentAppointments.map((appointment, index) => (
               <View
                 key={appointment._id || appointment.id || index}
                 style={styles.appointmentCard}
               >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <View style={styles.statusRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Image
                       source={{
@@ -870,37 +868,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
                       </Text>
                     </View>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ backgroundColor: '#e8f5e8', padding: 8, borderRadius: 8 }}>
-                      <Ionicons name="shield" size={20} color="#34c759" />
-                    </View>
-                    <Text style={{ fontSize: 14, color: '#666', marginLeft: 8 }}>
-                      Bảo mật 100%
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.appointmentDetails}>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="calendar" size={20} color="#007bff" />
-                    <Text style={styles.detailText}>
-                      {new Date(appointment.date).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      })}
-                    </Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="time" size={20} color="#007bff" />
-                    <Text style={styles.detailText}>
-                      {appointment.time}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.bottomRow}>
-                  <View style={styles.statusRow}>
+                  <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center' , gap: 8}}>
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusText}>● Online</Text>
                     </View>
@@ -927,9 +895,32 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
                       >
                         <Ionicons name="call" size={12} color="#fff" />
                       </TouchableOpacity>
+
                     </View>
                   </View>
-                  <View style={styles.statusRow}>
+                </View>
+
+                <View style={styles.appointmentDetails}>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="calendar" size={20} color="#007bff" />
+                    <Text style={styles.detailText}>
+                      {new Date(appointment.date).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Ionicons name="time" size={20} color="#007bff" />
+                    <Text style={styles.detailText}>
+                      {appointment.time}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.statusRow}>
+                  <View style={styles.bottomRow}>
                     <Ionicons
                       name="checkmark-circle"
                       size={14}
@@ -944,6 +935,8 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
                     }}>
                       {appointment.status === "pending" ? "Chờ xác nhận" : "Đã xác nhận"}
                     </Text>
+                  </View>
+                  <View>
                     <TouchableOpacity
                       style={styles.cancelButton}
                       onPress={() => handleCancelBooking(appointment._id || appointment.id)}
@@ -1034,7 +1027,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
               </TouchableOpacity>
             </View>
 
-            <ScrollView 
+            <ScrollView
               style={styles.chatMessages}
               ref={scrollViewRef => {
                 this.scrollView = scrollViewRef;
@@ -1197,7 +1190,7 @@ const BookingNew = ({ handleSubmit }) => {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const user = useSelector((state) => state.auth.userInfo);
+  const user = useSelector((state) => state.auth.user);
 
   // Fetch doctors by date
   useEffect(() => {
@@ -1244,7 +1237,7 @@ const BookingNew = ({ handleSubmit }) => {
       setShowErrorModal(true);
       return;
     }
-    
+
     if (!selectedDoctor || !selectedDate || !selectedTime || !reason.trim()) {
       setErrorMessage("Vui lòng chọn bác sĩ, ngày, giờ khám và nhập lý do khám.");
       setShowErrorModal(true);
@@ -1268,7 +1261,7 @@ const BookingNew = ({ handleSubmit }) => {
       setShowErrorModal(true);
       return;
     }
-    
+
     const doctorStartTime = selectedDoctorData?.shift?.start || "08:00";
     const doctorEndTime = selectedDoctorData?.shift?.end || "17:00";
     if (selectedTime < doctorStartTime || selectedTime > doctorEndTime) {
@@ -1279,7 +1272,7 @@ const BookingNew = ({ handleSubmit }) => {
 
     try {
       setLoadingSubmit(true);
-      
+
       const payload = {
         firebaseUid: user.uid,
         doctorId: selectedDoctor,
@@ -1351,7 +1344,7 @@ const BookingNew = ({ handleSubmit }) => {
     if (!selectedDoctor) return false;
     const selectedDoctorData = doctors.find(d => (d.id || d._id || d.doctorId) === selectedDoctor);
     if (!selectedDoctorData) return false;
-    
+
     const doctorStartTime = selectedDoctorData?.shift?.start || "08:00";
     const doctorEndTime = selectedDoctorData?.shift?.end || "17:00";
     return time >= doctorStartTime && time <= doctorEndTime;
@@ -1411,7 +1404,7 @@ const BookingNew = ({ handleSubmit }) => {
             </Text>
             <Ionicons name="chevron-down" size={16} color="#666" />
           </TouchableOpacity>
-          
+
           {showDatePicker && (
             <DateTimePicker
               value={selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date()}
@@ -1588,14 +1581,14 @@ const BookingTabs = ({ handleStartCall }) => {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
       {/* Lịch hẹn sắp tới - ở trên */}
-      <View style={{ marginBottom: 16 }}>
+      <View>
         <UpcomingAppointment
           handleStartCall={handleStartCall}
           refreshTrigger={refreshTrigger}
           onNewAppointment={newAppointment}
         />
       </View>
-      
+
       {/* Đặt lịch khám mới - ở dưới */}
       <View>
         <BookingNew handleSubmit={handleSubmit} />

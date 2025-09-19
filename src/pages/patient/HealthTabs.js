@@ -32,7 +32,6 @@ const Following = ({ user, nearestAppointment }) => {
     color: latestReading < 6 ? '#28a745' : latestReading < 7 ? '#ffc107' : '#dc3545',
     bgColor: latestReading < 6 ? '#d4edda' : latestReading < 7 ? '#fff3cd' : '#f8d7da',
   };
-console.log('ssssssssss ', user);
 
   return (
     <View style={styles.container}>
