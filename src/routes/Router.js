@@ -27,7 +27,7 @@ import OverviewTab from "../pages/doctor/OverviewTab";
 import InformationTab from "../pages/doctor/InformationTab";
 import AppointmentTab from "../pages/doctor/AppointmentTab";
 import PatientTab from "../pages/doctor/PatientTab";
-import SettingTabs from "../pages/doctor/SettingTabs";
+import AttendanceTab from "../pages/doctor/AttendanceTab";
 import Header from "../routes/Header";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Diagnosis from "../pages/patient/assistant/diagnosis";
@@ -60,10 +60,11 @@ const DoctorTab = ({ route, handleStartCall }) => {
               "Tổng quan": focused
                 ? "chatbubble-ellipses"
                 : "chatbubble-ellipses-outline",
-              "Bệnh nhân": focused ? "people" : "people-outline", // Changed icon
-              "Lịch hẹn": focused ? "calendar" : "calendar-outline", // Changed icon
-              "Thông tin": focused ? "information-circle" : "information-circle-outline", // Changed icon
-              "Cài đặt": focused ? "settings" : "settings-outline", // Changed icon
+              "Bệnh nhân": focused ? "id-card" : "id-card-outline",
+              "Lịch hẹn": focused ? "sparkles" : "sparkles-outline",
+              "Chấm công": focused ? "checkmark-done-circle" : "checkmark-done-circle-outline",
+              "Thông tin": focused ? "person" : "person-outline",
+              "Cài đặt": focused ? "person" : "person-outline",
             };
             return <Icon name={icons[route.name]} size={size} color={color} />;
           },
@@ -76,8 +77,8 @@ const DoctorTab = ({ route, handleStartCall }) => {
           {(props) => <PatientTab {...props} handleStartCall={handleStartCall} />}
         </Tab.Screen>
         <Tab.Screen name="Lịch hẹn" component={AppointmentTab} />
+        <Tab.Screen name="Chấm công" component={AttendanceTab} />
         <Tab.Screen name="Thông tin" component={InformationTab} />
-        <Tab.Screen name="Cài đặt" component={SettingTabs} />
       </Tab.Navigator>
     </View>
   );
