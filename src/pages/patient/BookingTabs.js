@@ -19,6 +19,7 @@ import { db } from "../../../firebase";
 import { useSelector } from "react-redux";
 import ApiBooking from "../../apis/ApiBooking";
 import DateTimePicker from '@react-native-community/datetimepicker';
+import {sendStatus} from "../../utils/SetupSignFireBase";
 
 const { width, height } = Dimensions.get('window');
 
@@ -362,7 +363,7 @@ const styles = StyleSheet.create({
   bookingContainer: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    padding: 16 ,
+    padding: 16,
   },
   bookingCard: {
     backgroundColor: '#ffffff',
@@ -630,7 +631,6 @@ const CustomModal = ({ visible, onClose, title, children, type = "info" }) => {
 const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment }) => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [isCanceling, setIsCanceling] = useState(false); // Fixed variable name
   const user = useSelector((state) => state.auth.user);
   const [currentPage, setCurrentPage] = useState(0);
@@ -640,7 +640,9 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [cancelErrorMessage, setCancelErrorMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-
+  const senderId = user?.uid;
+  const receiverId = "weHP9TWfdrZo5L9rmY81BRYxNXr2";
+  
   // Fetch appointments from API
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -716,6 +718,9 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
         setCurrentPage(newTotalPages - 1);
       }
 
+      // gửi tín hiệu trạng thái hủy lịch tới bác sĩ qua Firestore
+      await sendStatus(user?.uid, receiverId, "Hủy lịch");
+
       setShowCancelModal(false);
       setAppointmentToCancel(null);
     } catch (err) {
@@ -732,8 +737,6 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
   const [showChatbot, setShowChatbot] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const senderId = user?.uid;
-  const receiverId = "weHP9TWfdrZo5L9rmY81BRYxNXr2";
   const [chatMessages, setChatMessages] = useState([
     {
       id: 'welcome',
@@ -749,6 +752,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
     return [senderId, receiverId].sort().join('_');
   }, [senderId, receiverId]);
 
+  // nhận tín hiệu tin nhắn
   useEffect(() => {
     if (!senderId || !roomChats) return;
 
@@ -762,7 +766,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
         const data = doc.data();
         return {
           id: doc.id,
-          text: data.message || data.text || '',
+          text: data.message || data.text || data.status || '',
           sender: data.senderId === senderId ? "patient" : "doctor",
           timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
           originalData: data
@@ -868,7 +872,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
                       </Text>
                     </View>
                   </View>
-                  <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center' , gap: 8}}>
+                  <View style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusText}>● Online</Text>
                     </View>
@@ -1229,8 +1233,6 @@ const BookingNew = ({ handleSubmit }) => {
   };
 
   const onSubmit = useCallback(async () => {
-    console.log("onSubmit called");
-
     // Validation
     if (!user?.uid) {
       setErrorMessage("Vui lòng đăng nhập để đặt lịch.");
@@ -1285,7 +1287,6 @@ const BookingNew = ({ handleSubmit }) => {
       };
 
       const response = await ApiBooking.bookAppointment(payload);
-      console.log("Booking response:", response);
 
       const newAppointment = {
         _id: response._id || response.id || Date.now().toString(),
@@ -1304,6 +1305,8 @@ const BookingNew = ({ handleSubmit }) => {
       };
 
       const successMsg = `Đặt lịch khám thành công với bác sĩ ${selectedDoctorData.name} vào ${selectedTime} ngày ${new Date(selectedDate).toLocaleDateString("vi-VN")}!`;
+      // gửi tín hiệu trạng thái đặt lịch tới bác sĩ qua Firestore
+      await sendStatus(user?.uid, receiverId, "Đặt lịch");
       setSuccessMessage(successMsg);
       setShowSuccessModal(true);
 

@@ -19,6 +19,7 @@ import EditAppointmentModal from "../../components/doctor/appointment/EditAppoin
 import ApiDoctor from "../../apis/ApiDoctor";
 import { getLabelFromOptions } from "../../utils/appointmentHelper";
 import { STATUS_COLORS, STATUS_OPTIONS, TYPE_OPTIONS } from "../../utils/appointmentConstants";
+import { listenStatus } from "../../utils/SetupSignFireBase";
 
 const { width, height } = Dimensions.get("window");
 const itemsPerPage = 5;
@@ -52,23 +53,42 @@ export default function AppointmentTab() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
 
+  const fetchAppointments = async () => {
+    console.log("fetchAppointments chạy...");
+    try {
+      const resToday = await ApiDoctor.getAppointmentsToday();
+      console.log("Raw Today:", resToday);
+      setTodayAppointments(resToday.map(mapAppointment));
+      console.log("Appointments Today:", resToday);
+      const resUpcoming = await ApiDoctor.getAppointments();
+      console.log("Upcoming Appointments:", resUpcoming);
+      setUpcomingAppointments(resUpcoming.map(mapAppointment));
+    } catch (err) {
+      console.error("Lỗi lấy appointments:", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchAppointments = async () => {
-      console.log("fetchAppointments chạy...");
-      try {
-        const resToday = await ApiDoctor.getAppointmentsToday();
-        console.log("Raw Today:", resToday);
-        setTodayAppointments(resToday.map(mapAppointment));
-        console.log("Appointments Today:", resToday);
-        const resUpcoming = await ApiDoctor.getAppointments();
-        console.log("Upcoming Appointments:", resUpcoming);
-        setUpcomingAppointments(resUpcoming.map(mapAppointment));
-      } catch (err) {
-        console.error("Lỗi lấy appointments:", err);
-      }
-    };
     fetchAppointments();
   }, []);
+
+  // Lắng nghe tín hiệu hủy lịch qua Firestore (status message) trong chats
+  let doctorUid = "weHP9TWfdrZo5L9rmY81BRYxNXr2";
+  let patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
+  useEffect(() => {
+    const roomChats = [doctorUid, patientUid].sort().join("_");
+
+    const unsub = listenStatus(roomChats, doctorUid, (signal) => {
+      if (signal?.status === "Hủy lịch") {
+        fetchAppointments();
+      }
+      else if (signal?.status === "Đặt lịch") {
+        fetchAppointments();
+      }
+    });
+
+    return () => unsub();
+  }, [doctorUid, patientUid]);
 
   const mapAppointment = (item) => {
     console.log("Mapping item:", item);
