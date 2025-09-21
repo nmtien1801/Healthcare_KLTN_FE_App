@@ -1203,7 +1203,11 @@ const BookingNew = ({ handleSubmit }) => {
         const dateString = getDateString(selectedDate);
         const response = await ApiBooking.getDoctorsByDate(dateString);
         const data = Array.isArray(response) ? response : response?.data || [];
-        setDoctors(data);
+        const normalizedDoctors = data.map((doctor, index) => ({
+          ...doctor,
+          id: doctor.id || doctor._id || doctor.doctorId || `doctor-${index}`, // Tạo ID duy nhất
+        }));
+        setDoctors(normalizedDoctors);
       } catch (err) {
         console.error("Lỗi khi tải danh sách bác sĩ:", err);
         setDoctors([]);
