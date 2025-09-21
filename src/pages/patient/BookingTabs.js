@@ -1280,7 +1280,7 @@ const BookingNew = ({ handleSubmit }) => {
       return;
     }
 
-    if (!selectedDoctor || !selectedDate || !selectedTime || !reason.trim()) {
+    if (!selectedDoctor || !selectedDate || !selectedTime) {
       setErrorMessage("Vui lòng chọn bác sĩ, ngày, giờ khám và nhập lý do khám.");
       setShowErrorModal(true);
       return;
@@ -1297,7 +1297,7 @@ const BookingNew = ({ handleSubmit }) => {
     }
 
     // Doctor working hours validation
-    const selectedDoctorData = doctors.find(d => (d.id || d._id || d.doctorId) === selectedDoctor);
+    const selectedDoctorData = doctors.find((d) => d.id === selectedDoctor);
     if (!selectedDoctorData) {
       setErrorMessage("Bác sĩ không hợp lệ. Vui lòng chọn lại.");
       setShowErrorModal(true);
