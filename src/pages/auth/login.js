@@ -73,7 +73,7 @@ export default function LoginForm() {
               userId: res.payload.DT.userId,
               uid: user.uid,
               email: user.email,
-              username:  res.payload.DT.username,
+              username: res.payload.DT.username,
               photoURL: user.photoURL,
               role: res.payload.DT.role,
               address: res.payload.DT.address,
@@ -83,7 +83,8 @@ export default function LoginForm() {
             })
           );
           Alert.alert("Thành công", "Đăng nhập thành công!");
-          navigation.navigate("Home");
+          let parseRole = res.payload.DT.role === "doctor" ? "Tổng quan" : "Sức khỏe";
+          navigation.navigate(parseRole);
         } else {
           Alert.alert("Lỗi", "Lỗi từ server: " + res.payload.message);
         }
@@ -124,7 +125,7 @@ export default function LoginForm() {
               userId: res.payload.DT.userId,
               uid: user.uid,
               email: user.email,
-              username:  res.payload.DT.username,
+              username: res.payload.DT.username,
               photoURL: user.photoURL,
               role: res.payload.DT.role,
               address: res.payload.DT.address,
@@ -134,7 +135,8 @@ export default function LoginForm() {
             })
           );
           Alert.alert("Thành công", "Đăng nhập Google thành công!");
-          navigation.navigate("Home");
+          let parseRole = res.payload.DT.role === "doctor" ? "Tổng quan" : "Sức khỏe";
+          navigation.navigate(parseRole);
         } else {
           Alert.alert("Lỗi", "Lỗi từ server: " + res.payload.message);
         }
