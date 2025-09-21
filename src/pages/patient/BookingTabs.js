@@ -11,7 +11,8 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
-  FlatList
+  FlatList,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -19,9 +20,9 @@ import { db } from "../../../firebase";
 import { useSelector } from "react-redux";
 import ApiBooking from "../../apis/ApiBooking";
 import DateTimePicker from '@react-native-community/datetimepicker';
-import {sendStatus} from "../../utils/SetupSignFireBase";
+import { sendStatus } from "../../utils/SetupSignFireBase";
 
-const { width, height } = Dimensions.get('window');
+const DEVICE = Platform.OS === "web" ? "WEB" : "APP";
 
 const styles = StyleSheet.create({
   container: {
@@ -642,7 +643,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
   const [errorMessage, setErrorMessage] = useState("");
   const senderId = user?.uid;
   const receiverId = "weHP9TWfdrZo5L9rmY81BRYxNXr2";
-  
+
   // Fetch appointments from API
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -1176,13 +1177,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
 const BookingNew = ({ handleSubmit }) => {
   const [appointmentType, setAppointmentType] = useState("onsite");
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  });
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState("");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
@@ -1195,6 +1190,7 @@ const BookingNew = ({ handleSubmit }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const user = useSelector((state) => state.auth.user);
+  const receiverId = "weHP9TWfdrZo5L9rmY81BRYxNXr2";
 
   // Fetch doctors by date
   useEffect(() => {
@@ -1202,12 +1198,11 @@ const BookingNew = ({ handleSubmit }) => {
 
     const fetchDoctors = async () => {
       setLoadingDoctors(true);
-      setSelectedDoctor(null); // Reset selected doctor when date changes
+      setSelectedDoctor(null);
       try {
-        const response = await ApiBooking.getDoctorsByDate(selectedDate);
-        const data = Array.isArray(response)
-          ? response
-          : response?.data || [];
+        const dateString = getDateString(selectedDate);
+        const response = await ApiBooking.getDoctorsByDate(dateString);
+        const data = Array.isArray(response) ? response : response?.data || [];
         setDoctors(data);
       } catch (err) {
         console.error("Lỗi khi tải danh sách bác sĩ:", err);
@@ -1222,13 +1217,54 @@ const BookingNew = ({ handleSubmit }) => {
     fetchDoctors();
   }, [selectedDate]);
 
+  // Format ngày thành chuỗi YYYY-MM-DD
+  const getDateString = (date) => {
+    if (!(date instanceof Date) || isNaN(date)) {
+      console.error('Invalid date:', date);
+      return new Date().toISOString().split('T')[0];
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleDateChange = (event, date) => {
-    setShowDatePicker(false);
-    if (date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      setSelectedDate(`${year}-${month}-${day}`);
+    // Đóng date picker trên Android ngay lập tức
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    // Chỉ cập nhật date khi user chọn (không phải khi dismiss)
+    if (event?.type === 'set' && date) {
+      setSelectedDate(date);
+      setSelectedTime(""); // Reset time khi đổi ngày
+    }
+
+    // Đóng date picker trên iOS khi chọn xong
+    if (Platform.OS === 'ios' && (event?.type === 'set' || event?.type === 'dismissed')) {
+      setShowDatePicker(false);
+    }
+  };
+
+  // Xử lý thay đổi ngày trên web
+  const handleWebDateChange = (event) => {
+    const dateString = event.target.value;
+    if (dateString) {
+      const newDate = new Date(dateString);
+      if (!isNaN(newDate)) {
+        setSelectedDate(newDate);
+        setSelectedTime(""); // Reset time khi đổi ngày
+      } else {
+        console.error('Invalid web date input:', dateString);
+      }
+    }
+  };
+
+  // SỬA LẠI: Toggle date picker
+  const toggleDatePicker = () => {
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      setShowDatePicker(!showDatePicker);
     }
   };
 
@@ -1330,7 +1366,6 @@ const BookingNew = ({ handleSubmit }) => {
     }
   }, [user, selectedDoctor, selectedDate, selectedTime, reason, notes, appointmentType, doctors, handleSubmit]);
 
-  // Generate time slots
   const generateTimeSlots = () => {
     const allTimeSlots = [];
     for (let hour = 8; hour <= 16; hour++) {
@@ -1399,22 +1434,58 @@ const BookingNew = ({ handleSubmit }) => {
           <Text style={styles.label}>Chọn ngày khám</Text>
           <TouchableOpacity
             style={styles.datePickerContainer}
-            onPress={() => setShowDatePicker(true)}
+            onPress={Platform.OS === 'web' ? undefined : toggleDatePicker}
           >
             <Ionicons name="calendar" size={20} color="#007bff" style={{ marginRight: 8 }} />
-            <Text style={styles.datePickerText}>
-              {selectedDate ? new Date(selectedDate + 'T00:00:00').toLocaleDateString("vi-VN") : "Chọn ngày"}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color="#666" />
+
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: 14,
+                  backgroundColor: 'transparent',
+                }}
+                value={getDateString(selectedDate)}
+                onChange={handleWebDateChange}
+                min={getDateString(new Date())} // Không cho chọn ngày quá khứ
+                max={getDateString(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))} // Tối đa 30 ngày
+              />
+            ) : (
+              <Text style={styles.datePickerText}>
+                {selectedDate && !isNaN(selectedDate)
+                  ? selectedDate.toLocaleDateString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })
+                  : "Chọn ngày"}
+              </Text>
+            )}
+
+            {Platform.OS !== 'web' && (
+              <Ionicons
+                name={showDatePicker ? "chevron-up" : "chevron-down"}
+                size={16}
+                color="#666"
+              />
+            )}
           </TouchableOpacity>
 
-          {showDatePicker && (
+          {/* DateTimePicker cho mobile */}
+          {Platform.OS !== 'web' && showDatePicker && (
             <DateTimePicker
-              value={selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date()}
+              testID="dateTimePicker"
+              value={selectedDate && !isNaN(selectedDate) ? selectedDate : new Date()}
               mode="date"
-              display="default"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={handleDateChange}
               minimumDate={new Date()}
+              maximumDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
+              locale="vi-VN"
+              style={{ backgroundColor: '#ffffff' }}
             />
           )}
         </View>

@@ -5,8 +5,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from "react-native";
-import { Eye, EyeOff, RefreshCw } from "lucide-react-native";
+import { Eye, EyeOff, RefreshCw, Calendar, ChevronDown, ChevronUp } from "lucide-react-native";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useDispatch, useSelector } from "react-redux";
 import { register, verifyEmail } from "../../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
@@ -19,10 +21,11 @@ export default function LoginForm() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [countdown, setCountdown] = useState(0); // đếm ngược 60s
-  const [code, setCode] = useState({}); // mã xác thực trong 60s
-  const [startTime, setStartTime] = useState(null); // thời điểm bắt đầu đếm ngược
+  const [countdown, setCountdown] = useState(0);
+  const [code, setCode] = useState({});
+  const [startTime, setStartTime] = useState(null);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -33,10 +36,59 @@ export default function LoginForm() {
     confirmPassword: "",
     captcha: "",
     gender: "",
-    dob: "",
+    dob: new Date(), // Khởi tạo với Date object
     avatar: "",
     code: "",
   });
+
+  // Format ngày thành chuỗi YYYY-MM-DD
+  const getDateString = (date) => {
+    if (!(date instanceof Date) || isNaN(date)) {
+      return "";
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Xử lý thay đổi ngày sinh
+  const handleDateChange = (event, date) => {
+    console.log('DatePicker onChange:', { event: event?.type, date });
+    
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (event?.type === 'set' && date) {
+      console.log('Setting new birth date:', date.toLocaleDateString('vi-VN'));
+      handleChange("dob", date);
+    }
+    
+    if (Platform.OS === 'ios' && (event?.type === 'set' || event?.type === 'dismissed')) {
+      setShowDatePicker(false);
+    }
+  };
+
+  // Xử lý thay đổi ngày trên web
+  const handleWebDateChange = (event) => {
+    const dateString = event.target.value;
+    console.log('Web date input changed:', dateString);
+    if (dateString) {
+      const newDate = new Date(dateString);
+      if (!isNaN(newDate)) {
+        handleChange("dob", newDate);
+      }
+    }
+  };
+
+  // Toggle date picker
+  const toggleDatePicker = () => {
+    console.log('Toggle date picker, current state:', showDatePicker);
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      setShowDatePicker(!showDatePicker);
+    }
+  };
 
   const handleChange = (name, value) => {
     setFormData((prevState) => ({
@@ -91,13 +143,33 @@ export default function LoginForm() {
     // Kiểm tra mật khẩu và mật khẩu nhập lại có khớp không
     if (formData.password !== formData.confirmPassword) {
       setErrorMessage("Mật khẩu và mật khẩu nhập lại không khớp!");
-
       return;
     }
 
     // kiểm tra captcha
     if (!formData.captcha) {
       setErrorMessage("captcha không được để trống");
+      return;
+    }
+
+    // kiểm tra ngày sinh
+    if (!formData.dob || isNaN(formData.dob)) {
+      setErrorMessage("Vui lòng chọn ngày sinh hợp lệ");
+      return;
+    }
+
+    // Kiểm tra tuổi hợp lệ (ít nhất 13 tuổi)
+    const today = new Date();
+    const birthDate = new Date(formData.dob);
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    if (age < 13) {
+      setErrorMessage("Bạn phải ít nhất 13 tuổi để đăng ký");
       return;
     }
 
@@ -108,8 +180,14 @@ export default function LoginForm() {
     } else if (+formData.captcha !== +code.code) {
       setErrorMessage("❌ Mã không đúng");
     } else {
+      // Chuyển đổi dob thành string trước khi gửi
+      const formDataToSend = {
+        ...formData,
+        dob: getDateString(formData.dob)
+      };
+
       // Gửi thông tin đăng ký đi mongo
-      let res = await dispatch(register(formData));
+      let res = await dispatch(register(formDataToSend));
       if (res.payload.EC === 0) {
         // Gửi thông tin đăng ký đi firebase
         await createUserWithEmailAndPassword(
@@ -117,7 +195,7 @@ export default function LoginForm() {
           formData.email,
           formData.password
         );
-        navigation.navigate("Login"); // Điều hướng đến màn hình Login
+        navigation.navigate("Login");
       } else {
         setErrorMessage(res.payload.EM);
       }
@@ -173,11 +251,11 @@ export default function LoginForm() {
           />
         </View>
 
-        {/* Username Input */}
+        {/* Address Input */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Đia chỉ"
+            placeholder="Địa chỉ"
             value={formData.address}
             onChangeText={(text) => handleChange("address", text)}
           />
@@ -246,25 +324,75 @@ export default function LoginForm() {
           </TouchableOpacity>
         </View>
 
-        {/* gender Input */}
+        {/* Gender Input */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Gender"
+            placeholder="Giới tính (Nam/Nữ/Khác)"
             value={formData.gender}
             onChangeText={(text) => handleChange("gender", text)}
           />
         </View>
 
-        {/* dob Input */}
+        {/* Date of Birth Input */}
         <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.Date}
-            placeholder="Ngày sinh"
-            value={formData.dob}
-            onChangeText={(text) => handleChange("dob", text)}
-          />
+          <TouchableOpacity
+            style={styles.dateInputContainer}
+            onPress={Platform.OS === 'web' ? undefined : toggleDatePicker}
+          >
+            <Calendar size={20} color="#555" style={{ marginRight: 8 }} />
+            
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: 16,
+                  backgroundColor: 'transparent',
+                  height: 30,
+                }}
+                value={formData.dob ? getDateString(formData.dob) : ''}
+                onChange={handleWebDateChange}
+                max={getDateString(new Date())} // Không cho chọn ngày tương lai
+              />
+            ) : (
+              <Text style={styles.dateText}>
+                {formData.dob && !isNaN(formData.dob)
+                  ? formData.dob.toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })
+                  : "Chọn ngày sinh"}
+              </Text>
+            )}
+            
+            {Platform.OS !== 'web' && (
+              showDatePicker ? (
+                <ChevronUp size={16} color="#666" />
+              ) : (
+                <ChevronDown size={16} color="#666" />
+              )
+            )}
+          </TouchableOpacity>
         </View>
+
+        {/* DateTimePicker cho mobile */}
+        {Platform.OS !== 'web' && showDatePicker && (
+          <DateTimePicker
+            testID="dobDateTimePicker"
+            value={formData.dob && !isNaN(formData.dob) ? formData.dob : new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateChange}
+            maximumDate={new Date()} // Không cho chọn ngày tương lai
+            minimumDate={new Date(1900, 0, 1)} // Giới hạn từ năm 1900
+            locale="vi-VN"
+            style={{ backgroundColor: '#ffffff' }}
+          />
+        )}
 
         {errorMessage !== "" && (
           <View style={styles.errorContainer}>
@@ -332,18 +460,30 @@ const styles = StyleSheet.create({
     height: 50,
     fontSize: 16,
   },
+  dateInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 50,
+  },
+  dateText: {
+    flex: 1,
+    fontSize: 16,
+    color: formData => (formData.dob && !isNaN(formData.dob)) ? '#000' : '#999',
+  },
   iconButton: {
     padding: 10,
   },
   button: {
     width: "100%",
-    paddingVertical: 8,
+    paddingVertical: 15,
     marginVertical: 10,
     backgroundColor: "#2962ff",
-    alignItems: "center", // Căn giữa ngang
-    justifyContent: "center", // Căn giữa dọc
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
   },
-  linkText: {
+  link: {
     color: "#2962ff",
     marginTop: 8,
     fontSize: 14,
@@ -360,5 +500,8 @@ const styles = StyleSheet.create({
     color: "red",
     fontSize: 14,
     textAlign: "center",
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });
