@@ -13,9 +13,9 @@ import {
     SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import ApiWorkShift from "../../apis/ApiWorkShift"; // Giả sử đường dẫn giống web
-import ApiDoctor from "../../apis/ApiDoctor"; // Giả sử đường dẫn giống web
-import { formatDate } from "../../utils/formatDate"; // Giả sử đường dẫn giống web
+import ApiWorkShift from "../../apis/ApiWorkShift";
+import ApiDoctor from "../../apis/ApiDoctor";
+import { formatDate } from "../../utils/formatDate";
 
 // Shift options
 const shiftOptions = [
@@ -86,7 +86,7 @@ const ScheduleFormModal = ({
                 </View>
                 <ScrollView
                     style={styles.modalBody}
-                    contentContainerStyle={{ paddingBottom: 20 }} // Thêm padding để đảm bảo cuộn hết nội dung
+                    contentContainerStyle={{ paddingBottom: 20 }}
                     showsVerticalScrollIndicator={true}
                 >
                     {/* Chọn ngày bắt đầu tuần */}
@@ -98,7 +98,7 @@ const ScheduleFormModal = ({
                             value={weekStartDate}
                             onChangeText={(text) => handleWeekStartChange({ target: { value: text } })}
                             placeholderTextColor="#9ca3af"
-                            keyboardType="numeric" // Hỗ trợ nhập số dễ hơn
+                            keyboardType="numeric"
                         />
                         <TouchableOpacity style={styles.currentWeekButton} onPress={handleSelectCurrentWeek}>
                             <Icon name="calendar" size={20} color="#fff" />
