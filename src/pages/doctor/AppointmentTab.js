@@ -73,7 +73,7 @@ export default function AppointmentTab() {
   }, []);
 
   // Lắng nghe tín hiệu hủy lịch qua Firestore (status message) trong chats
-  let doctorUid = "weHP9TWfdrZo5L9rmY81BRYxNXr2";
+  let doctorUid = "1HwseYsBwxby5YnsLUWYzvRtCw53";
   let patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
   useEffect(() => {
     const roomChats = [doctorUid, patientUid].sort().join("_");

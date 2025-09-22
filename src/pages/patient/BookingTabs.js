@@ -642,7 +642,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
   const [cancelErrorMessage, setCancelErrorMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const senderId = user?.uid;
-  const receiverId = "weHP9TWfdrZo5L9rmY81BRYxNXr2";
+  const receiverId = "1HwseYsBwxby5YnsLUWYzvRtCw53";
 
   // Fetch appointments from API
   useEffect(() => {
@@ -890,7 +890,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
                           handleStartCall(
                             user,
                             {
-                              uid: "weHP9TWfdrZo5L9rmY81BRYxNXr2",
+                              uid: "1HwseYsBwxby5YnsLUWYzvRtCw53",
                               name: appointment.doctorId?.name || "Bác sĩ Trần Thị B",
                               role: "doctor",
                             },
@@ -1190,7 +1190,7 @@ const BookingNew = ({ handleSubmit }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const user = useSelector((state) => state.auth.user);
-  const receiverId = "weHP9TWfdrZo5L9rmY81BRYxNXr2";
+  const receiverId = "1HwseYsBwxby5YnsLUWYzvRtCw53";
 
   // Fetch doctors by date
   useEffect(() => {
