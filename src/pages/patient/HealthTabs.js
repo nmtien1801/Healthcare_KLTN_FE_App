@@ -424,8 +424,8 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
               {medicines.sang.length === 0 && medicines.trua.length === 0 && medicines.toi.length === 0 ? (
                 <TouchableOpacity
                   style={styles.diagnosisButton}
-                  onPress={() => navigation.navigate('Assistant')}
-                  accessibilityLabel="Chẩn đoán đơn thuốc"
+                  onPress={() => navigation.navigate('Trợ lý AI')}
+                  accessibilityLabel="Chẩn đoán"
                   accessibilityRole="button"
                 >
                   <Text style={styles.diagnosisButtonText}>Chẩn đoán</Text>
@@ -476,7 +476,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
             ) : (
               <TouchableOpacity
                 style={styles.exploreButton}
-                onPress={() => navigation.navigate('SuggestedFood')}
+                onPress={() => navigation.navigate('Dinh dưỡng')}
                 accessibilityLabel="Khám phá thực đơn"
                 accessibilityRole="button"
               >
