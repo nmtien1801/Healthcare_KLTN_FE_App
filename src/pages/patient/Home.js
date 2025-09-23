@@ -11,7 +11,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ApiBooking from '../../apis/ApiBooking';
-import { getUpcomingAppointments } from '../../redux/patientSlice';
 
 const Home = () => {
   const navigation = useNavigation();
@@ -39,7 +38,7 @@ const Home = () => {
     const fetchNearestAppointment = async () => {
       try {
         setLoading(true);
-        const appointments = await dispatch(getUpcomingAppointments()).unwrap();
+        const appointments = await ApiBooking.getUpcomingAppointments();
         if (appointments && appointments.length > 0) {
           const sortedAppointments = appointments.sort((a, b) => {
             const dateA = new Date(a.date);
