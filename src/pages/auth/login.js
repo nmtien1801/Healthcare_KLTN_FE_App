@@ -66,7 +66,8 @@ export default function LoginForm() {
         const idToken = await user.getIdToken();
         const res = await dispatch(Login({ user }));
         if (res.payload.EC === 0) {
-          await AsyncStorage.setItem("access_Token", user.accessToken);
+          // Lưu ID token để gọi BE (tránh dùng accessToken của Firebase)
+          await AsyncStorage.setItem("access_Token", idToken);
           await AsyncStorage.setItem("userInfo", JSON.stringify(res.payload.DT));
           dispatch(
             setUser({
@@ -83,8 +84,11 @@ export default function LoginForm() {
             })
           );
           Alert.alert("Thành công", "Đăng nhập thành công!");
-          let parseRole = res.payload.DT.role === "doctor" ? "Tổng quan" : "Sức khỏe";
-          navigation.navigate(parseRole);
+          if (res.payload.DT.role === "doctor") {
+            navigation.navigate("DoctorTab", { screen: "Tổng quan" });
+          } else if (res.payload.DT.role === "patient") {
+            navigation.navigate("PatientTabs", { screen: "Trang chủ" });
+          }
         } else {
           Alert.alert("Lỗi", "Lỗi từ server: " + res.payload.message);
         }
@@ -117,6 +121,7 @@ export default function LoginForm() {
       if (user) {
         const idToken = await user.getIdToken();
         const res = await dispatch(Login({ idToken }));
+
         if (res.payload.EC === 0) {
           await AsyncStorage.setItem("access_Token", idToken);
           await AsyncStorage.setItem("userInfo", JSON.stringify(res.payload.DT));
@@ -135,8 +140,11 @@ export default function LoginForm() {
             })
           );
           Alert.alert("Thành công", "Đăng nhập Google thành công!");
-          let parseRole = res.payload.DT.role === "doctor" ? "Tổng quan" : "Sức khỏe";
-          navigation.navigate(parseRole);
+          if (res.payload.DT.role === "doctor") {
+            navigation.navigate("DoctorTab", { screen: "Tổng quan" });
+          } else if (res.payload.DT.role === "patient") {
+            navigation.navigate("PatientTabs", { screen: "Trang chủ" });
+          }
         } else {
           Alert.alert("Lỗi", "Lỗi từ server: " + res.payload.message);
         }

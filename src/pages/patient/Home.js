@@ -11,6 +11,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ApiBooking from '../../apis/ApiBooking';
+import { getUpcomingAppointments } from '../../redux/patientSlice';
 
 const Home = () => {
   const navigation = useNavigation();
@@ -19,6 +20,7 @@ const Home = () => {
   const [nearestAppointment, setNearestAppointment] = useState(null);
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
 
   const calculateAge = (user) => {
     if (!user?.dob) return '';
@@ -37,7 +39,7 @@ const Home = () => {
     const fetchNearestAppointment = async () => {
       try {
         setLoading(true);
-        const appointments = await ApiBooking.getUpcomingAppointments();
+        const appointments = await dispatch(getUpcomingAppointments()).unwrap();
         if (appointments && appointments.length > 0) {
           const sortedAppointments = appointments.sort((a, b) => {
             const dateA = new Date(a.date);
@@ -58,6 +60,7 @@ const Home = () => {
         setLoading(false);
       }
     };
+
     fetchNearestAppointment();
   }, []);
 

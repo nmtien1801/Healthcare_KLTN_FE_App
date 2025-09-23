@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 // Use LAN IP on device (Android/iOS), localhost on web
-const URL_ANDROID = "http://192.168.1.3:8080/api";
+const URL_ANDROID = "http://192.168.1.101:8080/api";
 const URL_WEB = "http://localhost:8080/api";
 const BASE_URL =
     Platform.OS === "android" || Platform.OS === "ios" ? URL_ANDROID : URL_WEB;
@@ -17,8 +17,13 @@ const api = axios.create({
     responseType: "json",
 });
 
+// Interceptor cho request
+const getToken = async () => {
+    return await AsyncStorage.getItem("access_Token");
+};
+
 api.interceptors.request.use(async (config) => {
-    let token = await AsyncStorage.getItem("access_Token");
+    const token = await getToken(); // Lấy access token từ AsyncStorage
 
     if (token) {
         config.headers["Authorization"] = `Bearer ${token}`;

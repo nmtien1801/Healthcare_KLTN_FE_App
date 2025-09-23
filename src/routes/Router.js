@@ -325,6 +325,9 @@ export default function Router() {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       try {
         if (firebaseUser) {
+          // Update access token
+          const token = await firebaseUser.getIdToken();
+          await AsyncStorage.setItem("access_Token", token);
           // Get user info from AsyncStorage
           const userInfoString = await AsyncStorage.getItem("userInfo");
           const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
@@ -348,23 +351,8 @@ export default function Router() {
             );
           } else {
             // If no userInfo in storage, user might need to complete registration
-            console.log("No user info in storage, setting default user data");
-            dispatch(
-              setUser({
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                username: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
-                photoURL: firebaseUser.photoURL,
-                emailVerified: firebaseUser.emailVerified,
-                role: 'patient', // default role
-              })
-            );
+            console.log("No user info in storage");
           }
-
-          // Update access token
-          const token = await firebaseUser.getIdToken();
-          await AsyncStorage.setItem("access_Token", token);
-
         } else {
           // User logged out
           console.log("User logged out, clearing state");
@@ -450,52 +438,48 @@ export default function Router() {
       )}
 
       <Stack.Navigator>
-        {user ? (
-          user.role === 'doctor' ? (
-            <Stack.Screen
-              name="DoctorTab"
-              options={{ headerShown: false }}
-            >
-              {(props) => <DoctorTab {...props} handleStartCall={handleStartCall} />}
-            </Stack.Screen>
-          ) : (
-            <>
-              <Stack.Screen
-                name="PatientTabs"
-                options={{ headerShown: false }}
-              >
-                {(props) => <PatientTabs {...props} handleStartCall={handleStartCall} />}
-              </Stack.Screen>
-              <Stack.Screen
-                name="PersonalTabs"
-                component={PersonalTabs}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Diagnosis"
-                component={Diagnosis}
-                options={{ headerShown: false }}
-              />
-            </>
-          )
+        <Stack.Screen
+          name="Login"
+          component={LoginForm}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Register"
+          component={RegisterForm}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ResetPassword"
+          component={ResetPassword}
+          options={{ headerShown: false }}
+        />
+
+        {user && user.role === 'doctor' ? (
+        <Stack.Screen
+          name="DoctorTab"
+          options={{ headerShown: false }}
+        >
+          {(props) => <DoctorTab {...props} handleStartCall={handleStartCall} />}
+        </Stack.Screen>
         ) : (
-          <>
-            <Stack.Screen
-              name="Login"
-              component={LoginForm}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Register"
-              component={RegisterForm}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="ResetPassword"
-              component={ResetPassword}
-              options={{ headerShown: false }}
-            />
-          </>
+        <>
+          <Stack.Screen
+            name="PatientTabs"
+            options={{ headerShown: false }}
+          >
+            {(props) => <PatientTabs {...props} handleStartCall={handleStartCall} />}
+          </Stack.Screen>
+          <Stack.Screen
+            name="PersonalTabs"
+            component={PersonalTabs}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Diagnosis"
+            component={Diagnosis}
+            options={{ headerShown: false }}
+          />
+        </>
         )}
       </Stack.Navigator>
     </SafeAreaView>
