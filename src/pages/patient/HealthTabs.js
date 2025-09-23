@@ -141,39 +141,6 @@ const Following = ({ user, nearestAppointment }) => {
             </View>
           )}
         </View>
-
-        {/* Status */}
-        <View style={styles.statusCard}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIconContainer}>
-              <Icon name="activity" size={18} color="#8b5cf6" />
-            </View>
-            <Text style={styles.cardTitle}>Tình trạng hiện tại</Text>
-          </View>
-          <View style={[styles.statusContainer, { backgroundColor: readingStatus.bgColor }]}>
-            <View style={styles.statusHeader}>
-              <Icon
-                name={readingStatus.status === 'normal' ? 'check-circle' : 'warning'}
-                size={18}
-                color={readingStatus.color}
-              />
-              <Text style={[styles.statusTitle, { color: readingStatus.color }]}>
-                {readingStatus.status === 'normal'
-                  ? 'Bình thường'
-                  : readingStatus.status === 'prediabetes'
-                  ? 'Tiền tiểu đường'
-                  : 'Cần chú ý'}
-              </Text>
-            </View>
-            <Text style={styles.statusDescription}>
-              {readingStatus.status === 'normal'
-                ? 'Chỉ số đường huyết trong mức bình thường'
-                : readingStatus.status === 'prediabetes'
-                ? 'Chỉ số cao hơn bình thường, cần theo dõi'
-                : 'Chỉ số cao, cần tham khảo ý kiến bác sĩ'}
-            </Text>
-          </View>
-        </View>
       </View>
     </View>
   );
@@ -245,150 +212,105 @@ const Chart = ({ bloodSugar }) => {
     }
   }
 
+  // Build last 7 days view to match subtitle
   const last7Labels = dailyBloodSugar.dates.slice(-7);
-  const last7Fasting = dailyBloodSugar.fastingData.slice(-7).map((v) => (v == null ? null : Number(v.toFixed(1))));
-  const last7Post = dailyBloodSugar.postMealData.slice(-7).map((v) => (v == null ? null : Number(v.toFixed(1))));
+  const last7Fasting = dailyBloodSugar.fastingData.slice(-7);
+  const last7Post = dailyBloodSugar.postMealData.slice(-7);
 
-  const yValues = [...last7Fasting, ...last7Post].filter((v) => typeof v === 'number' && !isNaN(v));
-  const minYRaw = yValues.length ? Math.min(...yValues) : 3.5;
-  const maxYRaw = yValues.length ? Math.max(...yValues) : 11.5;
-  const padding = 0.6;
-  const minY = Math.max(0, Math.floor((minYRaw - padding) * 10) / 10);
-  const maxY = Math.ceil((maxYRaw + padding) * 10) / 10;
+  // Dynamic Y axis based on available values
+  const yVals = [...last7Fasting, ...last7Post].filter((v) => typeof v === 'number' && !isNaN(v));
+  const yMin = yVals.length ? Math.max(0, Math.floor((Math.min(...yVals) - 0.6) * 10) / 10) : 3.5;
+  const yMax = yVals.length ? Math.ceil((Math.max(...yVals) + 0.6) * 10) / 10 : 11.5;
 
   const option = {
-    backgroundColor: 'transparent',
-    color: ['#3b82f6', '#f59e0b'],
     tooltip: {
-      trigger: 'axis',
-      confine: true,
-      backgroundColor: '#111827',
-      borderWidth: 0,
-      textStyle: { color: '#fff' },
-      formatter: (params) => {
-        const title = params?.[0]?.axisValueLabel || '';
-        const lines = params
-          .map((p) => `${p.marker} ${p.seriesName}: ${p.data == null ? 'N/A' : p.data} mmol/L`)
-          .join('\n');
-        return `${title}\n${lines}`;
-      },
+      trigger: "axis",
+      formatter: function (params) {
+        let result = params[0].axisValue + '<br/>';
+        params.forEach(param => {
+          if (param.value !== null) {
+            result += param.marker + ' ' + param.seriesName + ': ' + Number(param.value?.toFixed(1)) + ' mmol/L<br/>';
+          }
+        });
+        return result;
+      }
     },
     legend: {
-      data: ['Lúc đói', 'Sau ăn'],
-      top: 0,
+      top: 8,
       icon: 'circle',
+      data: ["Lúc đói", "Sau ăn"],
       textStyle: { color: '#6b7280' },
     },
-    grid: {
-      left: 28,
-      right: 12,
-      top: 36,
-      bottom: 28,
-      containLabel: true,
-    },
     xAxis: {
-      type: 'category',
+      type: "category",
       boundaryGap: false,
       data: last7Labels,
       axisLine: { lineStyle: { color: '#e5e7eb' } },
       axisLabel: { color: '#6b7280', fontSize: 10 },
-      axisTick: { show: false },
     },
     yAxis: {
-      type: 'value',
-      min: minY,
-      max: maxY,
+      type: "value",
+      min: yMin,
+      max: yMax,
       axisLine: { show: false },
       splitLine: { lineStyle: { color: '#e5e7eb', type: 'dashed' } },
-      axisLabel: { color: '#6b7280', fontSize: 10, formatter: '{value} mmol/L' },
+      axisLabel: { color: '#6b7280', fontSize: 10, formatter: "{value} mmol/L" },
     },
     series: [
       {
-        name: 'Lúc đói',
-        type: 'line',
-        smooth: true,
-        showSymbol: true,
-        symbolSize: 6,
-        lineStyle: { width: 2 },
-        areaStyle: { opacity: 0.08 },
+        name: "Lúc đói",
         data: last7Fasting,
-        connectNulls: true,
-      },
-      {
-        name: 'Sau ăn',
-        type: 'line',
+        type: "line",
         smooth: true,
         showSymbol: true,
         symbolSize: 6,
-        lineStyle: { width: 2 },
-        areaStyle: { opacity: 0.08 },
-        data: last7Post,
+        lineStyle: { color: "#3b82f6", width: 2 },
+        itemStyle: { color: "#3b82f6" },
+        areaStyle: { opacity: 0.06 },
         connectNulls: true,
+        markLine: {
+          data: [
+            {
+              yAxis: 5.6,
+              lineStyle: { color: "#10b981" },
+              label: { formatter: "Ngưỡng bình thường (đói)" },
+            },
+            {
+              yAxis: 7.0,
+              lineStyle: { color: "#ef4444" },
+              label: { formatter: "Ngưỡng cao" },
+            },
+          ],
+        },
+      },
+      {
+        name: "Sau ăn",
+        data: last7Post,
+        type: "line",
+        smooth: true,
+        showSymbol: true,
+        symbolSize: 6,
+        lineStyle: { color: "#f59e0b", width: 2 },
+        itemStyle: { color: "#f59e0b" },
+        areaStyle: { opacity: 0.06 },
+        connectNulls: true,
+        markLine: {
+          data: [
+            {
+              yAxis: 7.8,
+              lineStyle: { color: "#10b981" },
+              label: { formatter: "Ngưỡng bình thường (sau ăn)" },
+            },
+            {
+              yAxis: 11.1,
+              lineStyle: { color: "#ef4444" },
+              label: { formatter: "Ngưỡng cao" },
+            },
+          ],
+        },
       },
     ],
-    // Add reference lines using graphic
-    graphic: [
-      {
-        type: 'line',
-        left: 0,
-        right: 0,
-        top: `${((7 - minY) / (maxY - minY)) * 100}%`,
-        shape: {
-          y1: 0,
-          y2: 0,
-          x1: 0,
-          x2: '100%',
-        },
-        style: {
-          stroke: '#dc3545', // Red for high threshold
-          lineWidth: 1,
-          lineDash: [4, 4],
-        },
-        silent: true,
-      },
-      {
-        type: 'text',
-        left: '90%',
-        top: `${((7 - minY) / (maxY - minY)) * 100}%`,
-        style: {
-          text: 'Ngưỡng cao',
-          fontSize: 10,
-          fill: '#dc3545',
-          textAlign: 'right',
-        },
-        silent: true,
-      },
-      {
-        type: 'line',
-        left: 0,
-        right: 0,
-        top: `${((6 - minY) / (maxY - minY)) * 100}%`,
-        shape: {
-          y1: 0,
-          y2: 0,
-          x1: 0,
-          x2: '100%',
-        },
-        style: {
-          stroke: '#28a745', // Green for normal level
-          lineWidth: 1,
-          lineDash: [4, 4],
-        },
-        silent: true,
-      },
-      {
-        type: 'text',
-        left: '90%',
-        top: `${((6 - minY) / (maxY - minY)) * 100}%`,
-        style: {
-          text: 'Mức bình thường',
-          fontSize: 10,
-          fill: '#28a745',
-          textAlign: 'right',
-        },
-        silent: true,
-      },
-    ],
+    grid: { left: 28, right: 16, top: 40, bottom: 28, containLabel: true },
   };
 
   return (
@@ -402,10 +324,14 @@ const Chart = ({ bloodSugar }) => {
       <View style={styles.chartContainer}>
         <Text style={styles.chartSubtitle}>Chỉ số đường huyết (mmol/L) - 7 ngày gần nhất</Text>
         {dailyBloodSugar.dates.length > 0 ? (
-          <ECharts
-            option={option}
-            style={{ width: screenWidth - 40, height: 220, borderRadius: 16 }}
-          />
+          <View style={{ width: screenWidth , height: 260 }}>
+            <ECharts
+              key={last7Labels.join('|')}
+              option={option}
+              backgroundColor="transparent"
+              style={{ width: '100%', height: '100%', borderRadius: 16 }}
+            />
+          </View>
         ) : (
           <View style={styles.noDataContainer}>
             <Text style={styles.noDataText}>Chưa có dữ liệu để hiển thị</Text>
@@ -836,6 +762,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: '#eef2f7',
   },
   headerContent: {
     flexDirection: 'row',
@@ -881,6 +809,7 @@ const styles = StyleSheet.create({
   cardsRow: {
     flexDirection: 'row',
     gap: 12,
+    alignItems: 'stretch',
     marginBottom: 16,
   },
   infoCard: {
@@ -893,6 +822,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    minHeight: 130,
+    borderWidth: 1,
+    borderColor: '#eef2f7',
   },
   appointmentCard: {
     flex: 1,
@@ -904,18 +836,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    minHeight: 130,
+    borderWidth: 1,
+    borderColor: '#eef2f7',
   },
-  statusCard: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
+  
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -931,7 +856,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#212529',
   },
@@ -944,16 +869,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   infoLabel: {
-    fontSize: 14,
+    fontSize: 10,
     color: '#6c757d',
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: 10,
     color: '#212529',
     fontWeight: '500',
   },
   appointmentContent: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   appointmentDate: {
     fontSize: 18,
@@ -987,28 +912,15 @@ const styles = StyleSheet.create({
   },
   noAppointment: {
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: '#f1f3f5',
+    borderStyle: 'dashed',
+    borderRadius: 8,
   },
   noAppointmentText: {
     fontSize: 14,
-    color: '#6c757d',
-  },
-  statusContainer: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  statusHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  statusDescription: {
-    fontSize: 12,
     color: '#6c757d',
   },
   chartCard: {
@@ -1043,6 +955,7 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
   chartSubtitle: {
     fontSize: 14,
