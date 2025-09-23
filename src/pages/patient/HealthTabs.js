@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { api, get_advice } from '../../apis/assistant';
 import { useSelector, useDispatch } from 'react-redux';
@@ -20,6 +19,7 @@ import { fetchBloodSugar, saveBloodSugar } from '../../redux/patientSlice';
 import { useNavigation } from '@react-navigation/native';
 import { setWithExpiry, getWithExpiry } from '../../components/customizeStorage';
 import ApiBooking from '../../apis/ApiBooking';
+import { ECharts } from "react-native-echarts-wrapper";
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -245,38 +245,101 @@ const Chart = ({ bloodSugar }) => {
     }
   }
 
-  const chartData = {
-    labels: dailyBloodSugar.dates.slice(-7),
-    datasets: [
+  const last7Labels = dailyBloodSugar.dates.slice(-7);
+  const last7Fasting = dailyBloodSugar.fastingData.slice(-7).map((v) => (v == null ? null : Number(v.toFixed(1))));
+  const last7Post = dailyBloodSugar.postMealData.slice(-7).map((v) => (v == null ? null : Number(v.toFixed(1))));
+
+  const yValues = [...last7Fasting, ...last7Post].filter((v) => typeof v === 'number' && !isNaN(v));
+  const minYRaw = yValues.length ? Math.min(...yValues) : 3.5;
+  const maxYRaw = yValues.length ? Math.max(...yValues) : 11.5;
+  const padding = 0.6;
+  const minY = Math.max(0, Math.floor((minYRaw - padding) * 10) / 10);
+  const maxY = Math.ceil((maxYRaw + padding) * 10) / 10;
+
+  const option = {
+    backgroundColor: 'transparent',
+    color: ['#3b82f6', '#f59e0b'],
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      backgroundColor: '#111827',
+      borderWidth: 0,
+      textStyle: { color: '#fff' },
+      formatter: (params) => {
+        // params is an array of series values at the hovered x
+        const title = params?.[0]?.axisValueLabel || '';
+        const lines = params
+          .map((p) => `${p.marker} ${p.seriesName}: ${p.data == null ? 'N/A' : p.data} mmol/L`)
+          .join('\n');
+        return `${title}\n${lines}`;
+      },
+    },
+    legend: {
+      data: ['Lúc đói', 'Sau ăn'],
+      top: 0,
+      icon: 'circle',
+    },
+    grid: {
+      left: 28,
+      right: 12,
+      top: 36,
+      bottom: 28,
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: last7Labels,
+      axisLine: { lineStyle: { color: '#e5e7eb' } },
+      axisLabel: { color: '#6b7280' },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: 'value',
+      min: minY,
+      max: maxY,
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: '#e5e7eb' } },
+      axisLabel: { color: '#6b7280' },
+    },
+    series: [
       {
-        data: dailyBloodSugar.fastingData.slice(-7).map((val) => val || 0),
-        color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-        strokeWidth: 2,
-        label: 'Lúc đói',
+        name: 'Lúc đói',
+        type: 'line',
+        smooth: true,
+        showSymbol: true,
+        symbolSize: 6,
+        lineStyle: { width: 3 },
+        areaStyle: {
+          opacity: 0.08,
+        },
+        data: last7Fasting,
+        connectNulls: true,
       },
       {
-        data: dailyBloodSugar.postMealData.slice(-7).map((val) => val || 0),
-        color: (opacity = 1) => `rgba(245, 158, 11, ${opacity})`,
-        strokeWidth: 2,
-        label: 'Sau ăn',
+        name: 'Sau ăn',
+        type: 'line',
+        smooth: true,
+        showSymbol: true,
+        symbolSize: 6,
+        lineStyle: { width: 3 },
+        areaStyle: {
+          opacity: 0.08,
+        },
+        data: last7Post,
+        connectNulls: true,
       },
     ],
-    legend: ['Lúc đói', 'Sau ăn'],
-  };
-
-  const chartConfig = {
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientTo: '#ffffff',
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    strokeWidth: 2,
-    barPercentage: 0.5,
-    useShadowColorFromDataset: false,
-    decimalPlaces: 1,
-    propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      stroke: '#ffa726',
-    },
+    // Reference bands for normal ranges
+    visualMap: [
+      {
+        show: false,
+        type: 'continuous',
+        min: 0,
+        max: 20,
+        inRange: {},
+      },
+    ],
   };
 
   return (
@@ -291,13 +354,10 @@ const Chart = ({ bloodSugar }) => {
         <Text style={styles.chartSubtitle}>Chỉ số đường huyết (mmol/L) - 7 ngày gần nhất</Text>
         {dailyBloodSugar.dates.length > 0 ? (
           <TouchableWithoutFeedback>
-            <LineChart
-              data={chartData}
-              width={screenWidth - 40}
-              height={220}
-              chartConfig={chartConfig}
-              bezier
-              style={styles.chart}
+            <ECharts
+              option={option}
+              backgroundColor="transparent"
+              style={{ width: screenWidth - 40, height: 220, borderRadius: 16 }}
             />
           </TouchableWithoutFeedback>
         ) : (
@@ -323,18 +383,9 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
   const navigation = useNavigation();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchFood = async () => {
       setLoading(true);
       try {
-        // Fetch medications
-        // const meds = await ApiBooking.getMedications(user?.userId);
-        // if (meds) {
-        //   setMedicines({
-        //     sang: meds.filter((m) => m.time === 'sáng').map((m) => `${m.name} ${m.lieu_luong}`),
-        //     trua: meds.filter((m) => m.time === 'trưa').map((m) => `${m.name} ${m.lieu_luong}`),
-        //     toi: meds.filter((m) => m.time === 'tối').map((m) => `${m.name} ${m.lieu_luong}`),
-        //   });
-        // }
 
         // Fetch food
         const cached = await getWithExpiry('food');
@@ -348,7 +399,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
         const yesterday = getYesterdayAvg({ dailyBloodSugar });
 
         const res = await dispatch(GetCaloFood(user?.userId)).unwrap();
-        const data = res?.DT?.menuFood;
+        const data = res?.payload?.DT?.menuFood;
 
         if (data && yesterday) {
           const response = await dispatch(
@@ -361,13 +412,13 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
             })
           ).unwrap();
 
-          if (response?.result) {
-            await setWithExpiry('food', JSON.stringify(response.result));
-            setFood(response.result);
+          if (response?.payload?.result) {
+            await setWithExpiry('food', JSON.stringify(response.payload.result));
+            setFood(response.payload.result);
           }
         }
       } catch (error) {
-        console.error('Error fetching plan data:', error);
+        console.error('Error fetchFood data:', error);
         Alert.alert('Lỗi', 'Không thể tải kế hoạch. Vui lòng thử lại.');
       } finally {
         setLoading(false);
@@ -375,7 +426,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
     };
 
     if (user?.userId && bloodSugar?.length > 0) {
-      fetchData();
+      fetchFood();
     }
   }, [user?.userId, bloodSugar, dispatch]);
 
