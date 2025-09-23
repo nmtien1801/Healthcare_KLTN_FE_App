@@ -266,7 +266,6 @@ const Chart = ({ bloodSugar }) => {
       borderWidth: 0,
       textStyle: { color: '#fff' },
       formatter: (params) => {
-        // params is an array of series values at the hovered x
         const title = params?.[0]?.axisValueLabel || '';
         const lines = params
           .map((p) => `${p.marker} ${p.seriesName}: ${p.data == null ? 'N/A' : p.data} mmol/L`)
@@ -278,6 +277,7 @@ const Chart = ({ bloodSugar }) => {
       data: ['Lúc đói', 'Sau ăn'],
       top: 0,
       icon: 'circle',
+      textStyle: { color: '#6b7280' },
     },
     grid: {
       left: 28,
@@ -291,7 +291,7 @@ const Chart = ({ bloodSugar }) => {
       boundaryGap: false,
       data: last7Labels,
       axisLine: { lineStyle: { color: '#e5e7eb' } },
-      axisLabel: { color: '#6b7280' },
+      axisLabel: { color: '#6b7280', fontSize: 10 },
       axisTick: { show: false },
     },
     yAxis: {
@@ -299,8 +299,8 @@ const Chart = ({ bloodSugar }) => {
       min: minY,
       max: maxY,
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: '#e5e7eb' } },
-      axisLabel: { color: '#6b7280' },
+      splitLine: { lineStyle: { color: '#e5e7eb', type: 'dashed' } },
+      axisLabel: { color: '#6b7280', fontSize: 10, formatter: '{value} mmol/L' },
     },
     series: [
       {
@@ -309,10 +309,8 @@ const Chart = ({ bloodSugar }) => {
         smooth: true,
         showSymbol: true,
         symbolSize: 6,
-        lineStyle: { width: 3 },
-        areaStyle: {
-          opacity: 0.08,
-        },
+        lineStyle: { width: 2 },
+        areaStyle: { opacity: 0.08 },
         data: last7Fasting,
         connectNulls: true,
       },
@@ -322,22 +320,73 @@ const Chart = ({ bloodSugar }) => {
         smooth: true,
         showSymbol: true,
         symbolSize: 6,
-        lineStyle: { width: 3 },
-        areaStyle: {
-          opacity: 0.08,
-        },
+        lineStyle: { width: 2 },
+        areaStyle: { opacity: 0.08 },
         data: last7Post,
         connectNulls: true,
       },
     ],
-    // Reference bands for normal ranges
-    visualMap: [
+    // Add reference lines using graphic
+    graphic: [
       {
-        show: false,
-        type: 'continuous',
-        min: 0,
-        max: 20,
-        inRange: {},
+        type: 'line',
+        left: 0,
+        right: 0,
+        top: `${((7 - minY) / (maxY - minY)) * 100}%`,
+        shape: {
+          y1: 0,
+          y2: 0,
+          x1: 0,
+          x2: '100%',
+        },
+        style: {
+          stroke: '#dc3545', // Red for high threshold
+          lineWidth: 1,
+          lineDash: [4, 4],
+        },
+        silent: true,
+      },
+      {
+        type: 'text',
+        left: '90%',
+        top: `${((7 - minY) / (maxY - minY)) * 100}%`,
+        style: {
+          text: 'Ngưỡng cao',
+          fontSize: 10,
+          fill: '#dc3545',
+          textAlign: 'right',
+        },
+        silent: true,
+      },
+      {
+        type: 'line',
+        left: 0,
+        right: 0,
+        top: `${((6 - minY) / (maxY - minY)) * 100}%`,
+        shape: {
+          y1: 0,
+          y2: 0,
+          x1: 0,
+          x2: '100%',
+        },
+        style: {
+          stroke: '#28a745', // Green for normal level
+          lineWidth: 1,
+          lineDash: [4, 4],
+        },
+        silent: true,
+      },
+      {
+        type: 'text',
+        left: '90%',
+        top: `${((6 - minY) / (maxY - minY)) * 100}%`,
+        style: {
+          text: 'Mức bình thường',
+          fontSize: 10,
+          fill: '#28a745',
+          textAlign: 'right',
+        },
+        silent: true,
       },
     ],
   };
@@ -353,13 +402,10 @@ const Chart = ({ bloodSugar }) => {
       <View style={styles.chartContainer}>
         <Text style={styles.chartSubtitle}>Chỉ số đường huyết (mmol/L) - 7 ngày gần nhất</Text>
         {dailyBloodSugar.dates.length > 0 ? (
-          <TouchableWithoutFeedback>
-            <ECharts
-              option={option}
-              backgroundColor="transparent"
-              style={{ width: screenWidth - 40, height: 220, borderRadius: 16 }}
-            />
-          </TouchableWithoutFeedback>
+          <ECharts
+            option={option}
+            style={{ width: screenWidth - 40, height: 220, borderRadius: 16 }}
+          />
         ) : (
           <View style={styles.noDataContainer}>
             <Text style={styles.noDataText}>Chưa có dữ liệu để hiển thị</Text>
@@ -716,8 +762,8 @@ const HealthTabs = () => {
               keyboardType="numeric"
               onSubmitEditing={handleAiAgent}
               accessibilityLabel="Nhập chỉ số đường huyết (mmol/L)"
-              accessibilityRole="textbox"
             />
+
             <TouchableOpacity
               style={[styles.saveButton, loading && styles.disabledButton]}
               onPress={handleAiAgent}
