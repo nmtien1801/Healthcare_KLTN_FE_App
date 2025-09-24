@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    minWidth: 80,
+    minWidth: 100,
     alignItems: 'center',
   },
   timeSlotActive: {

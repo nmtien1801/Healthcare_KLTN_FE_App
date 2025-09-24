@@ -454,33 +454,38 @@ export default function Router() {
           options={{ headerShown: false }}
         />
 
-        {user && user.role === 'doctor' ? (
         <Stack.Screen
           name="DoctorTab"
           options={{ headerShown: false }}
         >
-          {(props) => <DoctorTab {...props} handleStartCall={handleStartCall} />}
+          {(props) =>
+            user?.role === "doctor"
+              ? <DoctorTab {...props} handleStartCall={handleStartCall} />
+              : null
+          }
         </Stack.Screen>
-        ) : (
-        <>
-          <Stack.Screen
-            name="PatientTabs"
-            options={{ headerShown: false }}
-          >
-            {(props) => <PatientTabs {...props} handleStartCall={handleStartCall} />}
-          </Stack.Screen>
-          <Stack.Screen
-            name="PersonalTabs"
-            component={PersonalTabs}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Diagnosis"
-            component={Diagnosis}
-            options={{ headerShown: false }}
-          />
-        </>
-        )}
+
+        <Stack.Screen
+          name="PatientTabs"
+          options={{ headerShown: false }}
+        >
+          {(props) =>
+            user?.role === "patient"
+              ? <PatientTabs {...props} handleStartCall={handleStartCall} />
+              : null
+          }
+        </Stack.Screen>
+
+        <Stack.Screen
+          name="PersonalTabs"
+          component={PersonalTabs}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Diagnosis"
+          component={Diagnosis}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </SafeAreaView>
   );

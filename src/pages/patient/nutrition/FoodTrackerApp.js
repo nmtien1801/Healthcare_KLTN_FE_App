@@ -573,7 +573,6 @@ export default function FoodTrackerApp() {
     }
     return result;
   }, {});
-  console.log('sssssssssss ', foods);
 
   return (
     <SafeAreaView style={styles.container}>
