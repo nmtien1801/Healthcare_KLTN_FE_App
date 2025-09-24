@@ -20,6 +20,8 @@ import { useNavigation } from '@react-navigation/native';
 import { setWithExpiry, getWithExpiry } from '../../components/customizeStorage';
 import ApiBooking from '../../apis/ApiBooking';
 import { ECharts } from "react-native-echarts-wrapper";
+import { fetchMedicines } from '../../redux/medicineAiSlice';
+import moment from "moment";
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -324,7 +326,7 @@ const Chart = ({ bloodSugar }) => {
       <View style={styles.chartContainer}>
         <Text style={styles.chartSubtitle}>Chỉ số đường huyết (mmol/L) - 7 ngày gần nhất</Text>
         {dailyBloodSugar.dates.length > 0 ? (
-          <View style={{ width: screenWidth , height: 260 }}>
+          <View style={{ width: screenWidth, height: 260 }}>
             <ECharts
               key={last7Labels.join('|')}
               option={option}
@@ -353,6 +355,38 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigation = useNavigation();
+
+  // Hàm phân loại thuốc theo giờ
+  const groupMedicinesByTime = (data) => {
+    const result = { sang: [], trua: [], toi: [] };
+
+    data.forEach((item) => {
+      const hour = new Date(item.time).getHours(); // lấy giờ từ time
+
+      if (hour >= 5 && hour < 11) {
+        result.sang.push(`${item.name} (${item.lieu_luong})`);
+      } else if (hour >= 11 && hour < 17) {
+        result.trua.push(`${item.name} (${item.lieu_luong})`);
+      } else {
+        result.toi.push(`${item.name} (${item.lieu_luong})`);
+      }
+    });
+
+    return result;
+  };
+
+  useEffect(() => {
+    const fetchMedicine = async () => {
+      try {
+        let res = await dispatch(fetchMedicines({ userId: user.userId, date: new Date().toISOString() }));
+        setMedicines(groupMedicinesByTime(res.payload.DT));
+      } catch (error) {
+        console.error('Lỗi khi lấy lịch hẹn:', error);
+      }
+    };
+
+    fetchMedicine();
+  }, []);
 
   useEffect(() => {
     const fetchFood = async () => {
@@ -840,7 +874,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#eef2f7',
   },
-  
+
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',

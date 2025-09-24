@@ -3,7 +3,6 @@ import {
     fetchBloodSugarService,
     saveBloodSugarService
 } from "../apis/patientService";
-import { getUpcomingAppointmentService } from "../apis/bookingService";
 
 const initialState = {
     bloodSugar: []
@@ -21,14 +20,6 @@ export const saveBloodSugar = createAsyncThunk(
     "patient/saveBloodSugar",
     async ({ userId, value, type }, thunkAPI) => {
         const response = await saveBloodSugarService(userId, value, type);
-        return response;
-    }
-);
-
-export const getUpcomingAppointments = createAsyncThunk(
-    "patient/getUpcomingAppointments",
-    async (thunkAPI) => {
-        const response = await getUpcomingAppointmentService();
         return response;
     }
 );
@@ -53,12 +44,6 @@ const patientSlice = createSlice({
             .addCase(saveBloodSugar.pending, (state) => { })
             .addCase(saveBloodSugar.fulfilled, (state, action) => { })
             .addCase(saveBloodSugar.rejected, (state, action) => { });
-
-        // getUpcomingAppointments
-        builder
-            .addCase(getUpcomingAppointments.pending, (state) => { })
-            .addCase(getUpcomingAppointments.fulfilled, (state, action) => { })
-            .addCase(getUpcomingAppointments.rejected, (state, action) => { });
     },
 });
 

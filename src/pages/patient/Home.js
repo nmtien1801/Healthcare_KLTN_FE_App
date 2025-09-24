@@ -11,6 +11,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ApiBooking from '../../apis/ApiBooking';
+import { fetchMedicines } from '../../redux/medicineAiSlice';
+import moment from "moment";
 
 const Home = () => {
   const navigation = useNavigation();
@@ -83,6 +85,19 @@ const Home = () => {
     updated[index].taken = !updated[index].taken;
     setMedications(updated);
   };
+
+  useEffect(() => {
+    const fetchMedicine = async () => {
+      try {
+        let res = await dispatch(fetchMedicines({ userId: user.userId, date: new Date().toISOString() }));
+        setMedications(res.payload.DT);
+      } catch (error) {
+        console.error('Lỗi khi lấy lịch hẹn:', error);
+      }
+    };
+
+    fetchMedicine();
+  }, []);
 
   if (loading) {
     return (
@@ -164,7 +179,7 @@ const Home = () => {
                 <Text style={styles.medicationName}>
                   {med.name} {med.dosage}
                 </Text>
-                <Text style={styles.medicationTime}>{med.time}</Text>
+                <Text style={styles.medicationTime}>{moment(med.time).format("HH:mm:ss")}</Text>
               </View>
               <TouchableOpacity
                 style={[
@@ -174,7 +189,7 @@ const Home = () => {
                 onPress={() => handleMedicationToggle(idx)}
               >
                 <Text style={styles.medicationButtonText}>
-                  {med.taken ? 'Đã uống' : 'Đánh dấu'}
+                  {med.taken ? '' : 'Đánh dấu'}
                 </Text>
                 {med.taken && <Icon name="check" size={16} color="#FFF" />}
               </TouchableOpacity>
@@ -385,7 +400,7 @@ const styles = StyleSheet.create({
   },
   medicationButtonText: {
     fontSize: 12,
-    color: '#FFF',
+    color: '#3B82F6',
     marginRight: 4,
   },
   noMedications: {
