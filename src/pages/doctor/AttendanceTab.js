@@ -13,24 +13,43 @@ import {
     SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import ApiWorkShift from "../../apis/ApiWorkShift";
+import ApiDoctor from "../../apis/ApiDoctor";
+import { formatDate } from "../../utils/formatDate";
 
 // Shift options
 const shiftOptions = [
-    { key: 'morning', label: 'Sáng (08:00 - 12:00)' },
-    { key: 'afternoon', label: 'Chiều (13:00 - 17:00)' },
-    { key: 'evening', label: 'Tối (18:00 - 21:00)' },
+    { key: "morning", label: "Sáng (08:00 - 12:00)", start: "08:00", end: "12:00" },
+    { key: "afternoon", label: "Chiều (13:00 - 17:00)", start: "13:00", end: "17:00" },
+    { key: "evening", label: "Tối (18:00 - 21:00)", start: "18:00", end: "21:00" },
+];
+
+// Work type options
+const workTypeOptions = [
+    { key: "fulltime", label: "Full Time", description: "Làm việc toàn thời gian" },
+    { key: "parttime", label: "Part Time", description: "Làm việc bán thời gian" },
 ];
 
 // Weekday options
 const weekdays = [
-    { label: 'Thứ 2', key: 'monday' },
-    { label: 'Thứ 3', key: 'tuesday' },
-    { label: 'Thứ 4', key: 'wednesday' },
-    { label: 'Thứ 5', key: 'thursday' },
-    { label: 'Thứ 6', key: 'friday' },
-    { label: 'Thứ 7', key: 'saturday' },
-    { label: 'Chủ nhật', key: 'sunday' },
+    { label: "Thứ 2", key: "monday" },
+    { label: "Thứ 3", key: "tuesday" },
+    { label: "Thứ 4", key: "wednesday" },
+    { label: "Thứ 5", key: "thursday" },
+    { label: "Thứ 6", key: "friday" },
+    { label: "Thứ 7", key: "saturday" },
+    { label: "Chủ nhật", key: "sunday" },
 ];
+
+// Hàm tính ngày thứ Hai của tuần hiện tại
+const getCurrentWeekStart = () => {
+    const today = new Date();
+    const day = today.getDay();
+    const offset = day === 0 ? -6 : 1 - day;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + offset);
+    return monday.toISOString().split("T")[0];
+};
 
 // Schedule Form Modal
 const ScheduleFormModal = ({
@@ -42,9 +61,12 @@ const ScheduleFormModal = ({
     handleSelectCurrentWeek,
     weeklySchedule,
     handleShiftToggle,
-    editingScheduleId,
+    isEditing,
     resetScheduleForm,
     handleSaveOrUpdateSchedule,
+    workType,
+    setWorkType,
+    handleWorkTypeChange,
 }) => (
     <Modal
         visible={show}
@@ -56,27 +78,55 @@ const ScheduleFormModal = ({
                 <View style={styles.modalHeader}>
                     <Icon name="edit" size={24} color="#007bff" />
                     <Text style={styles.modalTitle}>
-                        {editingScheduleId ? 'Cập nhật lịch làm việc' : 'Đăng ký lịch làm việc'}
+                        {isEditing ? 'Cập nhật lịch làm việc' : 'Đăng ký lịch làm việc'}
                     </Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                         <Icon name="x" size={24} color="#6b7280" />
                     </TouchableOpacity>
                 </View>
-                <ScrollView style={styles.modalBody}>
+                <ScrollView
+                    style={styles.modalBody}
+                    contentContainerStyle={{ paddingBottom: 20 }}
+                    showsVerticalScrollIndicator={true}
+                >
                     {/* Chọn ngày bắt đầu tuần */}
                     <Text style={styles.formLabel}>Chọn tuần bắt đầu</Text>
                     <View style={styles.datePickerContainer}>
                         <TextInput
                             style={styles.dateInput}
-                            placeholder="YYYY-MM-DD"
+                            placeholder="YYYY-MM-DD (VD: 2025-09-22)"
                             value={weekStartDate}
                             onChangeText={(text) => handleWeekStartChange({ target: { value: text } })}
                             placeholderTextColor="#9ca3af"
+                            keyboardType="numeric"
                         />
                         <TouchableOpacity style={styles.currentWeekButton} onPress={handleSelectCurrentWeek}>
                             <Icon name="calendar" size={20} color="#fff" />
                             <Text style={styles.buttonText}>Tuần hiện tại</Text>
                         </TouchableOpacity>
+                    </View>
+
+                    {/* Chọn loại hình làm việc */}
+                    <Text style={styles.formLabel}>Loại hình làm việc</Text>
+                    <View style={styles.workTypeContainer}>
+                        {workTypeOptions.map((type) => (
+                            <TouchableOpacity
+                                key={type.key}
+                                style={[
+                                    styles.workTypeButton,
+                                    workType === type.key ? styles.workTypeSelected : null,
+                                ]}
+                                onPress={() => handleWorkTypeChange(type.key)}
+                            >
+                                <Text style={[
+                                    styles.workTypeText,
+                                    workType === type.key ? styles.workTypeTextSelected : null,
+                                ]}>
+                                    {type.label}
+                                </Text>
+                                <Text style={styles.workTypeDescription}>{type.description}</Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
 
                     {/* Chọn ca làm việc */}
@@ -111,11 +161,12 @@ const ScheduleFormModal = ({
                     </View>
                 </ScrollView>
                 <View style={styles.modalFooter}>
-                    {editingScheduleId && (
-                        <TouchableOpacity style={styles.cancelButton} onPress={resetScheduleForm}>
-                            <Text style={styles.buttonText}>Hủy</Text>
-                        </TouchableOpacity>
-                    )}
+                    <TouchableOpacity style={styles.cancelButton} onPress={() => {
+                        resetScheduleForm();
+                        onClose();
+                    }}>
+                        <Text style={styles.buttonText}>Hủy</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.primaryButton}
                         onPress={() => {
@@ -123,7 +174,7 @@ const ScheduleFormModal = ({
                             onClose();
                         }}
                     >
-                        <Text style={styles.buttonText}>{editingScheduleId ? 'Cập nhật' : 'Lưu'}</Text>
+                        <Text style={styles.buttonText}>{isEditing ? 'Cập nhật' : 'Lưu'}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -147,7 +198,7 @@ const ConfirmationModal = ({ show, title, message, onConfirm, onCancel }) => (
                         <Text style={styles.buttonText}>Hủy</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.confirmButton} onPress={onConfirm}>
-                        <Text style={styles.buttonText}>Xác nhận</Text>
+                        <Text style={styles.buttonText}>Xác nhận xóa</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -163,7 +214,7 @@ const InfoModal = ({ show, title, message, onClose }) => (
         transparent={true}
     >
         <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <View style={styles.modalContentNotifications}>
                 <View style={styles.modalHeader}>
                     <Icon name="info" size={24} color="#007bff" />
                     <Text style={styles.modalTitle}>{title}</Text>
@@ -196,6 +247,9 @@ const SavedSchedulesModal = ({
                 <View style={styles.modalHeader}>
                     <Icon name="list" size={24} color="#007bff" />
                     <Text style={styles.modalTitle}>Lịch làm việc đã lưu</Text>
+                    <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <Icon name="x" size={24} color="#6b7280" />
+                    </TouchableOpacity>
                 </View>
                 <ScrollView style={styles.modalBody}>
                     {savedSchedules.length === 0 ? (
@@ -205,10 +259,11 @@ const SavedSchedulesModal = ({
                     ) : (
                         <FlatList
                             data={savedSchedules}
-                            keyExtractor={(item) => item.id.toString()}
+                            keyExtractor={(item) => item.weekStartDate}
                             renderItem={({ item }) => (
                                 <View style={styles.scheduleItem}>
                                     <Text style={styles.scheduleText}>Tuần bắt đầu: {formatDate(item.weekStartDate)}</Text>
+                                    <Text style={styles.scheduleText}>Loại hình: {workTypeOptions.find((wt) => wt.key === item.workType)?.label || "-"}</Text>
                                     <View>
                                         {Object.entries(item.schedule).map(([dayKey, shifts]) => (
                                             <View key={dayKey} style={styles.scheduleDay}>
@@ -218,8 +273,8 @@ const SavedSchedulesModal = ({
                                                 {shifts.length === 0 ? (
                                                     <Text style={styles.scheduleNoShift}>Không có ca</Text>
                                                 ) : (
-                                                    shifts.map((shift) => (
-                                                        <Text key={shift} style={styles.scheduleShift}>
+                                                    shifts.map((shift, index) => (
+                                                        <Text key={`${dayKey}-${shift}-${index}`} style={styles.scheduleShift}>
                                                             {shiftOptions.find((s) => s.key === shift)?.label}
                                                         </Text>
                                                     ))
@@ -239,7 +294,7 @@ const SavedSchedulesModal = ({
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             style={styles.deleteButton}
-                                            onPress={() => handleDeleteSchedule(item.id)}
+                                            onPress={() => handleDeleteSchedule(item.weekStartDate)}
                                         >
                                             <Icon name="trash-2" size={16} color="#dc3545" />
                                         </TouchableOpacity>
@@ -258,109 +313,231 @@ const SavedSchedulesModal = ({
 );
 
 // CurrentSchedule component
-const CurrentSchedule = () => (
-    <View style={styles.card}>
-        <View style={styles.header}>
-            <Icon name="calendar" size={24} color="#007bff" />
-            <Text style={styles.headerTitle}>Lịch làm việc hiện tại</Text>
+const CurrentSchedule = ({ currentShift, doctorInfo, loadingDoctor }) => {
+    return (
+        <View style={styles.card}>
+            <View style={styles.header}>
+                <Icon name="calendar" size={24} color="#007bff" />
+                <Text style={styles.headerTitle}>Lịch làm việc hiện tại</Text>
+            </View>
+            <View style={styles.cardBody}>
+                {loadingDoctor ? (
+                    <Text style={styles.loadingText}>Đang tải...</Text>
+                ) : (
+                    <View style={styles.doctorInfo}>
+                        <Image
+                            source={{ uri: doctorInfo?.avatar || "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face" }}
+                            style={styles.doctorAvatar}
+                        />
+                        <View style={styles.doctorInfoText}>
+                            <Text style={styles.doctorName}>{doctorInfo?.username || "Bác sĩ không xác định"}</Text>
+                            <Text style={styles.doctorSpecialty}>{doctorInfo?.specialty || "Chuyên khoa nội tiết"}</Text>
+                        </View>
+                        <View style={styles.statusBadge}>
+                            <Text style={styles.statusText}>Online</Text>
+                        </View>
+                    </View>
+                )}
+                <View style={styles.scheduleDetails}>
+                    <View style={styles.detailItem}>
+                        <Icon name="calendar" size={18} color="#007bff" />
+                        <Text style={styles.detailText}>
+                            {currentShift ? formatDate(currentShift.date) : "Không có ca làm việc hôm nay"}
+                        </Text>
+                    </View>
+                    {currentShift && (
+                        <View style={styles.detailItem}>
+                            <Icon name="clock" size={18} color="#007bff" />
+                            <Text style={styles.detailText}>{`${currentShift.start} - ${currentShift.end}`}</Text>
+                        </View>
+                    )}
+                </View>
+                <View style={styles.features}>
+                    <View style={styles.featureItem}>
+                        <View style={[styles.featureIcon, { backgroundColor: '#e8f5e8' }]}>
+                            <Icon name="shield" size={20} color="#28a745" />
+                        </View>
+                        <Text style={styles.featureText}>Bảo mật 100%</Text>
+                    </View>
+                    <View style={styles.featureItem}>
+                        <View style={[styles.featureIcon, { backgroundColor: '#fff3cd' }]}>
+                            <Icon name="award" size={20} color="#ffc107" />
+                        </View>
+                        <Text style={styles.featureText}>Bác sĩ chuyên nghiệp</Text>
+                    </View>
+                    <View style={styles.featureItem}>
+                        <View style={[styles.featureIcon, { backgroundColor: '#cce7ff' }]}>
+                            <Icon name="clock" size={20} color="#007bff" />
+                        </View>
+                        <Text style={styles.featureText}>Hỗ trợ 24/7</Text>
+                    </View>
+                </View>
+            </View>
         </View>
-        <View style={styles.cardBody}>
-            <View style={styles.doctorInfo}>
-                <Image
-                    source={{ uri: 'https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face' }}
-                    style={styles.doctorAvatar}
-                />
-                <View style={styles.doctorInfoText}>
-                    <Text style={styles.doctorName}>Bác sĩ Trần Thị B</Text>
-                    <Text style={styles.doctorSpecialty}>Chuyên khoa Nội tiết</Text>
-                </View>
-                <View style={styles.statusBadge}>
-                    <Text style={styles.statusText}>Đang làm việc</Text>
-                </View>
-            </View>
-            <View style={styles.scheduleDetails}>
-                <View style={styles.detailItem}>
-                    <Icon name="calendar" size={18} color="#007bff" />
-                    <Text style={styles.detailText}>Tuần từ 28/7/2025</Text>
-                </View>
-                <View style={styles.detailItem}>
-                    <Icon name="clock" size={18} color="#007bff" />
-                    <Text style={styles.detailText}>Sáng (08:00 - 12:00), Thứ 2 - Thứ 6</Text>
-                </View>
-            </View>
-            <View style={styles.features}>
-                <View style={styles.featureItem}>
-                    <View style={[styles.featureIcon, { backgroundColor: '#e8f5e8' }]}>
-                        <Icon name="shield" size={20} color="#28a745" />
-                    </View>
-                    <Text style={styles.featureText}>Bảo mật 100%</Text>
-                </View>
-                <View style={styles.featureItem}>
-                    <View style={[styles.featureIcon, { backgroundColor: '#fff3cd' }]}>
-                        <Icon name="award" size={20} color="#ffc107" />
-                    </View>
-                    <Text style={styles.featureText}>Bác sĩ chuyên nghiệp</Text>
-                </View>
-                <View style={styles.featureItem}>
-                    <View style={[styles.featureIcon, { backgroundColor: '#cce7ff' }]}>
-                        <Icon name="clock" size={20} color="#007bff" />
-                    </View>
-                    <Text style={styles.featureText}>Hỗ trợ 24/7</Text>
-                </View>
-            </View>
-        </View>
-    </View>
-);
+    );
+};
 
-// AttendanceTab component
+// AttendanceTab component (main component)
 const AttendanceTab = () => {
     const [savedSchedules, setSavedSchedules] = useState([]);
+    const [currentShift, setCurrentShift] = useState(null);
     const [checkInTime, setCheckInTime] = useState(null);
     const [checkOutTime, setCheckOutTime] = useState(null);
-    const [attendanceHistory, setAttendanceHistory] = useState([
-        { date: '2025-07-26', checkIn: '08:00', checkOut: '17:00', status: 'Đúng giờ' },
-        { date: '2025-07-27', checkIn: '08:15', checkOut: '17:00', status: 'Đi trễ' },
-        { date: '2025-07-28', checkIn: '07:55', checkOut: '17:05', status: 'Đúng giờ' },
-    ]);
+    const [attendanceHistory, setAttendanceHistory] = useState([]);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [showInfoModal, setShowInfoModal] = useState(false);
-    const [infoModalMessage, setInfoModalMessage] = useState('');
-    const [infoModalTitle, setInfoModalTitle] = useState('');
+    const [infoModalMessage, setInfoModalMessage] = useState("");
+    const [infoModalTitle, setInfoModalTitle] = useState("");
     const [showScheduleFormModal, setShowScheduleFormModal] = useState(false);
     const [showSavedSchedulesModal, setShowSavedSchedulesModal] = useState(false);
-    const [filterType, setFilterType] = useState('week');
-    const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
-    const [weekStartDate, setWeekStartDate] = useState('');
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [scheduleToDelete, setScheduleToDelete] = useState(null);
+    const [filterType, setFilterType] = useState("week");
+    const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]);
+    const [weekStartDate, setWeekStartDate] = useState(getCurrentWeekStart());
     const [weeklySchedule, setWeeklySchedule] = useState({});
-    const [editingScheduleId, setEditingScheduleId] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [workType, setWorkType] = useState("parttime");
+    const [doctorInfo, setDoctorInfo] = useState(null);
+    const [loadingDoctor, setLoadingDoctor] = useState(true);
 
     useEffect(() => {
+        const fetchDoctorInfo = async () => {
+            try {
+                setLoadingDoctor(true);
+                const response = await ApiDoctor.getDoctorInfo();
+                setDoctorInfo({
+                    username: response.userId?.username || "Bác sĩ không xác định",
+                    specialty: response.specialty || "Chuyên khoa nội tiết",
+                    avatar: response.userId?.avatar || "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
+                });
+            } catch (error) {
+                console.error("Error fetching doctor info:", error);
+                setInfoModalTitle("Thông báo");
+                setInfoModalMessage(`${error.message}`);
+                setShowInfoModal(true);
+            } finally {
+                setLoadingDoctor(false);
+            }
+        };
+
+        fetchDoctorInfo();
+        const fetchShifts = async () => {
+            try {
+                const shifts = await ApiWorkShift.getWorkShiftsByDoctor();
+                const groupedSchedules = {};
+                shifts.forEach((shift) => {
+                    const date = new Date(shift.date);
+                    if (isNaN(date.getTime())) return;
+
+                    const weekStart = new Date(date);
+                    const day = date.getDay();
+                    const offset = day === 0 ? -6 : 1 - day;
+                    weekStart.setDate(date.getDate() + offset);
+                    const weekStartStr = weekStart.toISOString().split("T")[0];
+
+                    if (!groupedSchedules[weekStartStr]) {
+                        groupedSchedules[weekStartStr] = {
+                            shiftIds: [],
+                            weekStartDate: weekStartStr,
+                            schedule: {},
+                            workType: shift.workType || "parttime",
+                        };
+                    }
+
+                    groupedSchedules[weekStartStr].shiftIds.push(shift._id);
+
+                    const weekday = weekdays[day === 0 ? 6 : day - 1].key;
+                    const shiftKey = shiftOptions.find(
+                        (option) => option.start === shift.start && option.end === shift.end
+                    )?.key;
+
+                    if (!groupedSchedules[weekStartStr].schedule[weekday]) {
+                        groupedSchedules[weekStartStr].schedule[weekday] = [];
+                    }
+                    groupedSchedules[weekStartStr].schedule[weekday].push(shiftKey);
+                });
+
+                setSavedSchedules(Object.values(groupedSchedules));
+
+                const todayShifts = await ApiWorkShift.getTodayWorkShifts();
+                const current = todayShifts.find(
+                    (s) => !s.attendance.checkedIn || (s.attendance.checkedIn && !s.attendance.checkedOut)
+                );
+                setCurrentShift(current || null);
+
+                const history = shifts
+                    .filter((shift) => shift.attendance?.checkedIn)
+                    .map((shift) => {
+                        const checkInTime = shift.attendance.checkInTime || "-";
+                        const checkOutTime = shift.attendance.checkOutTime || "-";
+                        let status = "-";
+                        if (checkInTime !== "-") {
+                            const [inHour, inMinute] = checkInTime.split(":").map(Number);
+                            const [startHour, startMinute] = shift.start.split(":").map(Number);
+                            if (inHour < startHour || (inHour === startHour && inMinute <= startMinute)) {
+                                status = "Đúng giờ";
+                            } else {
+                                status = "Đi trễ";
+                            }
+                            if (shift.attendance.checkedOut) {
+                                status = checkOutTime !== "-" ? status : "Đang làm việc";
+                            }
+                        }
+                        return {
+                            date: shift.date,
+                            checkIn: checkInTime,
+                            checkOut: checkOutTime,
+                            status,
+                        };
+                    });
+                setAttendanceHistory(history);
+            } catch (error) {
+                console.error("Error fetching shifts:", error);
+                setInfoModalTitle("Thông báo");
+                setInfoModalMessage(`${error.message}`);
+                setShowInfoModal(true);
+            }
+        };
+
+        fetchShifts();
+
         const timer = setInterval(() => {
             setCurrentTime(new Date());
         }, 1000);
         return () => clearInterval(timer);
     }, []);
 
+    useEffect(() => {
+        if (showScheduleFormModal) {
+            const existingSchedule = savedSchedules.find((s) => s.weekStartDate === weekStartDate);
+            if (existingSchedule) {
+                setIsEditing(true);
+                setWeeklySchedule(existingSchedule.schedule || {});
+                setWorkType(existingSchedule.workType || "parttime");
+            } else {
+                setIsEditing(false);
+                setWeeklySchedule({});
+                setWorkType("parttime");
+            }
+        }
+    }, [weekStartDate, showScheduleFormModal, savedSchedules]);
+
     const handleWeekStartChange = (e) => {
         const selectedDate = new Date(e.target.value);
         if (isNaN(selectedDate.getTime())) {
-            setWeekStartDate('');
+            setWeekStartDate(getCurrentWeekStart());
             return;
         }
         const day = selectedDate.getDay();
         const offset = day === 0 ? -6 : 1 - day;
         const monday = new Date(selectedDate);
         monday.setDate(selectedDate.getDate() + offset);
-        setWeekStartDate(monday.toISOString().split('T')[0]);
+        setWeekStartDate(monday.toISOString().split("T")[0]);
     };
 
     const handleSelectCurrentWeek = () => {
-        const today = new Date();
-        const day = today.getDay();
-        const offset = day === 0 ? -6 : 1 - day;
-        const monday = new Date(today);
-        monday.setDate(today.getDate() + offset);
-        setWeekStartDate(monday.toISOString().split('T')[0]);
+        setWeekStartDate(getCurrentWeekStart());
     };
 
     const handleShiftToggle = (dayKey, shiftKey) => {
@@ -373,159 +550,312 @@ const AttendanceTab = () => {
         });
     };
 
-    const handleSaveOrUpdateSchedule = () => {
-        if (!weekStartDate) {
-            setInfoModalTitle('Lỗi');
-            setInfoModalMessage('Vui lòng chọn ngày bắt đầu tuần.');
-            setShowInfoModal(true);
-            return;
-        }
-
-        const isDuplicateWeek = savedSchedules.some(
-            (s) => s.weekStartDate === weekStartDate && s.id !== editingScheduleId
-        );
-
-        if (isDuplicateWeek) {
-            setInfoModalTitle('Lỗi');
-            setInfoModalMessage('Lịch làm việc cho tuần này đã tồn tại. Vui lòng chọn tuần khác hoặc chỉnh sửa lịch đã có.');
-            setShowInfoModal(true);
-            return;
-        }
-
-        if (editingScheduleId) {
-            setSavedSchedules((prev) =>
-                prev.map((s) =>
-                    s.id === editingScheduleId
-                        ? { ...s, weekStartDate, schedule: weeklySchedule }
-                        : s
-                )
-            );
-            setInfoModalTitle('Thành công');
-            setInfoModalMessage('Lịch làm việc đã được cập nhật!');
+    const handleWorkTypeChange = (type) => {
+        setWorkType(type);
+        if (type === "fulltime") {
+            const fullTimeSchedule = {};
+            weekdays.forEach((day) => {
+                fullTimeSchedule[day.key] = shiftOptions.map((shift) => shift.key);
+            });
+            setWeeklySchedule(fullTimeSchedule);
         } else {
-            const newSchedule = {
-                id: Date.now(),
-                weekStartDate,
-                schedule: weeklySchedule,
-            };
-            setSavedSchedules((prev) => [...prev, newSchedule]);
-            setInfoModalTitle('Thành công');
-            setInfoModalMessage('Lịch làm việc đã được lưu!');
+            setWeeklySchedule({});
+        }
+    };
+
+    const handleSaveOrUpdateSchedule = async () => {
+        if (!weekStartDate) {
+            setInfoModalTitle("Thông báo");
+            setInfoModalMessage("Vui lòng chọn ngày bắt đầu tuần.");
+            setShowInfoModal(true);
+            return;
         }
 
-        setShowInfoModal(true);
-        resetScheduleForm();
+        try {
+            const shiftsData = [];
+            Object.entries(weeklySchedule).forEach(([dayKey, shifts]) => {
+                const dayIndex = weekdays.findIndex((d) => d.key === dayKey);
+                if (dayIndex === -1 || !shifts.length) return;
+
+                const date = new Date(weekStartDate);
+                date.setDate(date.getDate() + dayIndex);
+
+                shifts.forEach((shiftKey) => {
+                    const shiftOption = shiftOptions.find((s) => s.key === shiftKey);
+                    if (shiftOption) {
+                        shiftsData.push({
+                            date: date.toISOString().split("T")[0],
+                            start: shiftOption.start,
+                            end: shiftOption.end,
+                            workType,
+                        });
+                    }
+                });
+            });
+
+            if (shiftsData.length === 0) {
+                setInfoModalTitle("Thông báo");
+                setInfoModalMessage("Vui lòng chọn ít nhất một ca làm việc.");
+                setShowInfoModal(true);
+                return;
+            }
+
+            if (isEditing) {
+                const editingSchedule = savedSchedules.find((s) => s.weekStartDate === weekStartDate);
+                if (editingSchedule && editingSchedule.shiftIds.length > 0) {
+                    await ApiWorkShift.deleteManyWorkShifts(editingSchedule.shiftIds);
+                }
+                await ApiWorkShift.createWorkShifts({ shifts: shiftsData });
+                setInfoModalTitle("Thành công");
+                setInfoModalMessage("Lịch làm việc đã được cập nhật!");
+                setIsEditing(false);
+            } else {
+                await ApiWorkShift.createWorkShifts({ shifts: shiftsData });
+                setInfoModalTitle("Thành công");
+                setInfoModalMessage("Lịch làm việc đã được lưu!");
+            }
+
+            setShowInfoModal(true);
+
+            // Reload shifts
+            const shifts = await ApiWorkShift.getWorkShiftsByDoctor();
+            const groupedSchedules = {};
+            shifts.forEach((shift) => {
+                const date = new Date(shift.date);
+                if (isNaN(date.getTime())) return;
+
+                const weekStart = new Date(date);
+                const day = date.getDay();
+                const offset = day === 0 ? -6 : 1 - day;
+                weekStart.setDate(date.getDate() + offset);
+                const weekStartStr = weekStart.toISOString().split("T")[0];
+
+                if (!groupedSchedules[weekStartStr]) {
+                    groupedSchedules[weekStartStr] = {
+                        shiftIds: [],
+                        weekStartDate: weekStartStr,
+                        schedule: {},
+                        workType: shift.workType || "parttime",
+                    };
+                }
+
+                groupedSchedules[weekStartStr].shiftIds.push(shift._id);
+
+                const weekday = weekdays[day === 0 ? 6 : day - 1].key;
+                const shiftKey = shiftOptions.find(
+                    (option) => option.start === shift.start && option.end === shift.end
+                )?.key;
+
+                if (!groupedSchedules[weekStartStr].schedule[weekday]) {
+                    groupedSchedules[weekStartStr].schedule[weekday] = [];
+                }
+                groupedSchedules[weekStartStr].schedule[weekday].push(shiftKey);
+            });
+
+            setSavedSchedules(Object.values(groupedSchedules));
+            resetScheduleForm();
+        } catch (error) {
+            setInfoModalTitle("Thông báo");
+            setInfoModalMessage(`${error.response?.data?.message || error.message}`);
+            setShowInfoModal(true);
+        }
     };
 
     const resetScheduleForm = () => {
-        setWeekStartDate('');
+        setWeekStartDate(getCurrentWeekStart());
         setWeeklySchedule({});
-        setEditingScheduleId(null);
+        setIsEditing(false);
+        setWorkType("parttime");
     };
 
     const handleEditSchedule = (schedule) => {
-        setEditingScheduleId(schedule.id);
+        setIsEditing(true);
         setWeekStartDate(schedule.weekStartDate);
         setWeeklySchedule(schedule.schedule);
+        setWorkType(schedule.workType || "parttime");
         setShowScheduleFormModal(true);
     };
 
-    const handleDeleteSchedule = (id) => {
-        setSavedSchedules((prev) => prev.filter((s) => s.id !== id));
-        setInfoModalTitle('Thành công');
-        setInfoModalMessage('Lịch làm việc đã được xóa!');
-        setShowInfoModal(true);
+    const handleDeleteSchedule = (weekStartDate) => {
+        const schedule = savedSchedules.find((s) => s.weekStartDate === weekStartDate);
+        if (schedule && schedule.shiftIds && schedule.shiftIds.length > 0) {
+            setScheduleToDelete(schedule.shiftIds);
+            setShowDeleteConfirmModal(true);
+        } else {
+            setInfoModalTitle("Thông báo");
+            setInfoModalMessage("Không tìm thấy ca làm việc nào trong tuần này.");
+            setShowInfoModal(true);
+        }
     };
 
-    const handleCheckIn = () => {
-        const now = new Date();
-        const checkInTimeStr = now.toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-        const todayDate = now.toISOString().split('T')[0];
+    const confirmDeleteSchedule = async () => {
+        if (scheduleToDelete && scheduleToDelete.length > 0) {
+            try {
+                await ApiWorkShift.deleteManyWorkShifts(scheduleToDelete);
+                setInfoModalTitle("Thành công");
+                setInfoModalMessage("Lịch làm việc đã được xóa!");
+                setShowInfoModal(true);
 
-        setCheckInTime(checkInTimeStr);
-        setAttendanceHistory((prev) => {
-            const existingEntryIndex = prev.findIndex((entry) => entry.date === todayDate);
-            if (existingEntryIndex > -1) {
-                const updatedHistory = [...prev];
-                updatedHistory[existingEntryIndex] = {
-                    ...updatedHistory[existingEntryIndex],
-                    checkIn: checkInTimeStr,
-                    checkOut: null,
-                    status: 'Đang làm việc',
-                };
-                return updatedHistory;
+                // Reload shifts
+                const shifts = await ApiWorkShift.getWorkShiftsByDoctor();
+                const groupedSchedules = {};
+                shifts.forEach((shift) => {
+                    const date = new Date(shift.date);
+                    if (isNaN(date.getTime())) return;
+
+                    const weekStart = new Date(date);
+                    const day = date.getDay();
+                    const offset = day === 0 ? -6 : 1 - day;
+                    weekStart.setDate(date.getDate() + offset);
+                    const weekStartStr = weekStart.toISOString().split("T")[0];
+
+                    if (!groupedSchedules[weekStartStr]) {
+                        groupedSchedules[weekStartStr] = {
+                            shiftIds: [],
+                            weekStartDate: weekStartStr,
+                            schedule: {},
+                            workType: shift.workType || "parttime",
+                        };
+                    }
+
+                    groupedSchedules[weekStartStr].shiftIds.push(shift._id);
+
+                    const weekday = weekdays[day === 0 ? 6 : day - 1].key;
+                    const shiftKey = shiftOptions.find(
+                        (option) => option.start === shift.start && option.end === shift.end
+                    )?.key;
+
+                    if (!groupedSchedules[weekStartStr].schedule[weekday]) {
+                        groupedSchedules[weekStartStr].schedule[weekday] = [];
+                    }
+                    groupedSchedules[weekStartStr].schedule[weekday].push(shiftKey);
+                });
+
+                setSavedSchedules(Object.values(groupedSchedules));
+            } catch (error) {
+                setInfoModalTitle("Thông báo");
+                setInfoModalMessage(`${error.response?.data?.message || error.message}`);
+                setShowInfoModal(true);
             }
-            return [
-                ...prev,
-                { date: todayDate, checkIn: checkInTimeStr, checkOut: null, status: 'Đang làm việc' },
-            ];
-        });
-
-        setInfoModalTitle('Chấm công');
-        setInfoModalMessage(`Bạn đã chấm công vào lúc: ${checkInTimeStr}`);
-        setShowInfoModal(true);
-        setCheckOutTime(null);
+        }
+        setShowDeleteConfirmModal(false);
+        setScheduleToDelete(null);
     };
 
-    const handleCheckOut = () => {
+    const cancelDeleteSchedule = () => {
+        setShowDeleteConfirmModal(false);
+        setScheduleToDelete(null);
+    };
+
+    const handleCheckIn = async () => {
+        try {
+            const now = new Date();
+            const checkInTimeStr = now.toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+            await ApiWorkShift.checkInWorkShift("webcam");
+
+            setCheckInTime(checkInTimeStr);
+            setAttendanceHistory((prev) => {
+                const todayDate = now.toISOString().split("T")[0];
+                const existingEntryIndex = prev.findIndex((entry) => entry.date === todayDate);
+                if (existingEntryIndex > -1) {
+                    const updatedHistory = [...prev];
+                    updatedHistory[existingEntryIndex] = {
+                        ...updatedHistory[existingEntryIndex],
+                        checkIn: checkInTimeStr,
+                        checkOut: null,
+                        status: "Đang làm việc",
+                    };
+                    return updatedHistory;
+                }
+                return [
+                    ...prev,
+                    { date: todayDate, checkIn: checkInTimeStr, checkOut: null, status: "Đang làm việc" },
+                ];
+            });
+
+            setInfoModalTitle("Chấm công");
+            setInfoModalMessage(`Bạn đã chấm công vào lúc: ${checkInTimeStr}`);
+            setShowInfoModal(true);
+            setCheckOutTime(null);
+
+            const updatedShifts = await ApiWorkShift.getTodayWorkShifts();
+            const current = updatedShifts.find(
+                (s) => !s.attendance.checkedIn || (s.attendance.checkedIn && !s.attendance.checkedOut)
+            );
+            setCurrentShift(current || null);
+        } catch (error) {
+            setInfoModalTitle("Thông báo");
+            setInfoModalMessage(`${error.response?.data?.message || error.message}`);
+            setShowInfoModal(true);
+        }
+    };
+
+    const handleCheckOut = async () => {
         if (!checkInTime) {
-            setInfoModalTitle('Lỗi');
-            setInfoModalMessage('Bạn phải chấm công vào trước khi chấm công ra.');
+            setInfoModalTitle("Thông báo");
+            setInfoModalMessage("Bạn phải chấm công vào trước khi chấm công ra.");
             setShowInfoModal(true);
             return;
         }
 
-        const now = new Date();
-        const checkOutTimeStr = now.toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-        const todayDate = now.toISOString().split('T')[0];
+        try {
+            const now = new Date();
+            const checkOutTimeStr = now.toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+            await ApiWorkShift.checkOutWorkShift("webcam");
 
-        setCheckOutTime(checkOutTimeStr);
-        setAttendanceHistory((prev) => {
-            const existingEntryIndex = prev.findIndex((entry) => entry.date === todayDate);
-            const existingCheckIn = prev[existingEntryIndex]?.checkIn;
-            let status = 'N/A';
-            if (existingCheckIn) {
-                const [inHour, inMinute] = existingCheckIn.split(':').map(Number);
-                status = inHour < 8 || (inHour === 8 && inMinute === 0) ? 'Đúng giờ' : 'Đi trễ';
-            }
+            setCheckOutTime(checkOutTimeStr);
+            setAttendanceHistory((prev) => {
+                const todayDate = now.toISOString().split("T")[0];
+                const existingEntryIndex = prev.findIndex((entry) => entry.date === todayDate);
+                const existingCheckIn = prev[existingEntryIndex]?.checkIn;
+                let status = "-";
+                if (existingCheckIn) {
+                    const [inHour, inMinute] = existingCheckIn.split(":").map(Number);
+                    status = inHour < 8 || (inHour === 8 && inMinute === 0) ? "Đúng giờ" : "Đi trễ";
+                }
 
-            if (existingEntryIndex > -1) {
-                const updatedHistory = [...prev];
-                updatedHistory[existingEntryIndex] = {
-                    ...updatedHistory[existingEntryIndex],
-                    checkOut: checkOutTimeStr,
-                    status,
-                };
-                return updatedHistory;
-            }
-            return [
-                ...prev,
-                { date: todayDate, checkIn: checkInTime, checkOut: checkOutTimeStr, status },
-            ];
-        });
+                if (existingEntryIndex > -1) {
+                    const updatedHistory = [...prev];
+                    updatedHistory[existingEntryIndex] = {
+                        ...updatedHistory[existingEntryIndex],
+                        checkOut: checkOutTimeStr,
+                        status,
+                    };
+                    return updatedHistory;
+                }
+                return [
+                    ...prev,
+                    { date: todayDate, checkIn: checkInTime, checkOut: checkOutTimeStr, status },
+                ];
+            });
 
-        setInfoModalTitle('Chấm công');
-        setInfoModalMessage(`Bạn đã chấm công ra lúc: ${checkOutTimeStr}`);
-        setShowInfoModal(true);
-        setCheckInTime(null);
-        setCheckOutTime(null);
-    };
+            setInfoModalTitle("Chấm công");
+            setInfoModalMessage(`Bạn đã chấm công ra lúc: ${checkOutTimeStr}`);
+            setShowInfoModal(true);
+            setCheckInTime(null);
+            setCheckOutTime(null);
 
-    const formatDate = (d) => {
-        if (!d) return '';
-        const [year, month, day] = d.split('-');
-        return `${day}/${month}/${year}`;
+            const updatedShifts = await ApiWorkShift.getTodayWorkShifts();
+            const current = updatedShifts.find(
+                (s) => !s.attendance.checkedIn || (s.attendance.checkedIn && !s.attendance.checkedOut)
+            );
+            setCurrentShift(current || null);
+        } catch (error) {
+            setInfoModalTitle("Thông báo");
+            setInfoModalMessage(`${error.response?.data?.message || error.message}`);
+            setShowInfoModal(true);
+        }
     };
 
     const getFilteredHistory = () => {
         const selectedDate = new Date(filterDate);
-        if (filterType === 'week') {
+        if (filterType === "week") {
             const day = selectedDate.getDay();
             const offset = day === 0 ? -6 : 1 - day;
             const weekStart = new Date(selectedDate);
@@ -551,38 +881,41 @@ const AttendanceTab = () => {
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                <CurrentSchedule />
+                <CurrentSchedule currentShift={currentShift} doctorInfo={doctorInfo} loadingDoctor={loadingDoctor} />
                 <View style={styles.card}>
                     <Text style={styles.sectionTitle}>Chấm công</Text>
                     <Text style={styles.sectionSubtitle}>Quản lý thời gian làm việc của bạn</Text>
+
                     <View style={styles.timeContainer}>
                         <Icon name="clock" size={24} color="#007bff" />
                         <Text style={styles.currentTime}>
-                            {currentTime.toLocaleTimeString('vi-VN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
+                            {currentTime.toLocaleTimeString("vi-VN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
                             })}
                         </Text>
                     </View>
+
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
-                            style={[styles.checkButton, checkInTime && !checkOutTime ? styles.disabledButton : { backgroundColor: '#28a745' }]}
+                            style={[styles.checkButton, checkInTime && !checkOutTime ? styles.disabledButton : styles.checkInButton]}
                             onPress={handleCheckIn}
                             disabled={checkInTime && !checkOutTime}
                         >
                             <Icon name="log-in" size={20} color="#fff" />
-                            <Text style={styles.buttonText}>Check-in</Text>
+                            <Text style={styles.buttonText}>Chấm vào</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.checkButton, !checkInTime || checkOutTime ? styles.disabledButton : { backgroundColor: '#dc3545' }]}
+                            style={[styles.checkButton, !checkInTime || checkOutTime ? styles.disabledButton : styles.checkOutButton]}
                             onPress={handleCheckOut}
                             disabled={!checkInTime || checkOutTime}
                         >
                             <Icon name="log-out" size={20} color="#fff" />
-                            <Text style={styles.buttonText}>Check-out</Text>
+                            <Text style={styles.buttonText}>Chấm ra</Text>
                         </TouchableOpacity>
                     </View>
+
                     <View style={styles.actionButtonContainer}>
                         <TouchableOpacity
                             style={styles.actionButton}
@@ -599,6 +932,7 @@ const AttendanceTab = () => {
                             <Text style={styles.buttonText}>Lịch đã lưu</Text>
                         </TouchableOpacity>
                     </View>
+
                     <View style={styles.historyContainer}>
                         <Text style={styles.historyTitle}>Lịch sử chấm công</Text>
                         <View style={styles.filterContainer}>
@@ -613,11 +947,12 @@ const AttendanceTab = () => {
                                 value={filterDate}
                                 onChangeText={setFilterDate}
                                 placeholder="YYYY-MM-DD"
+                                keyboardType="numeric"
                             />
                         </View>
                         {filteredHistory.length === 0 ? (
                             <View style={styles.alertInfo}>
-                                <Text style={styles.alertText}>Chưa có lịch sử chấm công.</Text>
+                                <Text style={styles.alertText}>Chưa có lịch sử chấm công trong khoảng thời gian này.</Text>
                             </View>
                         ) : (
                             <FlatList
@@ -625,15 +960,15 @@ const AttendanceTab = () => {
                                 keyExtractor={(item, index) => index.toString()}
                                 renderItem={({ item }) => (
                                     <View style={styles.historyItem}>
-                                        <Text style={styles.historyText}>Ngày: {item.date}</Text>
-                                        <Text style={styles.historyText}>Giờ vào: {item.checkIn || 'N/A'}</Text>
-                                        <Text style={styles.historyText}>Giờ ra: {item.checkOut || 'N/A'}</Text>
+                                        <Text style={styles.historyText}>Ngày: {formatDate(item.date)}</Text>
+                                        <Text style={styles.historyText}>Giờ vào: {item.checkIn || "-"}</Text>
+                                        <Text style={styles.historyText}>Giờ ra: {item.checkOut || "-"}</Text>
                                         <Text
                                             style={[
                                                 styles.historyStatus,
-                                                item.status === 'Đúng giờ'
+                                                item.status === "Đúng giờ"
                                                     ? styles.statusSuccess
-                                                    : item.status === 'Đi trễ'
+                                                    : item.status === "Đi trễ"
                                                         ? styles.statusWarning
                                                         : styles.statusInfo,
                                             ]}
@@ -647,6 +982,7 @@ const AttendanceTab = () => {
                     </View>
                 </View>
             </ScrollView>
+
             <ScheduleFormModal
                 show={showScheduleFormModal}
                 onClose={() => {
@@ -659,9 +995,12 @@ const AttendanceTab = () => {
                 handleSelectCurrentWeek={handleSelectCurrentWeek}
                 weeklySchedule={weeklySchedule}
                 handleShiftToggle={handleShiftToggle}
-                editingScheduleId={editingScheduleId}
+                isEditing={isEditing}
                 resetScheduleForm={resetScheduleForm}
                 handleSaveOrUpdateSchedule={handleSaveOrUpdateSchedule}
+                workType={workType}
+                setWorkType={setWorkType}
+                handleWorkTypeChange={handleWorkTypeChange}
             />
             <SavedSchedulesModal
                 show={showSavedSchedulesModal}
@@ -676,6 +1015,13 @@ const AttendanceTab = () => {
                 title={infoModalTitle}
                 message={infoModalMessage}
                 onClose={() => setShowInfoModal(false)}
+            />
+            <ConfirmationModal
+                show={showDeleteConfirmModal}
+                title="Xác nhận xóa"
+                message="Bạn có chắc chắn muốn xóa lịch làm việc này không? Hành động này không thể hoàn tác."
+                onConfirm={confirmDeleteSchedule}
+                onCancel={cancelDeleteSchedule}
             />
         </SafeAreaView>
     );
@@ -830,6 +1176,12 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginHorizontal: 6,
     },
+    checkInButton: {
+        backgroundColor: '#28a745',
+    },
+    checkOutButton: {
+        backgroundColor: '#dc3545',
+    },
     disabledButton: {
         backgroundColor: '#d1d5db',
     },
@@ -911,7 +1263,6 @@ const styles = StyleSheet.create({
     },
     statusWarning: {
         backgroundColor: '#f59e0b',
-        color: '#fff',
     },
     statusInfo: {
         backgroundColor: '#06b6d4',
@@ -938,12 +1289,20 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 16,
         width: '90%',
+        maxHeight: Dimensions.get('window').height * 0.9,
+        minHeight: 400,
+    },
+    modalContentNotifications: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        width: '90%',
         maxHeight: Dimensions.get('window').height * 0.8,
+        minHeight: 100,
     },
     modalHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
         marginBottom: 12,
     },
     modalTitle: {
@@ -951,17 +1310,20 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#1a1a1a',
         marginLeft: 8,
+        flex: 1,
     },
     closeButton: {
-        padding: 8,
+        padding: 4,
     },
     modalBody: {
-        maxHeight: Dimensions.get('window').height * 0.6,
+        flex: 1,
+        minHeight: 200,
     },
     modalBodyText: {
         fontSize: 14,
         color: '#1a1a1a',
         marginBottom: 16,
+        textAlign: 'center',
     },
     modalFooter: {
         flexDirection: 'row',
@@ -976,7 +1338,7 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     confirmButton: {
-        backgroundColor: '#dc2626',
+        backgroundColor: '#dc3545',
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 8,
@@ -1020,6 +1382,38 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         borderRadius: 8,
     },
+    workTypeContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginBottom: 16,
+    },
+    workTypeButton: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        backgroundColor: '#fff',
+        marginHorizontal: 8,
+        alignItems: 'center',
+    },
+    workTypeSelected: {
+        borderColor: '#007bff',
+        backgroundColor: '#e0f2fe',
+    },
+    workTypeText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1a1a1a',
+    },
+    workTypeTextSelected: {
+        color: '#007bff',
+    },
+    workTypeDescription: {
+        fontSize: 12,
+        color: '#6b7280',
+        textAlign: 'center',
+    },
     weekGrid: {
         marginTop: 8,
     },
@@ -1044,8 +1438,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     shiftButton: {
-        flex: 1,
-        minWidth: '45%',
+        flexBasis: '48%',
         paddingVertical: 10,
         paddingHorizontal: 12,
         borderRadius: 8,
@@ -1053,7 +1446,6 @@ const styles = StyleSheet.create({
         borderColor: '#d1d5db',
         backgroundColor: '#fff',
         marginBottom: 8,
-        marginHorizontal: 4,
         alignItems: 'center',
     },
     shiftButtonSelected: {
@@ -1081,7 +1473,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#1a1a1a',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     scheduleDay: {
         marginVertical: 4,
@@ -1115,6 +1507,11 @@ const styles = StyleSheet.create({
     },
     deleteButton: {
         padding: 8,
+    },
+    loadingText: {
+        textAlign: 'center',
+        color: '#007bff',
+        fontSize: 16,
     },
 });
 
