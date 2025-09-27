@@ -11,8 +11,7 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import { ECharts } from "react-native-echarts-wrapper";
+import { BarChart, LineChart } from "react-native-chart-kit";
 import ApiDoctor from "../../apis/ApiDoctor";
 
 // Dữ liệu mẫu fallback
@@ -41,6 +40,8 @@ const fallbackHealthData = {
 export default function OverviewTab() {
   const [revenuePeriod, setRevenuePeriod] = useState("week");
   const [healthPeriod, setHealthPeriod] = useState("week");
+  const [showRevenueDropdown, setShowRevenueDropdown] = useState(false);
+  const [showHealthDropdown, setShowHealthDropdown] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patients, setPatients] = useState([]);
   const [summary, setSummary] = useState({
@@ -121,6 +122,9 @@ export default function OverviewTab() {
         };
 
         console.log("Revenue Data:", JSON.stringify(newRevenueData, null, 2));
+        console.log("Week data:", newRevenueData.week);
+        console.log("Month data:", newRevenueData.month);
+        console.log("Year data:", newRevenueData.year);
         setRevenueData(newRevenueData);
       } catch (err) {
         console.error("Lỗi fetch revenue:", err);
@@ -161,99 +165,86 @@ export default function OverviewTab() {
     }
   };
 
-  // Chart options for revenue
-  const getRevenueChartOptions = (period) => {
+  // Custom Dropdown Component
+  const CustomDropdown = ({
+    options,
+    selectedValue,
+    onSelect,
+    isVisible,
+    onToggle,
+    placeholder = "Chọn khoảng thời gian"
+  }) => {
+    const getDisplayText = (value) => {
+      const option = options.find(opt => opt.value === value);
+      return option ? option.label : placeholder;
+    };
+
+    return (
+      <View style={styles.dropdownWrapper}>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={onToggle}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.dropdownButtonText}>{getDisplayText(selectedValue)}</Text>
+          <Text style={styles.dropdownArrow}>{isVisible ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+
+        {isVisible && (
+          <View style={styles.dropdownMenu}>
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.dropdownItem,
+                  selectedValue === option.value && styles.dropdownItemSelected
+                ]}
+                onPress={() => {
+                  onSelect(option.value);
+                  onToggle();
+                }}
+              >
+                <Text style={[
+                  styles.dropdownItemText,
+                  selectedValue === option.value && styles.dropdownItemTextSelected
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Get chart data for revenue
+  const getRevenueChartData = (period) => {
     const data = revenueData[period] || { xAxisData: [], data: [] };
     console.log(`Revenue Chart Data (${period}):`, JSON.stringify(data, null, 2));
+    console.log(`Data length: ${data.data?.length}, xAxisData length: ${data.xAxisData?.length}`);
+
+    // Sử dụng fallback data nếu không có data
+    const chartData = data.data && data.data.length > 0 ? data.data : [1000000, 2000000, 1500000, 3000000, 2500000, 1800000, 2200000];
+    let chartLabels = data.xAxisData && data.xAxisData.length > 0 ? data.xAxisData : ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+
+    // Rút gọn nhãn nếu quá dài
+    chartLabels = chartLabels.map(label => {
+      if (typeof label === 'string' && label.length > 8) {
+        return label.substring(0, 6) + '...';
+      }
+      return label;
+    });
+
+    console.log("Using chart data:", chartData);
+    console.log("Using chart labels:", chartLabels);
 
     return {
-      tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "shadow" },
-      },
-      grid: {
-        left: "5%",
-        right: "5%",
-        bottom: "20%", // Tăng bottom để đủ chỗ cho nhãn trục X
-        top: "10%",
-        containLabel: true,
-      },
-      xAxis: {
-        type: "category",
-        data: data.xAxisData || [],
-        axisLabel: {
-          rotate: 45, // Xoay nhãn để tránh chồng lấn
-          fontSize: 10,
-          color: "#1f2937",
-        },
-        axisTick: { alignWithLabel: true },
-      },
-      yAxis: {
-        type: "value",
-        min: 0, // Đặt min để đảm bảo hiển thị cột nhỏ
-        max: Math.max(...data.data, 2000000), // Đặt max dựa trên dữ liệu hoặc giá trị tối thiểu
-        axisLabel: {
-          formatter: (value) => `${(value / 1000000).toFixed(1)}M`,
-          color: "#1f2937",
-        },
-      },
-      series: [
-        {
-          name: "Doanh thu",
-          type: "bar",
-          barWidth: "60%",
-          data: data.data || [],
-          itemStyle: {
-            color: "#2563eb",
-          },
-        },
-      ],
+      labels: chartLabels,
+      data: chartData
     };
   };
 
-  // Chart options for health
-  const getHealthChartOptions = () => {
-    console.log("Health Chart Option:", healthData); // Debug
-    return {
-      tooltip: { trigger: "axis" },
-      legend: {
-        data: ["Huyết áp", "Nhịp tim", "Đường huyết"],
-        top: "5%",
-        textStyle: { fontSize: 12, color: "#1f2937" },
-      },
-      grid: { left: "5%", right: "5%", bottom: "15%", top: "20%", containLabel: true },
-      xAxis: {
-        type: "category",
-        boundaryGap: false,
-        data: healthData.xAxisData || [],
-        axisLabel: { rotate: 45, fontSize: 10 },
-      },
-      yAxis: {
-        type: "value",
-        axisLabel: { fontSize: 10 },
-      },
-      series: [
-        {
-          name: "Huyết áp",
-          type: "line",
-          data: healthData.bloodPressureData || [],
-          itemStyle: { color: "#dc2626" },
-        },
-        {
-          name: "Nhịp tim",
-          type: "line",
-          data: healthData.heartRateData || [],
-          itemStyle: { color: "#7c3aed" },
-        },
-        {
-          name: "Đường huyết",
-          type: "line",
-          data: healthData.bloodSugarData || [],
-          itemStyle: { color: "#059669" },
-        },
-      ],
-    };
-  };
 
   if (loading) {
     return (
@@ -269,6 +260,10 @@ export default function OverviewTab() {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      onScrollBeginDrag={() => {
+        setShowRevenueDropdown(false);
+        setShowHealthDropdown(false);
+      }}
     >
       <Text style={styles.title}>Tổng quan</Text>
 
@@ -295,57 +290,152 @@ export default function OverviewTab() {
       {/* Revenue Chart */}
       <View style={styles.card}>
         <View style={styles.chartHeader}>
-          <Text style={styles.sectionTitle}>Doanh thu theo ngày</Text>
-          <View style={styles.dropdownContainer}>
-            <Picker
-              selectedValue={revenuePeriod}
-              onValueChange={(value) => setRevenuePeriod(value)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Tuần này" value="week" />
-              <Picker.Item label="Tháng này" value="month" />
-              <Picker.Item label="Năm nay" value="year" />
-            </Picker>
+          <View style={styles.titleContainer}>
+            <Text style={styles.sectionTitle}>📊 Doanh thu</Text>
+            <Text style={styles.sectionSubtitle}>Theo khoảng thời gian</Text>
           </View>
+          <CustomDropdown
+            options={[
+              { label: "Tuần này", value: "week" },
+              { label: "Tháng này", value: "month" },
+              { label: "Năm nay", value: "year" }
+            ]}
+            selectedValue={revenuePeriod}
+            onSelect={setRevenuePeriod}
+            isVisible={showRevenueDropdown}
+            onToggle={() => {
+              setShowRevenueDropdown(!showRevenueDropdown);
+              setShowHealthDropdown(false);
+            }}
+            placeholder="Chọn thời gian"
+          />
         </View>
         <View style={styles.chartContainer}>
-          {revenueData[revenuePeriod]?.data?.length > 0 ? (
-            <ECharts
-              option={getRevenueChartOptions(revenuePeriod)}
-              style={styles.chart}
-              backgroundColor="#ffffff" // Đặt màu nền để đảm bảo hiển thị
-              onLoad={(echart) => console.log("Revenue EChart loaded:", echart)}
-            />
-          ) : (
-            <Text style={styles.noDataText}>Không có dữ liệu để hiển thị</Text>
-          )}
+          {(() => {
+            const chartData = getRevenueChartData(revenuePeriod);
+            return (
+              <BarChart
+                data={{
+                  labels: chartData.labels,
+                  datasets: [
+                    {
+                      data: chartData.data.map(value => value / 1000000), // Convert to millions
+                    }
+                  ]
+                }}
+                width={Dimensions.get("window").width - 64}
+                height={240}
+                yAxisLabel=""
+                yAxisSuffix="M"
+                chartConfig={{
+                  backgroundColor: "#ffffff",
+                  backgroundGradientFrom: "#ffffff",
+                  backgroundGradientTo: "#ffffff",
+                  decimalPlaces: 1,
+                  color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
+                  style: {
+                    borderRadius: 16
+                  },
+                  propsForDots: {
+                    r: "6",
+                    strokeWidth: "2",
+                    stroke: "#2563eb"
+                  },
+                  propsForLabels: {
+                    fontSize: 10,
+                    rotation: chartData.labels.length > 6 ? -45 : 0,
+                  }
+                }}
+                style={styles.chart}
+                fromZero
+                showValuesOnTopOfBars={false}
+                withInnerLines={true}
+                withVerticalLabels={true}
+                withHorizontalLabels={true}
+                segments={4}
+              />
+            );
+          })()}
         </View>
       </View>
 
       {/* Health Chart and Patient List */}
       <View style={styles.card}>
         <View style={styles.chartHeader}>
-          <Text style={styles.sectionTitle}>Chỉ số sức khỏe: {selectedPatient?.name || "Chưa chọn"}</Text>
-          <View style={styles.dropdownContainer}>
-            <Picker
-              selectedValue={healthPeriod}
-              onValueChange={(value) => setHealthPeriod(value)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Tuần này" value="week" />
-              <Picker.Item label="Tháng này" value="month" />
-              <Picker.Item label="Năm nay" value="year" />
-            </Picker>
+          <View style={styles.titleContainer}>
+            <Text style={styles.sectionTitle}>❤️ Chỉ số sức khỏe</Text>
+            <Text style={styles.sectionSubtitle}>
+              {selectedPatient?.name || "Chưa chọn bệnh nhân"}
+            </Text>
           </View>
+          <CustomDropdown
+            options={[
+              { label: "Tuần này", value: "week" },
+              { label: "Tháng này", value: "month" },
+              { label: "Năm nay", value: "year" }
+            ]}
+            selectedValue={healthPeriod}
+            onSelect={setHealthPeriod}
+            isVisible={showHealthDropdown}
+            onToggle={() => {
+              setShowHealthDropdown(!showHealthDropdown);
+              setShowRevenueDropdown(false); // Close other dropdown
+            }}
+            placeholder="Chọn thời gian"
+          />
         </View>
         <View style={styles.chartContainer}>
-          <ECharts
-            option={getHealthChartOptions()}
-            style={styles.chart}
-            onLoad={(echart) => console.log("EChart loaded:", echart)} // Debug khi load
-          />
-          {!healthData?.bloodPressureData?.length && (
-            <Text style={styles.noDataText}>Không có dữ liệu để hiển thị</Text>
+          {healthData?.bloodPressureData?.length > 0 ? (
+            <LineChart
+              data={{
+                labels: healthData.xAxisData || ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+                datasets: [
+                  {
+                    data: healthData.bloodPressureData || [160, 162, 158, 165, 160, 163, 159],
+                    color: (opacity = 1) => `rgba(220, 38, 38, ${opacity})`, // Red for blood pressure
+                    strokeWidth: 2
+                  },
+                  {
+                    data: healthData.heartRateData || [92, 90, 93, 89, 91, 92, 90],
+                    color: (opacity = 1) => `rgba(124, 58, 237, ${opacity})`, // Purple for heart rate
+                    strokeWidth: 2
+                  },
+                  {
+                    data: healthData.bloodSugarData || [6.8, 7.0, 6.7, 7.2, 6.9, 7.1, 6.8],
+                    color: (opacity = 1) => `rgba(5, 150, 105, ${opacity})`, // Green for blood sugar
+                    strokeWidth: 2
+                  }
+                ]
+              }}
+              width={Dimensions.get("window").width - 64}
+              height={240} // Tăng chiều cao
+              chartConfig={{
+                backgroundColor: "#ffffff",
+                backgroundGradientFrom: "#ffffff",
+                backgroundGradientTo: "#ffffff",
+                decimalPlaces: 1,
+                color: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
+                style: {
+                  borderRadius: 16
+                },
+                propsForLabels: {
+                  fontSize: 10,
+                  rotation: (healthData.xAxisData?.length || 7) > 6 ? -45 : 0, // Xoay nhãn nếu quá nhiều
+                }
+              }}
+              style={styles.chart}
+              withInnerLines={true}
+              withVerticalLabels={true}
+              withHorizontalLabels={true}
+              segments={4} // Giảm số đường ngang
+            />
+          ) : (
+            <View style={styles.noDataContainer}>
+              <Text style={styles.noDataText}>Không có dữ liệu để hiển thị</Text>
+              <Text style={styles.noDataSubtext}>Vui lòng chọn bệnh nhân khác</Text>
+            </View>
           )}
         </View>
       </View>
@@ -405,14 +495,6 @@ export default function OverviewTab() {
                   <Text style={[styles.statusText, { color: patient.statusColor }]}>{patient.warning || patient.status}</Text>
                 </View>
               </View>
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={[styles.actionButton, styles.callButton]} onPress={() => Linking.openURL(`tel:${patient.phone}`)}>
-                  <Text style={styles.actionIcon}>📞</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionButton, styles.messageButton]} onPress={() => Linking.openURL(`sms:${patient.phone}`)}>
-                  <Text style={styles.actionIcon}>💬</Text>
-                </TouchableOpacity>
-              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -450,7 +532,6 @@ export default function OverviewTab() {
   );
 }
 
-// Styles (thêm style cho noDataText)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -519,44 +600,122 @@ const styles = StyleSheet.create({
   chartHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
+    alignItems: "flex-start",
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  titleContainer: {
+    flex: 1,
+    marginRight: 12,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1f2937",
+    marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 14,
     color: "#6b7280",
+    fontWeight: "500",
   },
-  dropdownContainer: {
-    width: 120,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
+  dropdownWrapper: {
+    position: "relative",
+    zIndex: 1000,
+  },
+  dropdownButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "#ffffff",
+    borderWidth: 2,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minWidth: 140,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  picker: {
-    height: 40,
+  dropdownButtonText: {
     fontSize: 14,
+    fontWeight: "600",
+    color: "#1f2937",
+    flex: 1,
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginLeft: 8,
+  },
+  dropdownMenu: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#e5e7eb",
+    marginTop: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1001,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  dropdownItemSelected: {
+    backgroundColor: "#eff6ff",
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  dropdownItemTextSelected: {
+    color: "#2563eb",
+    fontWeight: "600",
   },
   chartContainer: {
     width: "100%",
-    height: 280,
-    position: "relative", // Để hiển thị noDataText
+    height: 320,
+    position: "relative",
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    overflow: "visible",
+    paddingBottom: 20,
   },
   chart: {
-    width: Dimensions.get("window").width - 32,
-    height: 260,
+    marginVertical: 8,
+    borderRadius: 16,
+  },
+  noDataContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
   },
   noDataText: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: [{ translateX: -50 }, { translateY: -10 }],
     color: "#6b7280",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  noDataSubtext: {
+    color: "#9ca3af",
     fontSize: 14,
     textAlign: "center",
   },
@@ -639,17 +798,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "600",
-  },
-  actionButtons: {
-    flexDirection: "row",
-  },
-  actionButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  actionIcon: {
-    fontSize: 20,
-    color: "#2563eb",
   },
   viewAllButton: {
     padding: 8,
