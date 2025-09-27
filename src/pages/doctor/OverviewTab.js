@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,251 +9,151 @@ import {
   Linking,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { ECharts } from "react-native-echarts-wrapper";
+import ApiDoctor from "../../apis/ApiDoctor";
 
-// Mock data (giữ nguyên như code gốc, nhưng đảm bảo dữ liệu hợp lệ)
-const mockData = {
-  revenue: {
-    week: {
-      xAxisData: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
-      data: [5.2, 8.9, 7.0, 9.3, 12.5, 4.8, 2.1].map((v) => v * 1000000),
-    },
-    month: {
-      xAxisData: Array.from({ length: 30 }, (_, i) => `${i + 1}/07`),
-      data: Array.from({ length: 30 }, () => Math.floor(Math.random() * 10 + 3) * 1000000),
-    },
-    year: {
-      xAxisData: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
-      data: Array.from({ length: 12 }, () => Math.floor(Math.random() * 50 + 20) * 1000000),
-    },
+// Dữ liệu mẫu fallback
+const fallbackRevenueData = {
+  week: {
+    xAxisData: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+    data: [5.2, 8.9, 7.0, 9.3, 12.5, 4.8, 2.1].map((v) => v * 1000000),
   },
-  health: {
-    patients: [
-      {
-        id: 1,
-        name: "Trần Văn Bình",
-        age: 68,
-        bloodPressure: "160/95",
-        heartRate: 92,
-        warning: "Huyết áp cao",
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        phone: "0123456789",
-        status: "Cần theo dõi",
-        statusColor: "#dc2626",
-        week: {
-          xAxisData: ["19/06", "20/06", "21/06", "22/06", "23/06", "24/06", "25/06"],
-          bloodPressureData: [160, 162, 158, 165, 160, 163, 159],
-          heartRateData: [92, 90, 93, 89, 91, 92, 90],
-          bloodSugarData: [6.8, 7.0, 6.7, 7.2, 6.9, 7.1, 6.8],
-        },
-        month: {
-          xAxisData: Array.from({ length: 30 }, (_, i) => `${i + 1}/07`),
-          bloodPressureData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 10 + 155)),
-          heartRateData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 8 + 85)),
-          bloodSugarData: Array.from({ length: 30 }, () => Number.parseFloat((Math.random() * 1.0 + 6.5).toFixed(1))),
-        },
-        year: {
-          xAxisData: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
-          bloodPressureData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 15 + 150)),
-          heartRateData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 10 + 85)),
-          bloodSugarData: Array.from({ length: 12 }, () => Number.parseFloat((Math.random() * 1.5 + 6.0).toFixed(1))),
-        },
-      },
-      {
-        id: 2,
-        name: "Nguyễn Thị Hoa",
-        age: 55,
-        bloodPressure: "135/85",
-        heartRate: 78,
-        warning: "Đường huyết thấp",
-        image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-        phone: "0987654321",
-        status: "Đang điều trị",
-        statusColor: "#f59e0b",
-        week: {
-          xAxisData: ["19/06", "20/06", "21/06", "22/06", "23/06", "24/06", "25/06"],
-          bloodPressureData: [135, 138, 134, 136, 140, 137, 135],
-          heartRateData: [78, 80, 77, 79, 81, 78, 80],
-          bloodSugarData: [5.5, 5.7, 5.6, 5.8, 5.9, 5.6, 5.7],
-        },
-        month: {
-          xAxisData: Array.from({ length: 30 }, (_, i) => `${i + 1}/07`),
-          bloodPressureData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 10 + 130)),
-          heartRateData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 8 + 75)),
-          bloodSugarData: Array.from({ length: 30 }, () => Number.parseFloat((Math.random() * 1.0 + 5.0).toFixed(1))),
-        },
-        year: {
-          xAxisData: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
-          bloodPressureData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 15 + 125)),
-          heartRateData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 10 + 70)),
-          bloodSugarData: Array.from({ length: 12 }, () => Number.parseFloat((Math.random() * 1.5 + 5.0).toFixed(1))),
-        },
-      },
-      {
-        id: 3,
-        name: "Lê Minh Tuấn",
-        age: 72,
-        bloodPressure: "145/90",
-        heartRate: 85,
-        warning: "Huyết áp cao",
-        image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-        phone: "0912345678",
-        status: "Cần theo dõi",
-        statusColor: "#ef4444",
-        week: {
-          xAxisData: ["19/06", "20/06", "21/06", "22/06", "23/06", "24/06", "25/06"],
-          bloodPressureData: [145, 148, 143, 147, 150, 146, 144],
-          heartRateData: [85, 87, 84, 86, 88, 85, 87],
-          bloodSugarData: [6.2, 6.4, 6.3, 6.5, 6.6, 6.3, 6.4],
-        },
-        month: {
-          xAxisData: Array.from({ length: 30 }, (_, i) => `${i + 1}/07`),
-          bloodPressureData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 10 + 140)),
-          heartRateData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 8 + 80)),
-          bloodSugarData: Array.from({ length: 30 }, () => Number.parseFloat((Math.random() * 1.0 + 6.0).toFixed(1))),
-        },
-        year: {
-          xAxisData: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
-          bloodPressureData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 15 + 135)),
-          heartRateData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 10 + 80)),
-          bloodSugarData: Array.from({ length: 12 }, () => Number.parseFloat((Math.random() * 1.5 + 5.5).toFixed(1))),
-        },
-      },
-      {
-        id: 4,
-        name: "Phạm Thị Hương",
-        age: 52,
-        bloodPressure: "120/80",
-        heartRate: 75,
-        warning: "Ổn định",
-        image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-        phone: "0934567890",
-        status: "Ổn định",
-        statusColor: "#10b981",
-        week: {
-          xAxisData: ["19/06", "20/06", "21/06", "22/06", "23/06", "24/06", "25/06"],
-          bloodPressureData: [120, 122, 118, 125, 120, 123, 119],
-          heartRateData: [75, 77, 74, 76, 78, 75, 77],
-          bloodSugarData: [5.2, 5.4, 5.3, 5.5, 5.6, 5.3, 5.4],
-        },
-        month: {
-          xAxisData: Array.from({ length: 30 }, (_, i) => `${i + 1}/07`),
-          bloodPressureData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 10 + 115)),
-          heartRateData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 8 + 70)),
-          bloodSugarData: Array.from({ length: 30 }, () => Number.parseFloat((Math.random() * 1.0 + 4.8).toFixed(1))),
-        },
-        year: {
-          xAxisData: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
-          bloodPressureData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 15 + 110)),
-          heartRateData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 10 + 70)),
-          bloodSugarData: Array.from({ length: 12 }, () => Number.parseFloat((Math.random() * 1.5 + 4.5).toFixed(1))),
-        },
-      },
-      {
-        id: 5,
-        name: "Võ Đức Minh",
-        age: 45,
-        bloodPressure: "140/90",
-        heartRate: 88,
-        warning: "Huyết áp cao",
-        image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-        phone: "0945678901",
-        status: "Đang điều trị",
-        statusColor: "#f59e0b",
-        week: {
-          xAxisData: ["19/06", "20/06", "21/06", "22/06", "23/06", "24/06", "25/06"],
-          bloodPressureData: [140, 142, 138, 145, 140, 143, 139],
-          heartRateData: [88, 90, 87, 89, 91, 88, 90],
-          bloodSugarData: [6.0, 6.2, 6.1, 6.3, 6.4, 6.1, 6.2],
-        },
-        month: {
-          xAxisData: Array.from({ length: 30 }, (_, i) => `${i + 1}/07`),
-          bloodPressureData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 10 + 135)),
-          heartRateData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 8 + 83)),
-          bloodSugarData: Array.from({ length: 30 }, () => Number.parseFloat((Math.random() * 1.0 + 5.8).toFixed(1))),
-        },
-        year: {
-          xAxisData: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
-          bloodPressureData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 15 + 130)),
-          heartRateData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 10 + 80)),
-          bloodSugarData: Array.from({ length: 12 }, () => Number.parseFloat((Math.random() * 1.5 + 5.5).toFixed(1))),
-        },
-      },
-      {
-        id: 6,
-        name: "Hoàng Thị Mai",
-        age: 60,
-        bloodPressure: "130/85",
-        heartRate: 82,
-        warning: "Đường huyết cao",
-        image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-        phone: "0956789012",
-        status: "Cần theo dõi",
-        statusColor: "#ef4444",
-        week: {
-          xAxisData: ["19/06", "20/06", "21/06", "22/06", "23/06", "24/06", "25/06"],
-          bloodPressureData: [130, 132, 128, 135, 130, 133, 129],
-          heartRateData: [82, 84, 81, 83, 85, 82, 84],
-          bloodSugarData: [7.2, 7.4, 7.3, 7.5, 7.6, 7.3, 7.4],
-        },
-        month: {
-          xAxisData: Array.from({ length: 30 }, (_, i) => `${i + 1}/07`),
-          bloodPressureData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 10 + 125)),
-          heartRateData: Array.from({ length: 30 }, () => Math.floor(Math.random() * 8 + 78)),
-          bloodSugarData: Array.from({ length: 30 }, () => Number.parseFloat((Math.random() * 1.0 + 7.0).toFixed(1))),
-        },
-        year: {
-          xAxisData: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
-          bloodPressureData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 15 + 120)),
-          heartRateData: Array.from({ length: 12 }, () => Math.floor(Math.random() * 10 + 75)),
-          bloodSugarData: Array.from({ length: 12 }, () => Number.parseFloat((Math.random() * 1.5 + 6.8).toFixed(1))),
-        },
-      },
-    ],
+  month: {
+    xAxisData: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6"],
+    data: [50, 60, 55, 70, 65, 80].map((v) => v * 1000000),
   },
-  summary: {
-    newPatients: 12,
-    newPatientsChange: "+15% so với tuần trước",
-    appointmentsToday: 8,
-    upcomingAppointments: 2,
-    monthlyRevenue: "48.500.000 đ",
-    monthlyRevenueChange: "+8% so với tháng trước",
+  year: {
+    xAxisData: ["2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09"],
+    data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1500000],
   },
 };
 
-// Component chính OverviewTab
+const fallbackHealthData = {
+  xAxisData: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+  bloodPressureData: [160, 162, 158, 165, 160, 163, 159],
+  heartRateData: [92, 90, 93, 89, 91, 92, 90],
+  bloodSugarData: [6.8, 7.0, 6.7, 7.2, 6.9, 7.1, 6.8],
+};
+
 export default function OverviewTab() {
   const [revenuePeriod, setRevenuePeriod] = useState("week");
   const [healthPeriod, setHealthPeriod] = useState("week");
-  const [selectedPatient, setSelectedPatient] = useState(mockData.health.patients[0]);
-  const [appointmentToday, setAppointmentToday] = useState(0);
-  const [appointmentNext, setAppointmentNext] = useState(0);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patients, setPatients] = useState([]);
+  const [summary, setSummary] = useState({
+    newPatients: 0,
+    newPatientsChange: "",
+    appointmentsToday: 0,
+    upcomingAppointments: 0,
+    monthlyRevenue: "0 đ",
+    monthlyRevenueChange: "",
+  });
+  const [revenueData, setRevenueData] = useState({ week: {}, month: {}, year: {} });
+  const [healthData, setHealthData] = useState({});
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const patientsPerPage = 3;
+  const chartRef = useRef(null); // Thêm ref để kiểm tra render
 
+  // Fetch summary
   useEffect(() => {
-    const fetchAppointments = async () => {
+    const fetchSummary = async () => {
       try {
-        // Giả lập API call, thay thế bằng ApiDoctor thực tế
-        setAppointmentToday(mockData.summary.appointmentsToday);
-        setAppointmentNext(mockData.summary.upcomingAppointments);
+        const res = await ApiDoctor.getSummary();
+        if (
+          res &&
+          typeof res === "object" &&
+          "newPatients" in res &&
+          "appointmentsToday" in res &&
+          "upcomingAppointments" in res &&
+          "monthlyRevenue" in res
+        ) {
+          setSummary(res);
+        } else {
+          console.error("Response summary không hợp lệ:", res);
+        }
       } catch (err) {
-        console.error("Lỗi khi lấy dữ liệu cuộc hẹn:", err);
+        console.error("Lỗi fetch summary:", err);
+      }
+    };
+    fetchSummary();
+  }, []);
+
+  // Fetch patients
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const res = await ApiDoctor.getPatientsAttention();
+        const patientsData = Array.isArray(res) ? res : [];
+        setPatients(patientsData);
+        setSelectedPatient(patientsData.length > 0 ? patientsData[0] : null);
+      } catch (err) {
+        console.error("Lỗi fetch patients:", err);
+        setPatients([]);
+      }
+    };
+    fetchPatients();
+  }, []);
+
+  // Fetch revenue
+  useEffect(() => {
+    const fetchRevenue = async () => {
+      try {
+        const [weekRes, monthRes, yearRes] = await Promise.all([
+          ApiDoctor.getRevenue("week"),
+          ApiDoctor.getRevenue("month"),
+          ApiDoctor.getRevenue("year"),
+        ]);
+
+        const newRevenueData = {
+          week: weekRes && Array.isArray(weekRes.xAxisData) && Array.isArray(weekRes.data)
+            ? weekRes
+            : fallbackRevenueData.week,
+          month: monthRes && Array.isArray(monthRes.xAxisData) && Array.isArray(monthRes.data)
+            ? monthRes
+            : fallbackRevenueData.month,
+          year: yearRes && Array.isArray(yearRes.xAxisData) && Array.isArray(yearRes.data)
+            ? yearRes
+            : fallbackRevenueData.year,
+        };
+
+        console.log("Revenue Data:", JSON.stringify(newRevenueData, null, 2));
+        setRevenueData(newRevenueData);
+      } catch (err) {
+        console.error("Lỗi fetch revenue:", err);
+        setRevenueData(fallbackRevenueData); // Sử dụng fallback nếu lỗi
       } finally {
         setLoading(false);
       }
     };
-
-    fetchAppointments();
+    fetchRevenue();
   }, []);
 
+  // Fetch health data
+  useEffect(() => {
+    if (selectedPatient) {
+      const fetchHealth = async () => {
+        try {
+          const res = await ApiDoctor.getPatientHealth(selectedPatient._id || selectedPatient.id, healthPeriod);
+          console.log("Health Data:", res);
+          setHealthData(res || fallbackHealthData);
+        } catch (err) {
+          console.error("Lỗi fetch health:", err);
+          setHealthData(fallbackHealthData);
+        }
+      };
+      fetchHealth();
+    }
+  }, [selectedPatient, healthPeriod]);
+
   // Logic phân trang
-  const totalPages = Math.ceil(mockData.health.patients.length / patientsPerPage);
+  const totalPages = Math.ceil(patients.length / patientsPerPage);
   const startIndex = (currentPage - 1) * patientsPerPage;
   const endIndex = startIndex + patientsPerPage;
-  const displayedPatients = mockData.health.patients.slice(startIndex, endIndex);
+  const displayedPatients = patients.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -262,72 +162,98 @@ export default function OverviewTab() {
   };
 
   // Chart options for revenue
-  const getRevenueChartOptions = (period) => ({
-    tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-    grid: { left: "5%", right: "5%", bottom: "15%", top: "10%", containLabel: true },
-    xAxis: {
-      type: "category",
-      data: mockData.revenue[period]?.xAxisData || [],
-      axisLabel: { rotate: 45, fontSize: 10 },
-      axisTick: { alignWithLabel: true },
-    },
-    yAxis: {
-      type: "value",
-      axisLabel: {
-        formatter: (value) => `${(value / 1000000).toFixed(1)}M`,
+  const getRevenueChartOptions = (period) => {
+    const data = revenueData[period] || { xAxisData: [], data: [] };
+    console.log(`Revenue Chart Data (${period}):`, JSON.stringify(data, null, 2));
+
+    return {
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
       },
-    },
-    series: [
-      {
-        name: "Doanh thu",
-        type: "bar",
-        barWidth: "60%",
-        data: mockData.revenue[period]?.data || [],
-        itemStyle: { color: "#2563eb" },
+      grid: {
+        left: "5%",
+        right: "5%",
+        bottom: "20%", // Tăng bottom để đủ chỗ cho nhãn trục X
+        top: "10%",
+        containLabel: true,
       },
-    ],
-  });
+      xAxis: {
+        type: "category",
+        data: data.xAxisData || [],
+        axisLabel: {
+          rotate: 45, // Xoay nhãn để tránh chồng lấn
+          fontSize: 10,
+          color: "#1f2937",
+        },
+        axisTick: { alignWithLabel: true },
+      },
+      yAxis: {
+        type: "value",
+        min: 0, // Đặt min để đảm bảo hiển thị cột nhỏ
+        max: Math.max(...data.data, 2000000), // Đặt max dựa trên dữ liệu hoặc giá trị tối thiểu
+        axisLabel: {
+          formatter: (value) => `${(value / 1000000).toFixed(1)}M`,
+          color: "#1f2937",
+        },
+      },
+      series: [
+        {
+          name: "Doanh thu",
+          type: "bar",
+          barWidth: "60%",
+          data: data.data || [],
+          itemStyle: {
+            color: "#2563eb",
+          },
+        },
+      ],
+    };
+  };
 
   // Chart options for health
-  const getHealthChartOptions = (period, patient) => ({
-    tooltip: { trigger: "axis" },
-    legend: {
-      data: ["Huyết áp", "Nhịp tim", "Đường huyết"],
-      top: "5%",
-      textStyle: { fontSize: 12, color: "#1f2937" },
-    },
-    grid: { left: "5%", right: "5%", bottom: "15%", top: "20%", containLabel: true },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: patient[period]?.xAxisData || [],
-      axisLabel: { rotate: 45, fontSize: 10 },
-    },
-    yAxis: {
-      type: "value",
-      axisLabel: { fontSize: 10 },
-    },
-    series: [
-      {
-        name: "Huyết áp",
-        type: "line",
-        data: patient[period]?.bloodPressureData || [],
-        itemStyle: { color: "#dc2626" },
+  const getHealthChartOptions = () => {
+    console.log("Health Chart Option:", healthData); // Debug
+    return {
+      tooltip: { trigger: "axis" },
+      legend: {
+        data: ["Huyết áp", "Nhịp tim", "Đường huyết"],
+        top: "5%",
+        textStyle: { fontSize: 12, color: "#1f2937" },
       },
-      {
-        name: "Nhịp tim",
-        type: "line",
-        data: patient[period]?.heartRateData || [],
-        itemStyle: { color: "#7c3aed" },
+      grid: { left: "5%", right: "5%", bottom: "15%", top: "20%", containLabel: true },
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: healthData.xAxisData || [],
+        axisLabel: { rotate: 45, fontSize: 10 },
       },
-      {
-        name: "Đường huyết",
-        type: "line",
-        data: patient[period]?.bloodSugarData || [],
-        itemStyle: { color: "#059669" },
+      yAxis: {
+        type: "value",
+        axisLabel: { fontSize: 10 },
       },
-    ],
-  });
+      series: [
+        {
+          name: "Huyết áp",
+          type: "line",
+          data: healthData.bloodPressureData || [],
+          itemStyle: { color: "#dc2626" },
+        },
+        {
+          name: "Nhịp tim",
+          type: "line",
+          data: healthData.heartRateData || [],
+          itemStyle: { color: "#7c3aed" },
+        },
+        {
+          name: "Đường huyết",
+          type: "line",
+          data: healthData.bloodSugarData || [],
+          itemStyle: { color: "#059669" },
+        },
+      ],
+    };
+  };
 
   if (loading) {
     return (
@@ -349,9 +275,9 @@ export default function OverviewTab() {
       {/* Summary Cards */}
       <View style={styles.summaryContainer}>
         {[
-          { icon: "👤", title: "Bệnh nhân mới", value: mockData.summary.newPatients, change: mockData.summary.newPatientsChange, color: "#2563eb" },
-          { icon: "📅", title: "Cuộc hẹn hôm nay", value: appointmentToday, change: `${appointmentNext} cuộc hẹn sắp tới`, color: "#d97706" },
-          { icon: "💰", title: "Doanh thu tháng", value: mockData.summary.monthlyRevenue, change: mockData.summary.monthlyRevenueChange, color: "#059669" },
+          { icon: "👤", title: "Bệnh nhân mới", value: summary.newPatients, change: summary.newPatientsChange, color: "#2563eb" },
+          { icon: "📅", title: "Cuộc hẹn hôm nay", value: summary.appointmentsToday, change: `${summary.upcomingAppointments} cuộc hẹn sắp tới`, color: "#d97706" },
+          { icon: "💰", title: "Doanh thu tháng", value: summary.monthlyRevenue, change: summary.monthlyRevenueChange, color: "#059669" },
         ].map((item, index) => (
           <View key={index} style={styles.summaryCard}>
             <View style={[styles.iconContainer, { backgroundColor: `${item.color}20` }]}>
@@ -370,45 +296,57 @@ export default function OverviewTab() {
       <View style={styles.card}>
         <View style={styles.chartHeader}>
           <Text style={styles.sectionTitle}>Doanh thu theo ngày</Text>
-          <View style={styles.buttonGroup}>
-            {["week", "month", "year"].map((period) => (
-              <TouchableOpacity
-                key={period}
-                style={[styles.chartButton, revenuePeriod === period ? styles.activeButton : styles.inactiveButton]}
-                onPress={() => setRevenuePeriod(period)}
-              >
-                <Text style={[styles.buttonText, revenuePeriod === period ? styles.activeButtonText : styles.inactiveButtonText]}>
-                  {period === "week" ? "Tuần này" : period === "month" ? "Tháng này" : "Năm nay"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.dropdownContainer}>
+            <Picker
+              selectedValue={revenuePeriod}
+              onValueChange={(value) => setRevenuePeriod(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Tuần này" value="week" />
+              <Picker.Item label="Tháng này" value="month" />
+              <Picker.Item label="Năm nay" value="year" />
+            </Picker>
           </View>
         </View>
         <View style={styles.chartContainer}>
-          <ECharts option={getRevenueChartOptions(revenuePeriod)} style={styles.chart} />
+          {revenueData[revenuePeriod]?.data?.length > 0 ? (
+            <ECharts
+              option={getRevenueChartOptions(revenuePeriod)}
+              style={styles.chart}
+              backgroundColor="#ffffff" // Đặt màu nền để đảm bảo hiển thị
+              onLoad={(echart) => console.log("Revenue EChart loaded:", echart)}
+            />
+          ) : (
+            <Text style={styles.noDataText}>Không có dữ liệu để hiển thị</Text>
+          )}
         </View>
       </View>
 
       {/* Health Chart and Patient List */}
       <View style={styles.card}>
         <View style={styles.chartHeader}>
-          <Text style={styles.sectionTitle}>Chỉ số sức khỏe: {selectedPatient.name}</Text>
-          <View style={styles.buttonGroup}>
-            {["week", "month", "year"].map((period) => (
-              <TouchableOpacity
-                key={period}
-                style={[styles.chartButton, healthPeriod === period ? styles.activeButton : styles.inactiveButton]}
-                onPress={() => setHealthPeriod(period)}
-              >
-                <Text style={[styles.buttonText, healthPeriod === period ? styles.activeButtonText : styles.inactiveButtonText]}>
-                  {period === "week" ? "Tuần này" : period === "month" ? "Tháng này" : "Năm nay"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={styles.sectionTitle}>Chỉ số sức khỏe: {selectedPatient?.name || "Chưa chọn"}</Text>
+          <View style={styles.dropdownContainer}>
+            <Picker
+              selectedValue={healthPeriod}
+              onValueChange={(value) => setHealthPeriod(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Tuần này" value="week" />
+              <Picker.Item label="Tháng này" value="month" />
+              <Picker.Item label="Năm nay" value="year" />
+            </Picker>
           </View>
         </View>
         <View style={styles.chartContainer}>
-          <ECharts option={getHealthChartOptions(healthPeriod, selectedPatient)} style={styles.chart} />
+          <ECharts
+            option={getHealthChartOptions()}
+            style={styles.chart}
+            onLoad={(echart) => console.log("EChart loaded:", echart)} // Debug khi load
+          />
+          {!healthData?.bloodPressureData?.length && (
+            <Text style={styles.noDataText}>Không có dữ liệu để hiển thị</Text>
+          )}
         </View>
       </View>
 
@@ -417,7 +355,7 @@ export default function OverviewTab() {
         <View style={styles.chartHeader}>
           <View>
             <Text style={styles.sectionTitle}>⚠️ Bệnh nhân cần chú ý</Text>
-            <Text style={styles.sectionSubtitle}>Tổng {mockData.health.patients.length} bệnh nhân</Text>
+            <Text style={styles.sectionSubtitle}>Tổng {patients.length} bệnh nhân</Text>
           </View>
           <TouchableOpacity style={styles.viewAllButton}>
             <Text style={styles.viewAllText}>Xem tất cả</Text>
@@ -427,18 +365,13 @@ export default function OverviewTab() {
         <View style={styles.patientListContainer}>
           {displayedPatients.map((patient) => (
             <TouchableOpacity
-              key={patient.id}
-              style={[
-                styles.patientRow,
-                patient.name === selectedPatient.name ? styles.selectedPatient : null
-              ]}
+              key={patient._id || patient.id}
+              style={[styles.patientRow, patient.name === selectedPatient?.name ? styles.selectedPatient : null]}
               onPress={() => setSelectedPatient(patient)}
             >
               <View style={styles.patientImageContainer}>
                 <Image source={{ uri: patient.image }} style={styles.patientImage} />
-                {patient.name === selectedPatient.name && (
-                  <View style={styles.selectedIndicator} />
-                )}
+                {patient.name === selectedPatient?.name && <View style={styles.selectedIndicator} />}
               </View>
               <View style={styles.patientInfo}>
                 <Text style={styles.patientName}>{patient.name}</Text>
@@ -446,15 +379,21 @@ export default function OverviewTab() {
                 <View style={styles.healthMetrics}>
                   <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Huyết áp:</Text>
-                    <Text style={[
-                      styles.metricValue,
-                      patient.bloodPressure.includes("160") || patient.bloodPressure.includes("150") ||
-                        patient.bloodPressure.includes("145") || patient.bloodPressure.includes("140")
-                        ? styles.dangerText
-                        : patient.bloodPressure.includes("120")
-                          ? styles.goodText
-                          : styles.warningText
-                    ]}>{patient.bloodPressure}</Text>
+                    <Text
+                      style={[
+                        styles.metricValue,
+                        patient.bloodPressure.includes("160") ||
+                          patient.bloodPressure.includes("150") ||
+                          patient.bloodPressure.includes("145") ||
+                          patient.bloodPressure.includes("140")
+                          ? styles.dangerText
+                          : patient.bloodPressure.includes("120")
+                            ? styles.goodText
+                            : styles.warningText,
+                      ]}
+                    >
+                      {patient.bloodPressure}
+                    </Text>
                   </View>
                   <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Nhịp tim:</Text>
@@ -463,20 +402,14 @@ export default function OverviewTab() {
                 </View>
                 <View style={[styles.statusContainer, { backgroundColor: `${patient.statusColor}15` }]}>
                   <View style={[styles.statusDot, { backgroundColor: patient.statusColor }]} />
-                  <Text style={[styles.statusText, { color: patient.statusColor }]}>{patient.status}</Text>
+                  <Text style={[styles.statusText, { color: patient.statusColor }]}>{patient.warning || patient.status}</Text>
                 </View>
               </View>
               <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.callButton]}
-                  onPress={() => Linking.openURL(`tel:${patient.phone}`)}
-                >
+                <TouchableOpacity style={[styles.actionButton, styles.callButton]} onPress={() => Linking.openURL(`tel:${patient.phone}`)}>
                   <Text style={styles.actionIcon}>📞</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.messageButton]}
-                  onPress={() => Linking.openURL(`sms:${patient.phone}`)}
-                >
+                <TouchableOpacity style={[styles.actionButton, styles.messageButton]} onPress={() => Linking.openURL(`sms:${patient.phone}`)}>
                   <Text style={styles.actionIcon}>💬</Text>
                 </TouchableOpacity>
               </View>
@@ -494,23 +427,15 @@ export default function OverviewTab() {
             >
               <Text style={[styles.paginationText, currentPage === 1 && styles.disabledText]}>‹</Text>
             </TouchableOpacity>
-
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <TouchableOpacity
                 key={page}
-                style={[
-                  styles.paginationButton,
-                  page === currentPage && styles.activePaginationButton
-                ]}
+                style={[styles.paginationButton, page === currentPage && styles.activePaginationButton]}
                 onPress={() => handlePageChange(page)}
               >
-                <Text style={[
-                  styles.paginationText,
-                  page === currentPage && styles.activePaginationText
-                ]}>{page}</Text>
+                <Text style={[styles.paginationText, page === currentPage && styles.activePaginationText]}>{page}</Text>
               </TouchableOpacity>
             ))}
-
             <TouchableOpacity
               style={[styles.paginationButton, currentPage === totalPages && styles.disabledButton]}
               onPress={() => handlePageChange(currentPage + 1)}
@@ -525,7 +450,7 @@ export default function OverviewTab() {
   );
 }
 
-// Styles
+// Styles (thêm style cho noDataText)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -606,38 +531,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
   },
-  buttonGroup: {
-    flexDirection: "row",
-  },
-  chartButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+  dropdownContainer: {
+    width: 120,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
     borderRadius: 8,
-    marginLeft: 8,
+    backgroundColor: "#ffffff",
   },
-  activeButton: {
-    backgroundColor: "#2563eb",
-  },
-  inactiveButton: {
-    backgroundColor: "#e5e7eb",
-  },
-  buttonText: {
+  picker: {
+    height: 40,
     fontSize: 14,
-    fontWeight: "500",
-  },
-  activeButtonText: {
-    color: "#ffffff",
-  },
-  inactiveButtonText: {
-    color: "#4b5563",
   },
   chartContainer: {
     width: "100%",
     height: 280,
+    position: "relative", // Để hiển thị noDataText
   },
   chart: {
-    width: Dimensions.get("window").width - 32, // Đảm bảo biểu đồ không vượt quá chiều rộng màn hình
+    width: Dimensions.get("window").width - 32,
     height: 260,
+  },
+  noDataText: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: [{ translateX: -50 }, { translateY: -10 }],
+    color: "#6b7280",
+    fontSize: 14,
+    textAlign: "center",
   },
   patientRow: {
     flexDirection: "row",
