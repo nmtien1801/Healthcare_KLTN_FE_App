@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Linking,
   ActivityIndicator,
   Dimensions,
   Platform,
 } from "react-native";
-import { BarChart, LineChart } from "react-native-chart-kit";
+import { BarChart } from "react-native-chart-kit";
+import { ECharts } from "react-native-echarts-wrapper";
 import ApiDoctor from "../../apis/ApiDoctor";
 
 // Dữ liệu mẫu fallback
@@ -37,6 +37,16 @@ const fallbackHealthData = {
   bloodSugarData: [6.8, 7.0, 6.7, 7.2, 6.9, 7.1, 6.8],
 };
 
+// Hàm xử lý dữ liệu cho biểu đồ
+const processHealthData = ({ healthData }) => {
+  const labels = healthData.xAxisData || ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+  const bloodPressureData = healthData.bloodPressureData || [160, 162, 158, 165, 160, 163, 159];
+  const heartRateData = healthData.heartRateData || [92, 90, 93, 89, 91, 92, 90];
+  const bloodSugarData = healthData.bloodSugarData || [6.8, 7.0, 6.7, 7.2, 6.9, 7.1, 6.8];
+
+  return { labels, bloodPressureData, heartRateData, bloodSugarData };
+};
+
 export default function OverviewTab() {
   const [revenuePeriod, setRevenuePeriod] = useState("week");
   const [healthPeriod, setHealthPeriod] = useState("week");
@@ -57,7 +67,7 @@ export default function OverviewTab() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const patientsPerPage = 3;
-  const chartRef = useRef(null); // Thêm ref để kiểm tra render
+  const chartRef = useRef(null);
 
   // Fetch summary
   useEffect(() => {
@@ -121,14 +131,10 @@ export default function OverviewTab() {
             : fallbackRevenueData.year,
         };
 
-        console.log("Revenue Data:", JSON.stringify(newRevenueData, null, 2));
-        console.log("Week data:", newRevenueData.week);
-        console.log("Month data:", newRevenueData.month);
-        console.log("Year data:", newRevenueData.year);
         setRevenueData(newRevenueData);
       } catch (err) {
         console.error("Lỗi fetch revenue:", err);
-        setRevenueData(fallbackRevenueData); // Sử dụng fallback nếu lỗi
+        setRevenueData(fallbackRevenueData);
       } finally {
         setLoading(false);
       }
@@ -142,7 +148,6 @@ export default function OverviewTab() {
       const fetchHealth = async () => {
         try {
           const res = await ApiDoctor.getPatientHealth(selectedPatient._id || selectedPatient.id, healthPeriod);
-          console.log("Health Data:", res);
           setHealthData(res || fallbackHealthData);
         } catch (err) {
           console.error("Lỗi fetch health:", err);
@@ -221,14 +226,9 @@ export default function OverviewTab() {
   // Get chart data for revenue
   const getRevenueChartData = (period) => {
     const data = revenueData[period] || { xAxisData: [], data: [] };
-    console.log(`Revenue Chart Data (${period}):`, JSON.stringify(data, null, 2));
-    console.log(`Data length: ${data.data?.length}, xAxisData length: ${data.xAxisData?.length}`);
-
-    // Sử dụng fallback data nếu không có data
     const chartData = data.data && data.data.length > 0 ? data.data : [1000000, 2000000, 1500000, 3000000, 2500000, 1800000, 2200000];
     let chartLabels = data.xAxisData && data.xAxisData.length > 0 ? data.xAxisData : ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
-    // Rút gọn nhãn nếu quá dài
     chartLabels = chartLabels.map(label => {
       if (typeof label === 'string' && label.length > 8) {
         return label.substring(0, 6) + '...';
@@ -236,15 +236,103 @@ export default function OverviewTab() {
       return label;
     });
 
-    console.log("Using chart data:", chartData);
-    console.log("Using chart labels:", chartLabels);
-
     return {
       labels: chartLabels,
       data: chartData
     };
   };
 
+  // Cấu hình biểu đồ ECharts cho chỉ số sức khỏe (không có markLine)
+  const getHealthChartOption = () => {
+    const { labels, bloodPressureData, heartRateData, bloodSugarData } = processHealthData({ healthData });
+
+    // Tính toán min/max cho trục y dựa trên tất cả dữ liệu
+    const yVals = [...bloodPressureData, ...heartRateData, ...bloodSugarData].filter(
+      (v) => typeof v === 'number' && !isNaN(v)
+    );
+    const yMin = yVals.length ? Math.max(0, Math.floor((Math.min(...yVals) - 10) / 10) * 10) : 0;
+    const yMax = yVals.length ? Math.ceil((Math.max(...yVals) + 10) / 10) * 10 : 200;
+
+    return {
+      tooltip: {
+        trigger: "axis",
+        formatter: function (params) {
+          let result = params[0].axisValue + '<br/>';
+          params.forEach(param => {
+            if (param.value !== null) {
+              result += param.marker + ' ' + param.seriesName + ': ' + Number(param.value?.toFixed(1)) +
+                (param.seriesName === 'Huyết áp' ? ' mmHg' : param.seriesName === 'Nhịp tim' ? ' bpm' : ' mmol/L') + '<br/>';
+            }
+          });
+          return result;
+        }
+      },
+      legend: {
+        top: 8,
+        icon: 'circle',
+        data: ["Huyết áp", "Nhịp tim", "Đường huyết"],
+        textStyle: { color: '#6b7280' },
+      },
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: labels,
+        axisLine: { lineStyle: { color: '#e5e7eb' } },
+        axisLabel: {
+          color: '#6b7280',
+          fontSize: 10,
+          rotate: labels.length > 7 ? 45 : 0, // Xoay nhãn nếu quá dài
+        },
+      },
+      yAxis: {
+        type: "value",
+        min: yMin,
+        max: yMax,
+        axisLine: { show: false },
+        splitLine: { lineStyle: { color: '#e5e7eb', type: 'dashed' } },
+        axisLabel: { color: '#6b7280', fontSize: 10, formatter: '{value}' },
+      },
+      series: [
+        {
+          name: "Huyết áp",
+          data: bloodPressureData,
+          type: "line",
+          smooth: true,
+          showSymbol: true,
+          symbolSize: 6,
+          lineStyle: { color: "#dc2626", width: 2 }, // Đỏ cho huyết áp
+          itemStyle: { color: "#dc2626" },
+          areaStyle: { opacity: 0.06 },
+          connectNulls: true,
+        },
+        {
+          name: "Nhịp tim",
+          data: heartRateData,
+          type: "line",
+          smooth: true,
+          showSymbol: true,
+          symbolSize: 6,
+          lineStyle: { color: "#3b82f6", width: 2 }, // Xanh dương cho nhịp tim
+          itemStyle: { color: "#3b82f6" },
+          areaStyle: { opacity: 0.06 },
+          connectNulls: true,
+        },
+        {
+          name: "Đường huyết",
+          data: bloodSugarData,
+          type: "line",
+          smooth: true,
+          showSymbol: true,
+          symbolSize: 6,
+          lineStyle: { color: "#16b981", width: 2 }, // Xanh lá cho đường huyết
+          itemStyle: { color: "#16b981" },
+          areaStyle: { opacity: 0.06 },
+          connectNulls: true,
+        },
+      ],
+      grid: { left: 28, right: 16, top: 40, bottom: 28, containLabel: true },
+    };
+  };
 
   if (loading) {
     return (
@@ -275,7 +363,7 @@ export default function OverviewTab() {
           { icon: "💰", title: "Doanh thu tháng", value: summary.monthlyRevenue, change: summary.monthlyRevenueChange, color: "#059669" },
         ].map((item, index) => (
           <View key={index} style={[styles.summaryCard, { borderLeftColor: item.color }]}>
-            <View style={[styles.iconContainer, { backgroundColor: `${item.color}20` }]}>
+            <View style={[styles.iconContainer, { backgroundColor: `${item.color} 20` }]}>
               <Text style={[styles.icon, { color: item.color }]}>{item.icon}</Text>
             </View>
             <Text style={styles.summaryTitle}>{item.title}</Text>
@@ -284,7 +372,6 @@ export default function OverviewTab() {
           </View>
         ))}
       </View>
-
 
       {/* Revenue Chart */}
       <View style={styles.card}>
@@ -318,7 +405,7 @@ export default function OverviewTab() {
                   labels: chartData.labels,
                   datasets: [
                     {
-                      data: chartData.data.map(value => value / 1000000), // Convert to millions
+                      data: chartData.data.map(value => value / 1000000),
                     }
                   ]
                 }}
@@ -379,57 +466,21 @@ export default function OverviewTab() {
             isVisible={showHealthDropdown}
             onToggle={() => {
               setShowHealthDropdown(!showHealthDropdown);
-              setShowRevenueDropdown(false); // Close other dropdown
+              setShowRevenueDropdown(false);
             }}
             placeholder="Chọn thời gian"
           />
         </View>
         <View style={styles.chartContainer}>
           {healthData?.bloodPressureData?.length > 0 ? (
-            <LineChart
-              data={{
-                labels: healthData.xAxisData || ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
-                datasets: [
-                  {
-                    data: healthData.bloodPressureData || [160, 162, 158, 165, 160, 163, 159],
-                    color: (opacity = 1) => `rgba(220, 38, 38, ${opacity})`, // Red for blood pressure
-                    strokeWidth: 2
-                  },
-                  {
-                    data: healthData.heartRateData || [92, 90, 93, 89, 91, 92, 90],
-                    color: (opacity = 1) => `rgba(124, 58, 237, ${opacity})`, // Purple for heart rate
-                    strokeWidth: 2
-                  },
-                  {
-                    data: healthData.bloodSugarData || [6.8, 7.0, 6.7, 7.2, 6.9, 7.1, 6.8],
-                    color: (opacity = 1) => `rgba(5, 150, 105, ${opacity})`, // Green for blood sugar
-                    strokeWidth: 2
-                  }
-                ]
-              }}
-              width={Dimensions.get("window").width - 64}
-              height={240} // Tăng chiều cao
-              chartConfig={{
-                backgroundColor: "#ffffff",
-                backgroundGradientFrom: "#ffffff",
-                backgroundGradientTo: "#ffffff",
-                decimalPlaces: 1,
-                color: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
-                style: {
-                  borderRadius: 16
-                },
-                propsForLabels: {
-                  fontSize: 10,
-                  rotation: (healthData.xAxisData?.length || 7) > 6 ? -45 : 0, // Xoay nhãn nếu quá nhiều
-                }
-              }}
-              style={styles.chart}
-              withInnerLines={true}
-              withVerticalLabels={true}
-              withHorizontalLabels={true}
-              segments={4} // Giảm số đường ngang
-            />
+            <View style={{ width: Dimensions.get("window").width - 64, height: 300 }}>
+              <ECharts
+                key={healthData.xAxisData?.join('|') || 'health-chart'}
+                option={getHealthChartOption()}
+                backgroundColor="transparent"
+                style={{ width: '100%', height: '100%', borderRadius: 16 }}
+              />
+            </View>
           ) : (
             <View style={styles.noDataContainer}>
               <Text style={styles.noDataText}>Không có dữ liệu để hiển thị</Text>
@@ -489,7 +540,7 @@ export default function OverviewTab() {
                     <Text style={styles.metricValue}>{patient.heartRate} bpm</Text>
                   </View>
                 </View>
-                <View style={[styles.statusContainer, { backgroundColor: `${patient.statusColor}15` }]}>
+                <View style={[styles.statusContainer, { backgroundColor: `${patient.statusColor} 15` }]}>
                   <View style={[styles.statusDot, { backgroundColor: patient.statusColor }]} />
                   <Text style={[styles.statusText, { color: patient.statusColor }]}>{patient.warning || patient.status}</Text>
                 </View>
@@ -562,7 +613,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginVertical: 12,
   },
-
   summaryCard: {
     flex: 1,
     marginHorizontal: 6,
@@ -576,9 +626,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
-    borderLeftWidth: 4, // nhấn màu theo loại card
+    borderLeftWidth: 4,
   },
-
   iconContainer: {
     width: 44,
     height: 44,
@@ -587,30 +636,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-
   icon: {
     fontSize: 20,
   },
-
   summaryTitle: {
     fontSize: 14,
     color: "#6b7280",
     marginBottom: 4,
     textAlign: "center",
   },
-
   summaryValue: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#111827",
     marginBottom: 2,
   },
-
   summaryChange: {
     fontSize: 13,
     color: "#1b9c28ff",
   },
-
   chartHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
