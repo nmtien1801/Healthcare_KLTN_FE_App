@@ -55,7 +55,7 @@ const steps = [
   { id: 3, title: "Xác nhận", description: "Xem lại" },
 ];
 
-export default function WalletPaymentFlow() {
+export default function WalletPaymentFlow({ navigation }) {
   // State for wallet functionality
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [showPaymentFlow, setShowPaymentFlow] = useState(false);
@@ -447,6 +447,13 @@ export default function WalletPaymentFlow() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header with back button */}
+      <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="arrow-left" size={24} color="#007bff" />
+        </TouchableOpacity>
       {renderWalletOverview()}
     </SafeAreaView>
   );
@@ -456,7 +463,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    marginTop: 32,
+  },
+  backButton: {
+    marginTop: 60,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
   },
   // Wallet Overview Styles
   balanceCard: {
