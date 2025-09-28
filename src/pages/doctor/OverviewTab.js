@@ -271,21 +271,20 @@ export default function OverviewTab() {
       <View style={styles.summaryContainer}>
         {[
           { icon: "👤", title: "Bệnh nhân mới", value: summary.newPatients, change: summary.newPatientsChange, color: "#2563eb" },
-          { icon: "📅", title: "Cuộc hẹn hôm nay", value: summary.appointmentsToday, change: `${summary.upcomingAppointments} cuộc hẹn sắp tới`, color: "#d97706" },
+          { icon: "📅", title: "Cuộc hẹn hôm nay", value: summary.appointmentsToday, change: `${summary.upcomingAppointments} sắp tới`, color: "#d97706" },
           { icon: "💰", title: "Doanh thu tháng", value: summary.monthlyRevenue, change: summary.monthlyRevenueChange, color: "#059669" },
         ].map((item, index) => (
-          <View key={index} style={styles.summaryCard}>
+          <View key={index} style={[styles.summaryCard, { borderLeftColor: item.color }]}>
             <View style={[styles.iconContainer, { backgroundColor: `${item.color}20` }]}>
               <Text style={[styles.icon, { color: item.color }]}>{item.icon}</Text>
             </View>
-            <View>
-              <Text style={styles.summaryTitle}>{item.title}</Text>
-              <Text style={styles.summaryValue}>{item.value}</Text>
-              <Text style={styles.summaryChange}>{item.change}</Text>
-            </View>
+            <Text style={styles.summaryTitle}>{item.title}</Text>
+            <Text style={styles.summaryValue}>{item.value}</Text>
+            <Text style={styles.summaryChange}>{item.change}</Text>
           </View>
         ))}
       </View>
+
 
       {/* Revenue Chart */}
       <View style={styles.card}>
@@ -559,44 +558,59 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   summaryContainer: {
-    marginBottom: 16,
-    marginTop: 12,
-  },
-  summaryCard: {
     flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 12,
+  },
+
+  summaryCard: {
+    flex: 1,
+    marginHorizontal: 6,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
+    borderLeftWidth: 4, // nhấn màu theo loại card
   },
+
   iconContainer: {
-    padding: 10,
-    borderRadius: 10,
-    marginRight: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
   },
+
   icon: {
-    fontSize: 24,
+    fontSize: 20,
   },
+
   summaryTitle: {
     fontSize: 14,
     color: "#6b7280",
-    fontWeight: "500",
+    marginBottom: 4,
+    textAlign: "center",
   },
+
   summaryValue: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1f2937",
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#111827",
+    marginBottom: 2,
   },
+
   summaryChange: {
-    fontSize: 12,
-    color: "#059669",
+    fontSize: 13,
+    color: "#1b9c28ff",
   },
+
   chartHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
