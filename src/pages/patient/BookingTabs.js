@@ -26,7 +26,6 @@ const DEVICE = Platform.OS === "web" ? "WEB" : "APP";
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#f8f9fa',
     padding: 16,
   },
@@ -362,7 +361,6 @@ const styles = StyleSheet.create({
   },
   // Booking form styles
   bookingContainer: {
-    flex: 1,
     backgroundColor: '#f8f9fa',
     padding: 16,
   },

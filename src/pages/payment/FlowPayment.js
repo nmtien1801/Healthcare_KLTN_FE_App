@@ -11,7 +11,10 @@ import {
   SafeAreaView,
   Dimensions,
 } from 'react-native';
+import { Platform } from "react-native";
 import Icon from 'react-native-vector-icons/Feather';
+import { useDispatch, useSelector } from 'react-redux';
+import { deposit, createPaymentUrl } from "../../redux/paymentSlice"
 
 const { width } = Dimensions.get('window');
 
@@ -40,7 +43,9 @@ const steps = [
   { id: 3, title: "Xác nhận", description: "Xem lại" },
 ];
 
-export default function PaymentFlow() {
+export default function PaymentFlow({ onGoBack }) {
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.auth.user);
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentData, setPaymentData] = useState({
     amount: "50000",
@@ -68,20 +73,32 @@ export default function PaymentFlow() {
   };
 
   const handleConfirm = async () => {
-    Alert.alert(
-      "Xác nhận giao dịch",
-      `Bạn đã chuyển ${formatCurrency(paymentData.amount)} vào tài khoản ${paymentData.accountNumber} (${paymentData.recipient}) chưa?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        { 
-          text: "Xác nhận", 
-          onPress: () => {
-            // Xử lý logic deposit ở đây
-            Alert.alert("Thành công", "Giao dịch đã được xác nhận!");
+    if (Platform.OS === "web") {
+      if (window.confirm(`Bạn đã chuyển ${formatCurrency(paymentData.amount)} vào tài khoản ${paymentData.accountNumber} (${paymentData.recipient}) chưa?`)) {
+        await dispatch(deposit({ userId: user.userId, amount: paymentData.amount }))
+        window.alert("Thành công: Giao dịch đã được xác nhận!");
+        if (onGoBack) onGoBack();
+      }
+    } else {
+      Alert.alert(
+        "Xác nhận giao dịch",
+        `Bạn đã chuyển ${formatCurrency(paymentData.amount)} vào tài khoản ${paymentData.accountNumber} (${paymentData.recipient}) chưa?`,
+        [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Xác nhận",
+            onPress: () => {
+              (async () => {
+                let res = await dispatch(deposit({ userId: user.userId, amount: +paymentData.amount }));
+                if (res.payload.EC === 0) {
+                  Alert.alert("Thành công", "Giao dịch đã được xác nhận!", [{ text: "OK", onPress: onGoBack }]);
+                }
+              })();
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const renderProgressSteps = () => (
@@ -235,29 +252,29 @@ export default function PaymentFlow() {
 
       <View style={styles.confirmationContainer}>
         <Text style={styles.confirmationTitle}>Chi tiết người nhận</Text>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Người nhận:</Text>
           <Text style={styles.detailValue}>{paymentData.recipient}</Text>
         </View>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Ngân hàng:</Text>
           <Text style={styles.detailValue}>{banks.find(b => b.id === paymentData.bank)?.name}</Text>
         </View>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Số tài khoản:</Text>
           <Text style={styles.detailValue}>{paymentData.accountNumber}</Text>
         </View>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Phương thức TT:</Text>
           <Text style={styles.detailValue}>
             {paymentMethods.find(m => m.id === paymentData.paymentMethod)?.name}
           </Text>
         </View>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Số tiền:</Text>
           <Text style={[styles.detailValue, styles.amountValue]}>{formatCurrency(paymentData.amount)}</Text>
@@ -329,7 +346,16 @@ export default function PaymentFlow() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>CHUYỂN TIỀN VÀO VÍ NỘI BỘ</Text>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButtonHeader}
+              onPress={onGoBack}
+            >
+              <Icon name="arrow-left" size={24} color="#007bff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>CHUYỂN TIỀN VÀO VÍ NỘI BỘ</Text>
+            <View style={styles.headerSpacer} />
+          </View>
           <Text style={styles.headerSubtitle}>
             Giao dịch nhanh 24/7, an toàn tuyệt đối với công nghệ bảo mật tiên tiến.
           </Text>
@@ -341,7 +367,7 @@ export default function PaymentFlow() {
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
-          
+
           {renderSummaryCard()}
         </View>
       </ScrollView>
@@ -376,24 +402,39 @@ export default function PaymentFlow() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: '#f8f9fa',
+    marginTop: 36,
   },
   scrollView: {
     flex: 1,
   },
   header: {
     padding: 20,
-    alignItems: 'center',
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  backButtonHeader: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
+  },
+  headerSpacer: {
+    width: 40,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#007bff',
     textAlign: 'center',
-    marginBottom: 8,
+    flex: 1,
   },
   headerSubtitle: {
     fontSize: 14,
@@ -462,7 +503,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     left: '50%',
-    right: -width/6,
+    right: -width / 6,
     height: 2,
     backgroundColor: '#dee2e6',
     zIndex: -1,

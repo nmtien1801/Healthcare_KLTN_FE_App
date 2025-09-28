@@ -490,6 +490,7 @@ export default function Router() {
         <Stack.Screen
           name="payment"
           component={E_wallet}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </SafeAreaView>

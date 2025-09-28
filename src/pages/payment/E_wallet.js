@@ -13,7 +13,9 @@ import {
   FlatList,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-
+import FlowPayment from "./FlowPayment"
+import { getBalance } from "../../redux/paymentSlice"
+import { useSelector, useDispatch } from 'react-redux';
 const { width } = Dimensions.get('window');
 
 // Mock transaction history data
@@ -56,10 +58,20 @@ const steps = [
 export default function WalletPaymentFlow() {
   // State for wallet functionality
   const [balanceVisible, setBalanceVisible] = useState(true);
-  const [balance, setBalance] = useState('1,250,000');
   const [showPaymentFlow, setShowPaymentFlow] = useState(false);
-  
-  // Payment flow states
+  const user = useSelector((state) => state.auth.user);
+  const balance = useSelector((state) => state.payment.balance);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+        await dispatch(getBalance(user.userId))
+    }
+
+    fetchBalance()
+}, [dispatch, balance])
+
+// Payment flow states
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentData, setPaymentData] = useState({
     amount: "50000",
@@ -86,29 +98,6 @@ export default function WalletPaymentFlow() {
     return new Intl.NumberFormat("vi-VN").format(num) + "đ";
   };
 
-  const handleConfirm = async () => {
-    Alert.alert(
-      "Xác nhận giao dịch",
-      `Bạn đã chuyển ${formatCurrency(paymentData.amount)} vào tài khoản ${paymentData.accountNumber} (${paymentData.recipient}) chưa?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        { 
-          text: "Xác nhận", 
-          onPress: () => {
-            // Update balance
-            const currentBalance = parseInt(balance.replace(/,/g, ''));
-            const newBalance = currentBalance + parseInt(paymentData.amount);
-            setBalance(newBalance.toLocaleString('vi-VN'));
-            
-            Alert.alert("Thành công", "Giao dịch đã được xác nhận!");
-            setShowPaymentFlow(false);
-            setCurrentStep(1);
-          }
-        }
-      ]
-    );
-  };
-
   const toggleBalanceVisibility = () => {
     setBalanceVisible(!balanceVisible);
   };
@@ -128,10 +117,10 @@ export default function WalletPaymentFlow() {
           styles.transactionIcon,
           { backgroundColor: item.type === 'income' ? '#d4edda' : '#f8d7da' }
         ]}>
-          <Icon 
-            name={item.type === 'income' ? 'trending-up' : 'trending-down'} 
-            size={16} 
-            color={item.type === 'income' ? '#28a745' : '#dc3545'} 
+          <Icon
+            name={item.type === 'income' ? 'trending-up' : 'trending-down'}
+            size={16}
+            color={item.type === 'income' ? '#28a745' : '#dc3545'}
           />
         </View>
         <View style={styles.transactionInfo}>
@@ -166,10 +155,10 @@ export default function WalletPaymentFlow() {
             style={styles.eyeButton}
             onPress={toggleBalanceVisibility}
           >
-            <Icon 
-              name={balanceVisible ? 'eye-off' : 'eye'} 
-              size={20} 
-              color="#fff" 
+            <Icon
+              name={balanceVisible ? 'eye-off' : 'eye'}
+              size={20}
+              color="#fff"
             />
           </TouchableOpacity>
         </View>
@@ -362,29 +351,29 @@ export default function WalletPaymentFlow() {
 
       <View style={styles.confirmationContainer}>
         <Text style={styles.confirmationTitle}>Chi tiết người nhận</Text>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Người nhận:</Text>
           <Text style={styles.detailValue}>{paymentData.recipient}</Text>
         </View>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Ngân hàng:</Text>
           <Text style={styles.detailValue}>{banks.find(b => b.id === paymentData.bank)?.name}</Text>
         </View>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Số tài khoản:</Text>
           <Text style={styles.detailValue}>{paymentData.accountNumber}</Text>
         </View>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Phương thức TT:</Text>
           <Text style={styles.detailValue}>
             {paymentMethods.find(m => m.id === paymentData.paymentMethod)?.name}
           </Text>
         </View>
-        
+
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Số tiền:</Text>
           <Text style={[styles.detailValue, styles.amountValue]}>{formatCurrency(paymentData.amount)}</Text>
@@ -453,61 +442,7 @@ export default function WalletPaymentFlow() {
   };
 
   if (showPaymentFlow) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.paymentHeader}>
-          <TouchableOpacity onPress={() => setShowPaymentFlow(false)}>
-            <Icon name="arrow-left" size={24} color="#007bff" />
-          </TouchableOpacity>
-          <Text style={styles.paymentHeaderTitle}>Nạp tiền vào ví</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>CHUYỂN TIỀN VÀO VÍ NỘI BỘ</Text>
-            <Text style={styles.headerSubtitle}>
-              Giao dịch nhanh 24/7, an toàn tuyệt đối với công nghệ bảo mật tiên tiến.
-            </Text>
-          </View>
-
-          {renderProgressSteps()}
-
-          <View style={styles.content}>
-            {currentStep === 1 && renderStep1()}
-            {currentStep === 2 && renderStep2()}
-            {currentStep === 3 && renderStep3()}
-            
-            {renderSummaryCard()}
-          </View>
-        </ScrollView>
-
-        <View style={styles.navigationContainer}>
-          <TouchableOpacity
-            style={[styles.navButton, styles.backButton, currentStep === 1 && styles.disabledButton]}
-            onPress={prevStep}
-            disabled={currentStep === 1}
-          >
-            <Icon name="arrow-left" size={16} color={currentStep === 1 ? "#ccc" : "#6c757d"} />
-            <Text style={[styles.navButtonText, styles.backButtonText, currentStep === 1 && styles.disabledButtonText]}>
-              Quay lại
-            </Text>
-          </TouchableOpacity>
-
-          {currentStep < 3 ? (
-            <TouchableOpacity style={[styles.navButton, styles.nextButton]} onPress={nextStep}>
-              <Text style={[styles.navButtonText, styles.nextButtonText]}>Tiếp tục</Text>
-              <Icon name="arrow-right" size={16} color="#fff" />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={[styles.navButton, styles.confirmButton]} onPress={handleConfirm}>
-              <Icon name="send" size={16} color="#fff" />
-              <Text style={[styles.navButtonText, styles.confirmButtonText]}>Xác nhận chuyển tiền</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </SafeAreaView>
-    );
+    return <FlowPayment onGoBack={() => setShowPaymentFlow(false)} />
   }
 
   return (
@@ -521,6 +456,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+    marginTop: 32,
   },
   // Wallet Overview Styles
   balanceCard: {
@@ -799,7 +735,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     left: '50%',
-    right: -width/6,
+    right: -width / 6,
     height: 2,
     backgroundColor: '#dee2e6',
     zIndex: -1,
@@ -1088,55 +1024,5 @@ const styles = StyleSheet.create({
     color: '#6c757d',
     textAlign: 'center',
     marginTop: 8,
-  },
-  navigationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-  },
-  navButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#6c757d',
-  },
-  nextButton: {
-    backgroundColor: '#007bff',
-  },
-  confirmButton: {
-    backgroundColor: '#007bff',
-    flex: 1,
-    justifyContent: 'center',
-    marginLeft: 12,
-  },
-  disabledButton: {
-    borderColor: '#ccc',
-  },
-  navButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginHorizontal: 8,
-  },
-  backButtonText: {
-    color: '#6c757d',
-  },
-  nextButtonText: {
-    color: '#fff',
-  },
-  confirmButtonText: {
-    color: '#fff',
-  },
-  disabledButtonText: {
-    color: '#ccc',
   },
 });

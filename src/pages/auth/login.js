@@ -55,13 +55,15 @@ export default function LoginForm() {
   };
 
   const handleEmailAndPasswordLogin = async () => {
+    const result = await signInWithEmailAndPassword(
+      auth,
+      formData.email,
+      formData.password
+    );
+    const user = result.user;
+    console.log('ssssssssssssssss ',user);
     try {
-      const result = await signInWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-      const user = result.user;
+      
       if (user) {
         const idToken = await user.getIdToken();
         const res = await dispatch(Login({ user }));

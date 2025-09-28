@@ -115,10 +115,12 @@ const Following = ({ user, nearestAppointment }) => {
           </View>
           {nearestAppointment ? (
             <View style={styles.appointmentContent}>
-              <Text style={styles.appointmentDate}>
-                {new Date(nearestAppointment.date).toLocaleDateString('vi-VN')}
-              </Text>
-              <Text style={styles.appointmentTime}>{nearestAppointment.time}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+                <Text style={styles.appointmentDate}>
+                  {new Date(nearestAppointment.date).toLocaleDateString('vi-VN')}
+                </Text>
+                <Text style={styles.appointmentTime}>{nearestAppointment.time}</Text>
+              </View>
               <Text style={styles.appointmentInfo}>
                 <Text style={styles.boldText}>Bác sĩ:</Text>{' '}
                 {nearestAppointment.doctorId?.userId?.username || 'N/A'}
@@ -915,7 +917,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   appointmentDate: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#212529',
     marginBottom: 4,
@@ -933,6 +935,7 @@ const styles = StyleSheet.create({
   },
   boldText: {
     fontWeight: 'bold',
+    fontSize: 12,
   },
   reminderContainer: {
     flexDirection: 'row',

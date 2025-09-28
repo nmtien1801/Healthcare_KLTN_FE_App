@@ -3,12 +3,14 @@ import authReducer from "./authSlice";
 import foodAiReducer from "./foodAiSlice";
 import patientReducer from "./patientSlice";
 import medicineAiReducer from "./medicineAiSlice";
+import paymentReducer from "./paymentSlice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     foodAi: foodAiReducer,
     patient: patientReducer,
-    medicineAi: medicineAiReducer
+    medicineAi: medicineAiReducer,
+    payment: paymentReducer
   },
 });
