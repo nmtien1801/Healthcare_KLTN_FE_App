@@ -52,6 +52,10 @@ const Header = () => {
     navigation.navigate("ForgotPassword");
   };
 
+  const handleE_wallet = () => {
+    navigation.navigate("payment");
+  };
+
   return (
     <View style={styles.container}>
       {/* Logo & Title */}
@@ -115,6 +119,9 @@ const Header = () => {
             </Pressable>
             <Pressable onPress={handleChangePassword} style={styles.menuItem}>
               <Text>Đổi mật khẩu</Text>
+            </Pressable>
+            <Pressable onPress={handleE_wallet} style={styles.menuItem}>
+              <Text>Ví điện tử</Text>
             </Pressable>
             <View style={styles.divider} />
             <Pressable onPress={handleLogout} style={styles.menuItem}>

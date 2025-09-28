@@ -34,6 +34,7 @@ import Diagnosis from "../pages/patient/assistant/diagnosis";
 import { auth } from "../../firebase";
 import { dbCall } from "../../firebase";
 import VideoCallModal from '../components/call/videoModalCall';
+import E_wallet from '../pages/payment/E_wallet';
 import {
   ref,
   onValue,
@@ -485,6 +486,10 @@ export default function Router() {
           name="Diagnosis"
           component={Diagnosis}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="payment"
+          component={E_wallet}
         />
       </Stack.Navigator>
     </SafeAreaView>
