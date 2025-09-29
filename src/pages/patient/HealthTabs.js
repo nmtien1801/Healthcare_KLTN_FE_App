@@ -27,7 +27,10 @@ const { width: screenWidth } = Dimensions.get('window');
 
 const Following = ({ user, nearestAppointment }) => {
   const bloodSugar = useSelector((state) => state.patient.bloodSugar);
-  const latestReading = bloodSugar?.DT?.bloodSugarData?.[0]?.value || 0;
+  const latestReading =
+    Array.isArray(bloodSugar?.DT?.bloodSugarData) && bloodSugar.DT.bloodSugarData.length > 0
+      ? bloodSugar.DT.bloodSugarData[0].value
+      : 0;
 
   const readingStatus = {
     status: latestReading < 6 ? 'normal' : latestReading < 7 ? 'prediabetes' : 'danger',
@@ -84,7 +87,7 @@ const Following = ({ user, nearestAppointment }) => {
                   if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
                     age--;
                   }
-                  return age;
+                  return age.toString();
                 })()}
               </Text>
             </View>
@@ -99,7 +102,7 @@ const Following = ({ user, nearestAppointment }) => {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Bác sĩ:</Text>
               <Text style={styles.infoValue}>
-                {nearestAppointment?.doctorId?.userId?.username || 'Chưa có'}
+                {nearestAppointment?.doctorId?.userId?.username ?? 'Chưa có'}
               </Text>
             </View>
           </View>
@@ -123,17 +126,12 @@ const Following = ({ user, nearestAppointment }) => {
               </View>
               <Text style={styles.appointmentInfo}>
                 <Text style={styles.boldText}>Bác sĩ:</Text>{' '}
-                {nearestAppointment.doctorId?.userId?.username || 'N/A'}
+                {nearestAppointment.doctorId?.userId?.username ?? 'N/A'}
               </Text>
               <Text style={styles.appointmentInfo}>
                 <Text style={styles.boldText}>Địa điểm:</Text>{' '}
                 {nearestAppointment.type === 'onsite' ? 'Tại phòng khám' : 'Trực tuyến'}
               </Text>
-              {nearestAppointment.reason && (
-                <Text style={styles.appointmentInfo}>
-                  <Text style={styles.boldText}>Lý do:</Text> {nearestAppointment.reason}
-                </Text>
-              )}
               <View style={styles.reminderContainer}>
                 <Icon name="schedule" size={14} color="#dc3545" />
                 <Text style={styles.reminderText}>Nhớ chuẩn bị trước 30 phút</Text>
@@ -381,6 +379,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
     const fetchMedicine = async () => {
       try {
         let res = await dispatch(fetchMedicines({ userId: user.userId, date: new Date().toISOString() }));
+        
         setMedicines(groupMedicinesByTime(res.payload.DT));
       } catch (error) {
         console.error('Lỗi khi lấy lịch hẹn:', error);
@@ -390,6 +389,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
     fetchMedicine();
   }, []);
 
+  // render món ăn
   useEffect(() => {
     const fetchFood = async () => {
       setLoading(true);
@@ -398,7 +398,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
         // Fetch food
         const cached = await getWithExpiry('food');
         if (cached) {
-          setFood(JSON.parse(cached));
+          setFood(cached);
           setLoading(false);
           return;
         }
@@ -407,7 +407,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
         const yesterday = getYesterdayAvg({ dailyBloodSugar });
 
         const res = await dispatch(GetCaloFood(user?.userId)).unwrap();
-        const data = res?.payload?.DT?.menuFood;
+        const data = res?.DT?.menuFood;
 
         if (data && yesterday) {
           const response = await dispatch(
@@ -420,9 +420,9 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
             })
           ).unwrap();
 
-          if (response?.payload?.result) {
-            await setWithExpiry('food', JSON.stringify(response.payload.result));
-            setFood(response.payload.result);
+          if (response.result) {
+            await setWithExpiry('food', JSON.stringify(response.result));
+            setFood(response.result);
           }
         }
       } catch (error) {
@@ -654,7 +654,7 @@ const HealthTabs = () => {
 
       const res = await get_advice.post('/mess-fb-new', {
         message: {
-          input: inputValue,
+          input: Number(inputValue),
           measurementType: inputType,
           type: result,
         },
@@ -722,7 +722,6 @@ const HealthTabs = () => {
               value={messageInput}
               onChangeText={setMessageInput}
               keyboardType="numeric"
-              onSubmitEditing={handleAiAgent}
               accessibilityLabel="Nhập chỉ số đường huyết (mmol/L)"
             />
 

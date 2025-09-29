@@ -61,7 +61,7 @@ export default function LoginForm() {
       formData.password
     );
     const user = result.user;
-    console.log('ssssssssssssssss ',user);
+
     try {
       
       if (user) {
