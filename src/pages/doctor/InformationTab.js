@@ -194,8 +194,9 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
 const SummaryCards = ({ doctor }) => {
   const cards = [
     { title: "Chuyên khoa", value: doctor.professionalInfo.specialty, color: "#007bff" },
-    { title: "Bệnh viện", value: doctor.professionalInfo.hospital, color: "#28a745" },
     { title: "Kinh nghiệm", value: doctor.professionalInfo.experienceYears, color: "#ffc107" },
+    { title: "Bệnh viện", value: doctor.professionalInfo.hospital, color: "#28a745" },
+
   ];
 
   return (
@@ -468,7 +469,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   summaryContainer: {
-    flexDirection: "column",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
   },
   summaryCard: {
     flexDirection: "row",
@@ -476,12 +480,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    flex: 1,
+    minWidth: 150,
+    marginBottom: 12,
   },
   iconContainer: {
     padding: 12,
@@ -491,6 +497,10 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 24,
   },
+  textContainer: {
+    flex: 1,
+    flexWrap: "wrap",
+  },
   summaryTitle: {
     fontSize: 14,
     color: "#6c757d",
@@ -499,6 +509,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#212529",
+    flexWrap: "wrap",
+    flexShrink: 1,
   },
   loadingContainer: {
     flex: 1,

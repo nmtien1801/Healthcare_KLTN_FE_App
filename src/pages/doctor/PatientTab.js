@@ -10,7 +10,7 @@ import {
   Modal,
   ActivityIndicator,
   Dimensions,
-  FlatList
+  FlatList,
 } from "react-native";
 import { Search, Filter, Eye, Edit, MessageSquare, Phone, ChevronDown, X, Bot, Send, ArrowLeft } from "lucide-react-native";
 import { Picker } from "@react-native-picker/picker";
@@ -25,15 +25,13 @@ import EditPatientModal from "../../components/doctor/patient/EditPatientModal";
 
 const { width } = Dimensions.get("window");
 
-// Hàm ánh xạ dữ liệu từ API sang định dạng phù hợp với component
 const mapPatientData = (apiPatient, pastAppointments = []) => {
   const statusColors = {
-    "Cần theo dõi": { color: "#dc2626", textColor: "#fff" },
-    "Đang điều trị": { color: "#f59e0b", textColor: "#1f2937" },
-    "Ổn định": { color: "#16a34a", textColor: "#fff" },
+    "Cần theo dõi": { color: "#ef4444", textColor: "#fff" },
+    "Đang điều trị": { color: "#f59e0b", textColor: "#fff" },
+    "Ổn định": { color: "#22c55e", textColor: "#fff" },
   };
 
-  // Xử lý healthRecords an toàn
   const hasHealthRecords = apiPatient.healthRecords && Array.isArray(apiPatient.healthRecords) && apiPatient.healthRecords.length > 0;
   const healthRecords = hasHealthRecords
     ? apiPatient.healthRecords.map(record => ({
@@ -60,10 +58,7 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     }))
     : [];
 
-  // Xử lý thông tin userId
   const userId = apiPatient.userId || {};
-
-  // Lấy lịch hẹn gần nhất từ pastAppointments
   const lastAppointment = pastAppointments.length > 0 ? pastAppointments[0] : null;
   const lastVisitDate = lastAppointment && lastAppointment.date ? new Date(lastAppointment.date) : null;
 
@@ -99,7 +94,7 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
       : "-",
     role: userId.role || "-",
     healthRecords,
-    uid: userId.uid || apiPatient.uid || `uid-${apiPatient._id}`, // Đảm bảo mỗi bệnh nhân có UID cho chat
+    uid: userId.uid || apiPatient.uid || `uid-${apiPatient._id}`,
   };
 };
 
@@ -130,25 +125,14 @@ export default function PatientTab({ handleStartCall }) {
       setLoading(true);
       setError(null);
       try {
-        // Lấy danh sách bệnh nhân
         const response = await ApiPatient.getAllPatients();
-        console.log("Dữ liệu API thô (bệnh nhân):", response); // Debug
-        let patients;
-        if (Array.isArray(response)) {
-          patients = response;
-        } else {
-          patients = response.data || [];
-        }
-        console.log("patients extracted:", patients); // Debug
-
+        let patients = Array.isArray(response) ? response : response.data || [];
         if (!Array.isArray(patients)) {
-          console.warn("Dữ liệu API không đúng định dạng:", response);
-          setError("Dữ liệu không hợp lệ từ server. Vui lòng kiểm tra định dạng dữ liệu API.");
+          setError("Dữ liệu không hợp lệ từ server.");
           setLoading(false);
           return;
         }
 
-        // Lấy lịch hẹn gần nhất cho từng bệnh nhân
         const patientsWithAppointments = await Promise.all(
           patients.map(async (patient) => {
             try {
@@ -156,19 +140,17 @@ export default function PatientTab({ handleStartCall }) {
               const appointments = Array.isArray(appointmentsResponse)
                 ? appointmentsResponse
                 : appointmentsResponse.data || [];
-              console.log(`Lịch hẹn của bệnh nhân ${patient._id}:`, appointments); // Debug
               return mapPatientData(patient, appointments);
             } catch (err) {
               console.error(`Lỗi khi lấy lịch hẹn cho bệnh nhân ${patient._id}:`, err.message);
-              return mapPatientData(patient, []); // Nếu lỗi, trả về bệnh nhân với lịch hẹn rỗng
+              return mapPatientData(patient, []);
             }
           })
         );
 
         setPatientList(patientsWithAppointments);
       } catch (err) {
-        console.error("Lỗi khi gọi API bệnh nhân:", err.message, err.response?.data);
-        setError(err.response?.data?.message || "Không thể tải danh sách bệnh nhân. Vui lòng thử lại sau.");
+        setError(err.response?.data?.message || "Không thể tải danh sách bệnh nhân.");
       } finally {
         setLoading(false);
       }
@@ -177,7 +159,7 @@ export default function PatientTab({ handleStartCall }) {
     fetchPatientsAndAppointments();
   }, []);
 
-  // Thiết lập phòng chat động dựa trên bệnh nhân được chọn
+  // Thiết lập phòng chat động
   const getRoomChats = (patientUid) => {
     if (!senderId || !patientUid) return null;
     return [senderId, patientUid].sort().join("_");
@@ -205,8 +187,6 @@ export default function PatientTab({ handleStartCall }) {
         };
       });
       setChatMessages(messages);
-
-      // Scroll xuống cuối danh sách tin nhắn
       if (flatListRef.current) {
         flatListRef.current.scrollToEnd({ animated: true });
       }
@@ -254,7 +234,7 @@ export default function PatientTab({ handleStartCall }) {
     } catch (err) {
       console.error("Error sending message:", err);
       setChatMessages((prev) => prev.filter((msg) => !msg.isTemp || msg.text !== userMessage));
-      setError("Không thể gửi tin nhắn. Vui lòng thử lại.");
+      setError("Không thể gửi tin nhắn.");
     } finally {
       setIsSending(false);
     }
@@ -301,9 +281,9 @@ export default function PatientTab({ handleStartCall }) {
   // Cập nhật bệnh nhân
   const handleUpdatePatient = (updatedPatient) => {
     const statusColors = {
-      "Cần theo dõi": { color: "#dc2626", textColor: "#fff" },
-      "Đang điều trị": { color: "#f59e0b", textColor: "#1f2937" },
-      "Ổn định": { color: "#16a34a", textColor: "#fff" },
+      "Cần theo dõi": { color: "#ef4444", textColor: "#fff" },
+      "Đang điều trị": { color: "#f59e0b", textColor: "#fff" },
+      "Ổn định": { color: "#22c55e", textColor: "#fff" },
     };
 
     const updated = {
@@ -357,8 +337,8 @@ export default function PatientTab({ handleStartCall }) {
       <View style={styles.container}>
         <Text style={styles.title}>Quản lý bệnh nhân</Text>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Đang tải danh sách bệnh nhân...</Text>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Đang tải...</Text>
         </View>
       </View>
     );
@@ -371,15 +351,7 @@ export default function PatientTab({ handleStartCall }) {
         <Text style={styles.title}>Quản lý bệnh nhân</Text>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => {
-              setLoading(true);
-              setError(null);
-              // Gọi lại hàm fetch
-              fetchPatientsAndAppointments();
-            }}
-          >
+          <TouchableOpacity style={styles.retryButton} onPress={() => setLoading(true)}>
             <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
         </View>
@@ -392,108 +364,87 @@ export default function PatientTab({ handleStartCall }) {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.title}>Quản lý bệnh nhân</Text>
 
-        {/* Thống kê */}
-        <View style={styles.summaryContainer}>
-          {[
-            { icon: "!", title: "Cần theo dõi", value: patientList.filter((p) => p.status === "Cần theo dõi").length, color: "#dc2626" },
-            { icon: "🏥", title: "Đang điều trị", value: patientList.filter((p) => p.status === "Đang điều trị").length, color: "#f59e0b" },
-            { icon: "✔", title: "Ổn định", value: patientList.filter((p) => p.status === "Ổn định").length, color: "#16a34a" },
-          ].map((item, index) => (
-            <View key={index} style={styles.summaryCard}>
-              <View style={[styles.iconContainer, { backgroundColor: `${item.color}20` }]}>
-                <Text style={[styles.icon, { color: item.color }]}>{item.icon}</Text>
-              </View>
-              <View>
-                <Text style={styles.summaryTitle}>{item.title}</Text>
-                <Text style={styles.summaryValue}>{item.value}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
         {/* Search and Filters */}
-        <View style={styles.card}>
-          <View style={styles.filterContainer}>
-            <View style={styles.searchContainer}>
-              <Search color="#6b7280" size={20} style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Tìm kiếm bệnh nhân..."
-                value={searchTerm}
-                onChangeText={setSearchTerm}
-                placeholderTextColor="#9ca3af"
-              />
+        <View style={styles.filterCard}>
+          <View style={styles.searchContainer}>
+            <Search color="#6b7280" size={20} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Tìm kiếm bệnh nhân..."
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+          <View style={styles.filterRow}>
+            <View style={styles.filterItem}>
+              <Filter color="#6b7280" size={20} style={styles.filterIcon} />
+              <Picker
+                selectedValue={statusFilter}
+                onValueChange={setStatusFilter}
+                style={styles.picker}
+              >
+                <Picker.Item label="Tất cả tình trạng" value="all" />
+                <Picker.Item label="Cần theo dõi" value="Cần theo dõi" />
+                <Picker.Item label="Đang điều trị" value="Đang điều trị" />
+                <Picker.Item label="Ổn định" value="Ổn định" />
+              </Picker>
             </View>
-            <View style={styles.filterRow}>
-              <View style={styles.filterItem}>
-                <Filter color="#6b7280" size={20} style={styles.filterIcon} />
-                <Picker
-                  selectedValue={statusFilter}
-                  onValueChange={setStatusFilter}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Tất cả tình trạng" value="all" />
-                  <Picker.Item label="Cần theo dõi" value="Cần theo dõi" />
-                  <Picker.Item label="Đang điều trị" value="Đang điều trị" />
-                  <Picker.Item label="Ổn định" value="Ổn định" />
-                </Picker>
-              </View>
-              <View style={styles.filterItem}>
-                <ChevronDown color="#6b7280" size={20} style={styles.filterIcon} />
-                <Picker
-                  selectedValue={sortBy}
-                  onValueChange={setSortBy}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Sắp xếp theo tên" value="name" />
-                  <Picker.Item label="Sắp xếp theo tuổi" value="age" />
-                  <Picker.Item label="Lần khám gần nhất" value="lastVisit" />
-                  <Picker.Item label="Tình trạng" value="status" />
-                </Picker>
-              </View>
+            <View style={styles.filterItem}>
+              <ChevronDown color="#6b7280" size={20} style={styles.filterIcon} />
+              <Picker
+                selectedValue={sortBy}
+                onValueChange={setSortBy}
+                style={styles.picker}
+              >
+                <Picker.Item label="Sắp xếp theo tên" value="name" />
+                <Picker.Item label="Sắp xếp theo tuổi" value="age" />
+                <Picker.Item label="Lần khám gần nhất" value="lastVisit" />
+                <Picker.Item label="Tình trạng" value="status" />
+              </Picker>
             </View>
           </View>
         </View>
 
         {/* Patient List */}
-        <View style={styles.card}>
+        <View style={styles.patientList}>
           {paginatedPatients.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Bot color="#6b7280" size={32} />
+              <Bot color="#6b7280" size={40} />
               <Text style={styles.emptyText}>Không tìm thấy bệnh nhân</Text>
               <Text style={styles.emptySubText}>Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</Text>
             </View>
           ) : (
             paginatedPatients.map((patient) => (
-              <View key={patient.id.toString()} style={styles.patientRow}>
+              <View key={patient.id.toString()} style={styles.patientCard}>
                 <View style={styles.patientInfo}>
-                  <Image source={{ uri: patient.avatar }} style={styles.avatar} onError={() => { }} />
+                  <Image source={{ uri: patient.avatar }} style={styles.avatar} />
                   <View style={styles.patientDetails}>
                     <Text style={styles.patientName}>{patient.name}</Text>
-                    <Text style={styles.patientAge}>{patient.patientCount}</Text>
+                    <Text style={styles.patientDetail}>{patient.patientCount}</Text>
                     <Text style={styles.patientDetail}>{patient.disease}</Text>
-                    <Text style={styles.patientDetail}>{patient.patientId}</Text>
+                    <Text style={styles.patientDetail}>ID: {patient.patientId}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: patient.statusColor }]}>
                       <Text style={[styles.statusText, { color: patient.statusTextColor }]}>{patient.status}</Text>
                     </View>
                   </View>
                 </View>
-                <Text style={styles.lastVisit}>{patient.lastVisit}</Text>
+                <Text style={styles.lastVisit}>Lần khám cuối: {patient.lastVisit}</Text>
                 <View style={styles.actionButtons}>
                   <TouchableOpacity style={styles.actionButton} onPress={() => handleViewPatient(patient)}>
-                    <Eye color="#06b6d4" size={20} />
+                    <Eye color="#06b6d4" size={22} />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionButton} onPress={() => handleEditPatient(patient)}>
-                    <Edit color="#16a34a" size={20} />
+                    <Edit color="#22c55e" size={22} />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionButton} onPress={() => handleOpenChat(patient)}>
-                    <MessageSquare color="#2563eb" size={20} />
+                    <MessageSquare color="#3b82f6" size={22} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleStartCall(user, { uid: patient.uid }, "doctor")}
                   >
-                    <Phone color="#f59e0b" size={20} />
+                    <Phone color="#f59e0b" size={22} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -570,12 +521,7 @@ export default function PatientTab({ handleStartCall }) {
                       {item.text}
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.messageTime,
-                      item.sender === "doctor" ? styles.doctorTime : styles.patientTime,
-                    ]}
-                  >
+                  <Text style={[styles.messageTime, item.sender === "doctor" ? styles.doctorTime : styles.patientTime]}>
                     {item.timestamp instanceof Date
                       ? item.timestamp.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
                       : new Date(item.timestamp).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
@@ -587,7 +533,7 @@ export default function PatientTab({ handleStartCall }) {
               contentContainerStyle={styles.chatMessagesContent}
               ListEmptyComponent={
                 <View style={styles.emptyChat}>
-                  <Bot color="#6b7280" size={32} />
+                  <Bot color="#6b7280" size={40} />
                   <Text style={styles.emptyChatText}>Chưa có tin nhắn</Text>
                   <Text style={styles.emptyChatSubText}>Bắt đầu cuộc trò chuyện với bệnh nhân</Text>
                 </View>
@@ -643,18 +589,19 @@ export default function PatientTab({ handleStartCall }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#f8fafc", // Màu nền nhẹ nhàng, sáng
   },
   scrollContainer: {
     padding: 16,
     paddingBottom: 32,
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "700",
-    color: "#1f2937",
-    marginBottom: 20,
+    color: "#1e293b",
+    marginBottom: 24,
     textAlign: "center",
+    fontFamily: "System", // Có thể thay bằng font tùy chỉnh
   },
   loadingContainer: {
     flex: 1,
@@ -665,93 +612,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6b7280",
     marginTop: 12,
+    fontWeight: "500",
   },
   errorContainer: {
     backgroundColor: "#fee2e2",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     alignItems: "center",
+    margin: 16,
   },
   errorText: {
     fontSize: 16,
     color: "#dc2626",
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: "center",
+    fontWeight: "500",
   },
   retryButton: {
-    backgroundColor: "#dc2626",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
   },
   retryButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
   },
-  summaryContainer: {
-    marginBottom: 20,
-  },
-  summaryCard: {
-    flexDirection: "row",
-    alignItems: "center",
+  filterCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 12,
+    elevation: 6,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  icon: {
-    fontSize: 24,
-    fontWeight: "600",
-  },
-  summaryTitle: {
-    fontSize: 14,
-    color: "#6b7280",
-    fontWeight: "500",
-  },
-  summaryValue: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1f2937",
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  filterContainer: {
-    paddingVertical: 12,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#f1f5f9",
     borderRadius: 12,
     paddingHorizontal: 12,
-    marginBottom: 12,
+    paddingVertical: 8,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: "#d1d5db",
   },
@@ -761,8 +669,9 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 12,
-    color: "#1f2937",
+    paddingVertical: 8,
+    color: "#1e293b",
+    fontFamily: "System",
   },
   filterRow: {
     flexDirection: "row",
@@ -772,7 +681,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#f1f5f9",
     borderRadius: 12,
     marginRight: 8,
     borderWidth: 1,
@@ -786,12 +695,23 @@ const styles = StyleSheet.create({
   picker: {
     flex: 1,
     fontSize: 16,
-    color: "#1f2937",
+    color: "#1e293b",
   },
-  patientRow: {
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+  patientList: {
+    marginBottom: 24,
+  },
+  patientCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
   },
   patientInfo: {
     flexDirection: "row",
@@ -802,23 +722,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     marginRight: 16,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderWidth: 2,
+    borderColor: "#e5e7eb",
   },
   patientName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
-    color: "#1f2937",
-    marginBottom: 4,
-  },
-  patientAge: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginBottom: 4,
+    color: "#1e293b",
+    marginBottom: 6,
   },
   patientDetail: {
     fontSize: 14,
@@ -826,11 +741,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     alignSelf: "flex-start",
-    marginTop: 4,
+    marginTop: 6,
   },
   statusText: {
     fontSize: 12,
@@ -847,26 +762,26 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   actionButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: "#f3f4f6",
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
     marginLeft: 8,
   },
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 24,
   },
   pageButton: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: "#e5e7eb",
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
     marginHorizontal: 4,
   },
   activePageButton: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#3b82f6",
   },
   activePageButtonText: {
     color: "#fff",
@@ -876,26 +791,28 @@ const styles = StyleSheet.create({
   },
   pageButtonText: {
     fontSize: 14,
-    color: "#1f2937",
+    color: "#1e293b",
     fontWeight: "600",
   },
   emptyContainer: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: 40,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 18,
     color: "#6b7280",
-    marginBottom: 8,
+    marginTop: 12,
     fontWeight: "500",
   },
   emptySubText: {
     fontSize: 14,
     color: "#6b7280",
+    marginTop: 4,
+    textAlign: "center",
   },
   chatModalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   chatModalBackdrop: {
     flex: 1,
@@ -907,27 +824,32 @@ const styles = StyleSheet.create({
     right: 0,
     height: "100%",
     backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
   chatHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2563eb",
+    backgroundColor: "linear-gradient(90deg, #3b82f6, #60a5fa)",
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    paddingVertical: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   backButton: {
-    padding: 4,
+    padding: 8,
   },
   headerSpacer: {
     width: 24,
   },
   chatHeaderTitle: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
     color: "#fff",
     textAlign: "center",
@@ -935,13 +857,13 @@ const styles = StyleSheet.create({
   chatMessages: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
   chatMessagesContent: {
     paddingBottom: 16,
   },
   chatMessageContainer: {
-    marginVertical: 4,
+    marginVertical: 6,
   },
   doctorMessageContainer: {
     alignItems: "flex-end",
@@ -950,13 +872,18 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   messageBubble: {
-    maxWidth: "75%",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 18,
+    maxWidth: "80%",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   doctorBubble: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#3b82f6",
     borderBottomRightRadius: 4,
   },
   patientBubble: {
@@ -965,18 +892,19 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   doctorMessageText: {
     color: "#fff",
   },
   patientMessageText: {
-    color: "#1f2937",
+    color: "#1e293b",
   },
   messageTime: {
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 12,
+    marginTop: 4,
     opacity: 0.7,
+    color: "#6b7280",
   },
   doctorTime: {
     textAlign: "right",
@@ -999,15 +927,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    marginRight: 8,
-    maxHeight: 100,
-    color: "#1f2937",
+    marginRight: 12,
+    maxHeight: 120,
+    color: "#1e293b",
     borderWidth: 1,
     borderColor: "#d1d5db",
   },
   sendButton: {
-    backgroundColor: "#2563eb",
-    padding: 12,
+    backgroundColor: "#3b82f6",
+    padding: 14,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
@@ -1022,7 +950,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   emptyChatText: {
-    fontSize: 16,
+    fontSize: 18,
     color: "#6b7280",
     marginTop: 12,
     fontWeight: "500",
@@ -1034,4 +962,3 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
-
