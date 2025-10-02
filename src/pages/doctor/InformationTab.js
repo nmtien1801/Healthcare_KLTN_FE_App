@@ -9,9 +9,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Platform
 } from "react-native";
 import { Edit } from "lucide-react-native";
 import ApiDoctor from "../../apis/ApiDoctor";
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Hàm format ngày
 const formatDate = (date) => {
@@ -20,7 +22,6 @@ const formatDate = (date) => {
   return d.toLocaleDateString("vi-VN");
 };
 
-// Component ProfileHeader
 const ProfileHeader = ({ doctor }) => (
   <View style={styles.card}>
     <Image
@@ -34,7 +35,6 @@ const ProfileHeader = ({ doctor }) => (
   </View>
 );
 
-// Component InfoSection
 const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     fullName: doctor.basicInfo.fullName,
@@ -46,12 +46,56 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
     experienceYears: doctor.professionalInfo.experienceYears,
     license: doctor.professionalInfo.license,
   });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(formData.dob ? new Date(formData.dob.split("/").reverse().join("-")) : new Date());  // Chuyển dob string sang Date
 
   const handleChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
   };
 
+  const handleDateChange = (event, date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (event?.type === 'set' && date) {
+      const formattedDate = date.toLocaleDateString("vi-VN");
+      handleChange("dob", formattedDate);
+      setSelectedDate(date);
+    }
+
+    if (Platform.OS === 'ios' && (event?.type === 'set' || event?.type === 'dismissed')) {
+      setShowDatePicker(false);
+    }
+  };
+
+  const handleWebDateChange = (event) => {
+    const dateString = event.target.value;
+    if (dateString) {
+      const newDate = new Date(dateString);
+      if (!isNaN(newDate)) {
+        const formattedDate = newDate.toLocaleDateString("vi-VN");
+        handleChange("dob", formattedDate);
+        setSelectedDate(newDate);
+      } else {
+        console.error('Invalid web date input:', dateString);
+      }
+    }
+  };
+
+
+  const toggleDatePicker = () => {
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      setShowDatePicker(!showDatePicker);
+    }
+  };
+
   const handleSubmit = () => {
+    const today = new Date();
+    if (selectedDate > today) {
+      Alert.alert("Lỗi", "Ngày sinh không thể ở tương lai.");
+      return;
+    }
     onSave(formData);
   };
 
@@ -59,7 +103,6 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
     { label: "Họ và tên", name: "fullName", keyboardType: "default" },
     { label: "Email", name: "email", keyboardType: "email-address" },
     { label: "Số điện thoại", name: "phone", keyboardType: "phone-pad" },
-    { label: "Ngày sinh", name: "dob", keyboardType: "default" },
     { label: "Chuyên khoa", name: "specialty", keyboardType: "default" },
     { label: "Bệnh viện", name: "hospital", keyboardType: "default" },
     { label: "Số năm kinh nghiệm", name: "experienceYears", keyboardType: "numeric" },
@@ -84,6 +127,43 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
               />
             </View>
           ))}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Ngày sinh</Text>
+            <TouchableOpacity
+              style={styles.datePickerContainer}
+              onPress={Platform.OS === 'web' ? undefined : toggleDatePicker}
+            >
+              <Text style={styles.datePickerText}>
+                {formData.dob || "Chọn ngày sinh"}
+              </Text>
+            </TouchableOpacity>
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: 14,
+                  backgroundColor: 'transparent',
+                }}
+                value={formData.dob ? new Date(formData.dob.split("/").reverse().join("-")).toISOString().split('T')[0] : ''}
+                onChange={handleWebDateChange}
+              />
+            ) : (
+              showDatePicker && (
+                <DateTimePicker
+                  testID="dateTimePicker"
+                  value={selectedDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateChange}
+                  locale="vi-VN"
+                  style={{ backgroundColor: '#ffffff' }}
+                />
+              )
+            )}
+          </View>
           <View style={styles.buttonGroup}>
             <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
               <Text style={styles.buttonText}>Hủy</Text>
@@ -101,13 +181,16 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
               <Text style={styles.infoValue}>{formData[field.name]}</Text>
             </View>
           ))}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Ngày sinh:</Text>
+            <Text style={styles.infoValue}>{formData.dob}</Text>
+          </View>
         </View>
       )}
     </View>
   );
 };
 
-// Component SummaryCards
 const SummaryCards = ({ doctor }) => {
   const cards = [
     { title: "Chuyên khoa", value: doctor.professionalInfo.specialty, color: "#007bff" },
@@ -132,7 +215,6 @@ const SummaryCards = ({ doctor }) => {
   );
 };
 
-// Component chính DoctorProfile
 export default function DoctorProfile() {
   const [doctorData, setDoctorData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -258,7 +340,6 @@ export default function DoctorProfile() {
   );
 }
 
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -439,5 +520,20 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: "#dc3545",
+  },
+  datePickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+  },
+  datePickerText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
   },
 });
