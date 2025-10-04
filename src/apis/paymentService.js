@@ -1,11 +1,11 @@
 import customizeAxios from "../components/customizeAxios";
 
 const getBalanceService = (userId) => {
-    return customizeAxios.get(`/wallet/balance/${userId}`,{userId: userId});
+    return customizeAxios.get(`/wallet/balance/${userId}`, { userId: userId });
 };
 
 const depositService = (userId, amount) => {
-    return customizeAxios.post(`/wallet/deposit`,{ userId, amount});
+    return customizeAxios.post(`/wallet/deposit`, { userId, amount });
 };
 
 const createPaymentUrlService = (amount, orderDescription, orderType, language, bankCode) => {
@@ -18,8 +18,13 @@ const createPaymentUrlService = (amount, orderDescription, orderType, language, 
     });
 };
 
+const withdrawService = (userId, amount) => {
+    return customizeAxios.post(`/wallet/withdraw`, { userId, amount });
+};
+
 export {
     getBalanceService,
     depositService,
     createPaymentUrlService,
+    withdrawService
 };
