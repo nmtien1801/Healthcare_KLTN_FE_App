@@ -67,7 +67,7 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     name: userId.username || apiPatient.name || "Không xác định",
     age: apiPatient.age || 0,
     patientCount: `${apiPatient.age || 0} tuổi`,
-    avatar: userId.avatar || apiPatient.avatar || "https://via.placeholder.com/150?text=User",
+    avatar: userId.avatar || apiPatient.avatar || "",
     disease: apiPatient.disease || "Không xác định",
     patientId: apiPatient.insuranceId || "-",
     status: apiPatient.status || "Ổn định",

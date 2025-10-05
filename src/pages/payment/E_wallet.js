@@ -103,7 +103,11 @@ export default function WalletPaymentFlow({ navigation }) {
   };
 
   const handleDepositPress = () => {
-    setShowPaymentFlow(true);
+    if(user.role === "doctor"){
+      Alert.alert("Thông báo", "Bạn không có quyền nạp tiền!");
+    }else{
+      setShowPaymentFlow(true);
+    }
   };
 
   const handleWithdrawPress = () => {
