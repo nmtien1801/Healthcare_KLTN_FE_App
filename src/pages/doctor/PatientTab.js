@@ -361,8 +361,6 @@ export default function PatientTab({ handleStartCall }) {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.title}>Quản lý bệnh nhân</Text>
-
         {/* Search and Filters */}
         <View style={styles.filterCard}>
           <View style={styles.searchContainer}>
@@ -599,6 +597,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
+    marginTop: 62,
   },
   scrollContainer: {
     padding: 16,

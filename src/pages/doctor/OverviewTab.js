@@ -585,6 +585,7 @@ export default function OverviewTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: 62,
     backgroundColor: "#f3f4f6",
   },
   contentContainer: {
