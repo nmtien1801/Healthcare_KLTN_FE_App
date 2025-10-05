@@ -903,7 +903,7 @@ const AttendanceTab = () => {
                             onPress={handleCheckIn}
                             disabled={checkInTime && !checkOutTime}
                         >
-                            <Icon name="log-in" size={20} color="#fff" />
+                            <Icon name="log-in" size={12} color="#fff" />
                             <Text style={styles.buttonText}>Chấm vào</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -911,28 +911,24 @@ const AttendanceTab = () => {
                             onPress={handleCheckOut}
                             disabled={!checkInTime || checkOutTime}
                         >
-                            <Icon name="log-out" size={20} color="#fff" />
+                            <Icon name="log-out" size={12} color="#fff" />
                             <Text style={styles.buttonText}>Chấm ra</Text>
                         </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.actionButtonContainer}>
                         <TouchableOpacity
                             style={styles.actionButton}
                             onPress={() => setShowScheduleFormModal(true)}
                         >
-                            <Icon name="plus-circle" size={20} color="#fff" />
+                            <Icon name="plus-circle" size={12} color="#fff" />
                             <Text style={styles.buttonText}>Đăng ký lịch</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.actionButton, { backgroundColor: '#17a2b8' }]}
+                            style={[styles.actionButton, { backgroundColor: '#17a2b8' , marginLeft: 3}]}
                             onPress={() => setShowSavedSchedulesModal(true)}
                         >
-                            <Icon name="list" size={20} color="#fff" />
+                            <Icon name="list" size={12} color="#fff" />
                             <Text style={styles.buttonText}>Lịch đã lưu</Text>
                         </TouchableOpacity>
                     </View>
-
                     <View style={styles.historyContainer}>
                         <Text style={styles.historyTitle}>Lịch sử chấm công</Text>
                         <View style={styles.filterContainer}>
@@ -1031,6 +1027,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f7fa',
+        marginTop: 63,
     },
     scrollContent: {
         paddingBottom: 20,
@@ -1185,11 +1182,6 @@ const styles = StyleSheet.create({
     disabledButton: {
         backgroundColor: '#d1d5db',
     },
-    actionButtonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
     actionButton: {
         flex: 1,
         flexDirection: 'row',
@@ -1198,11 +1190,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#007bff',
         paddingVertical: 12,
         borderRadius: 8,
-        marginHorizontal: 6,
+        paddingHorizontal: 6,
     },
     buttonText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 10,
         fontWeight: '500',
         marginLeft: 8,
     },

@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
-  ScrollView,
   Alert,
   Dimensions,
 } from "react-native";
@@ -256,7 +255,7 @@ export default function AppointmentTab() {
         <View style={styles.cardHeader}>
           <Image source={{ uri: appointment.patientAvatar }} style={styles.avatar} />
           <View style={styles.patientInfo}>
-            <Text style={styles.patientName}  >
+            <Text style={styles.patientName}>
               {appointment.patientName}
             </Text>
             <Text style={styles.patientAge}>{appointment.patientAge} tuổi</Text>
@@ -266,7 +265,6 @@ export default function AppointmentTab() {
               {getLabelFromOptions(STATUS_OPTIONS, appointment.status)}
             </Text>
           </View>
-
         </View>
         <View style={styles.cardBody}>
           <Text style={styles.cardText}>
@@ -342,7 +340,13 @@ export default function AppointmentTab() {
 
   const renderTable = (title, paginated, totalPages, page, setPage, isToday = false) => (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" , marginTop: 5}}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
+          <Plus size={16} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
       {isToday && (
         <View style={styles.filterRow}>
           <View style={styles.searchContainer}>
@@ -364,9 +368,7 @@ export default function AppointmentTab() {
               keyboardType="numeric"
             />
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
-            <Plus size={16} color="#fff" />
-          </TouchableOpacity>
+
         </View>
       )}
       {isToday && (
@@ -382,17 +384,25 @@ export default function AppointmentTab() {
           </View>
         }
         showsVerticalScrollIndicator={false}
-        style={styles.list}
+        scrollEnabled={false}
       />
       {renderPagination(page, totalPages, setPage)}
     </View>
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.header}>Lịch Hẹn Khám Bệnh</Text>
-      {renderTable("Lịch Hẹn Hôm Nay", paginatedToday, totalTodayPages, todayPage, setTodayPage, true)}
-      {renderTable("Lịch Hẹn Sắp Tới", paginatedUpcoming, totalUpcomingPages, upcomingPage, setUpcomingPage)}
+    <View style={styles.container}>
+      <FlatList
+        data={[{ key: 'content' }]}
+        keyExtractor={(item) => item.key}
+        showsVerticalScrollIndicator={false}
+        renderItem={() => (
+          <View style={{ paddingVertical: 20 }}>
+            {renderTable("Lịch Hẹn Hôm Nay", paginatedToday, totalTodayPages, todayPage, setTodayPage, true)}
+            {renderTable("Lịch Hẹn Sắp Tới", paginatedUpcoming, totalUpcomingPages, upcomingPage, setUpcomingPage)}
+          </View>
+        )}
+      />
       <AddAppointmentModal
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -442,24 +452,16 @@ export default function AppointmentTab() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: 60,
     backgroundColor: "#f5f7fa",
     paddingHorizontal: width * 0.05,
-    paddingVertical: 20,
-  },
-  header: {
-    fontSize: width * 0.07,
-    fontWeight: "700",
-    color: "#1a3c6e",
-    textAlign: "center",
-    marginBottom: 20,
-    letterSpacing: 0.5,
   },
   card: {
     backgroundColor: "#fff",
@@ -481,10 +483,11 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     marginBottom: 12,
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
     gap: 8,
+    overflowX: "scroll",
   },
   searchContainer: {
     flexDirection: "row",
@@ -492,9 +495,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f2f5",
     borderRadius: 12,
     paddingHorizontal: 12,
-    flex: 1,
-    minWidth: width * 0.4,
-    maxWidth: width * 0.5,
+    width: width * 0.45,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -515,8 +516,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f2f5",
     borderRadius: 12,
     paddingHorizontal: 12,
-    minWidth: width * 0.3,
-    maxWidth: width * 0.35,
+    width: width * 0.32,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     padding: 10,
     alignItems: "center",
     justifyContent: "center",
-    minWidth: width * 0.12,
+    width: width * 0.12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   list: {
-    maxHeight: height * 0.6,
+    // maxHeight removed - không cần nữa với pagination
   },
   cardItem: {
     backgroundColor: "#fff",

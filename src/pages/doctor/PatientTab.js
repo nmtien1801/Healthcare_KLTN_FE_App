@@ -17,7 +17,6 @@ import { Picker } from "@react-native-picker/picker";
 import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from "firebase/firestore";
 import { useSelector } from "react-redux";
 import { db } from "../../../firebase";
-import { acceptCall, endCall, createCall, generateJitsiUrl } from "../../components/call/functionCall";
 import ApiPatient from "../../apis/ApiPatient";
 import ApiDoctor from "../../apis/ApiDoctor";
 import ViewPatientModal from "../../components/doctor/patient/ViewPatientModal";
@@ -422,30 +421,40 @@ export default function PatientTab({ handleStartCall }) {
                   <View style={styles.patientDetails}>
                     <Text style={styles.patientName}>{patient.name}</Text>
                     <Text style={styles.patientDetail}>{patient.patientCount}</Text>
-                    <Text style={styles.patientDetail}>{patient.disease}</Text>
-                    <Text style={styles.patientDetail}>ID: {patient.patientId}</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: patient.statusColor }]}>
-                      <Text style={[styles.statusText, { color: patient.statusTextColor }]}>{patient.status}</Text>
-                    </View>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: patient.statusColor }]}>
+                    <Text style={[styles.statusText, { color: patient.statusTextColor }]}>{patient.status}</Text>
                   </View>
                 </View>
-                <Text style={styles.lastVisit}>Lần khám cuối: {patient.lastVisit}</Text>
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity style={styles.actionButton} onPress={() => handleViewPatient(patient)}>
-                    <Eye color="#06b6d4" size={22} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionButton} onPress={() => handleEditPatient(patient)}>
-                    <Edit color="#22c55e" size={22} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionButton} onPress={() => handleOpenChat(patient)}>
-                    <MessageSquare color="#3b82f6" size={22} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleStartCall(user, { uid: patient.uid }, "doctor")}
-                  >
-                    <Phone color="#f59e0b" size={22} />
-                  </TouchableOpacity>
+                <View style={styles.patientInfo}>
+                  <View style={styles.patientDetails}>
+                    <Text style={styles.patientDetail}>{patient.disease}</Text>
+                    <Text style={styles.patientDetail}>ID: {patient.patientId}</Text>
+
+                    <Text style={styles.lastVisit}>Lần khám cuối: {patient.lastVisit}</Text>
+                  </View>
+
+                  <View style={styles.patientRightSection}>
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity style={styles.actionButton} onPress={() => handleViewPatient(patient)}>
+                        <Eye color="#06b6d4" size={10} />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.actionButton} onPress={() => handleEditPatient(patient)}>
+                        <Edit color="#22c55e" size={10} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity style={styles.actionButton} onPress={() => handleOpenChat(patient)}>
+                        <MessageSquare color="#3b82f6" size={10} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleStartCall(user, { uid: patient.uid }, "doctor")}
+                      >
+                        <Phone color="#f59e0b" size={10} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
               </View>
             ))
@@ -589,7 +598,7 @@ export default function PatientTab({ handleStartCall }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc", // Màu nền nhẹ nhàng, sáng
+    backgroundColor: "#f8fafc",
   },
   scrollContainer: {
     padding: 16,
@@ -601,7 +610,7 @@ const styles = StyleSheet.create({
     color: "#1e293b",
     marginBottom: 24,
     textAlign: "center",
-    fontFamily: "System", // Có thể thay bằng font tùy chỉnh
+    fontFamily: "System",
   },
   loadingContainer: {
     flex: 1,
@@ -715,11 +724,16 @@ const styles = StyleSheet.create({
   },
   patientInfo: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 12,
+    alignItems: "center",
+    flex: 1,
   },
   patientDetails: {
     flex: 1,
+  },
+  patientRightSection: {
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 8,
   },
   avatar: {
     width: 56,
@@ -754,12 +768,10 @@ const styles = StyleSheet.create({
   lastVisit: {
     fontSize: 14,
     color: "#4b5563",
-    marginBottom: 12,
-    textAlign: "right",
+    marginTop: 12,
   },
   actionButtons: {
     flexDirection: "row",
-    justifyContent: "flex-end",
   },
   actionButton: {
     padding: 12,
