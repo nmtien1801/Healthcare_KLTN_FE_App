@@ -54,14 +54,10 @@ export default function AppointmentTab() {
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
 
   const fetchAppointments = async () => {
-    console.log("fetchAppointments chạy...");
     try {
       const resToday = await ApiDoctor.getAppointmentsToday();
-      console.log("Raw Today:", resToday);
       setTodayAppointments(resToday.map(mapAppointment));
-      console.log("Appointments Today:", resToday);
       const resUpcoming = await ApiDoctor.getAppointments();
-      console.log("Upcoming Appointments:", resUpcoming);
       setUpcomingAppointments(resUpcoming.map(mapAppointment));
     } catch (err) {
       console.error("Lỗi lấy appointments:", err);
@@ -91,10 +87,10 @@ export default function AppointmentTab() {
   }, [doctorUid, patientUid]);
 
   const mapAppointment = (item) => {
-    console.log("Mapping item:", item);
     return {
       id: item._id,
       patientName: item.patientId?.userId?.username || "N/A",
+      patientEmail: item.patientId?.userId?.email || "N/A",
       patientAge: item.patientId?.age || "N/A",
       patientDisease: item.patientId?.disease || "N/A",
       patientAvatar:

@@ -12,10 +12,14 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import { User, Clock, CalendarDays, Stethoscope, FileText } from "lucide-react-native";
 import { TYPE_OPTIONS, STATUS_OPTIONS } from "../../../utils/appointmentConstants";
+import { book_appointment } from "../../../apis/assistant";
+import { useSelector, useDispatch } from "react-redux";
 
 const { width, height } = Dimensions.get("window");
 
 const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
+    const dispatch = useDispatch();
+    const user = useSelector((state) => state.auth.user);
     const [formData, setFormData] = useState({
         patientName: "",
         patientAge: "",
@@ -135,7 +139,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
         setErrors(newErrors);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (validateForm()) {
             const parsedDate = parseDate(formData.date);
             const payload = {
@@ -144,6 +148,35 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                 id: appointment.id,
                 date: parsedDate ? parsedDate.toISOString().split("T")[0] : null,
             };
+
+            // Kiểm tra nếu tình trạng là "đã xác nhận"
+            if (formData.status === "confirmed") {
+                try {
+                    // Hàm chuyển đổi định dạng ngày/giờ
+                    const formatDateTime = (dateStr, timeStr) => {
+                        const [day, month, year] = dateStr.split('/');
+                        const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                        const formattedTime = timeStr;
+                        return `${formattedDate}T${formattedTime}`;
+                    };
+
+                    const calendarTime = formatDateTime(appointment.date, appointment.time);
+
+                    const res = await book_appointment.post(
+                        "/create-calendar-schedule",
+                        {
+                            email_Patient: appointment.patientEmail,
+                            email_Docter: user.email,
+                            period: 30,  // thời lượng buổi hẹn
+                            time: calendarTime,
+                            location: appointment.type  // "online"
+                        }
+                    );
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+
             onSave(payload);
             setErrors({});
             onClose();

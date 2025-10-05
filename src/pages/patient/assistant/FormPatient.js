@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useDispatch, useSelector } from "react-redux";
-import { api, apply_medicine } from "../../../apis/assistant";
+import { api } from "../../../apis/assistant";
 import {
     fetchTrendMedicine,
     selectMedicineLoading,
@@ -141,10 +141,19 @@ const FormPatient = () => {
             const res = await dispatch(fetchMedicines({ userId: user.userId, date: today }));
 
             if (res?.payload?.DT) {
-                const categorized = categorizeMedicines(res.payload.DT);
+                const data = res.payload.DT;
+
+                // ✅ Nếu DB đã có thuốc, coi như đơn đã được áp dụng
+                if (data.length > 0) {
+                    setPrescriptionStatus("applied");
+                }
+
+                const categorized = categorizeMedicines(data);
                 setMedicines(categorized);
-                const hasAny = (arr) => Array.isArray(arr) && arr.length > 0;
-                if (prescriptionStatus !== "applied") {
+
+                // Nếu chưa có thuốc, giữ logic cũ
+                if (data.length === 0) {
+                    const hasAny = (arr) => Array.isArray(arr) && arr.length > 0;
                     if (hasAny(categorized.sang) || hasAny(categorized.trua) || hasAny(categorized.toi)) {
                         setPrescriptionStatus("created");
                     } else {
@@ -209,20 +218,7 @@ const FormPatient = () => {
             email: user.email,
             medicinePlan: medicines,
         }
-
-        try {
-            const res = await apply_medicine.post(
-                "/apply-medicine",
-                {
-                    message: {
-                        text: data,
-                    }
-                },
-            );
-        } catch (err) {
-            console.error(err);
-        }
-
+        
         Object.entries(medicines).forEach(([time, arr]) => {
             arr.forEach(item => {
                 const parsed = parseMedicine(item, time, user?.userId);
@@ -357,7 +353,7 @@ const FormPatient = () => {
                             Chưa có đơn thuốc. Vui lòng khởi tạo để có thể áp dụng theo dõi.
                         </Text>
                     )}
-                    
+
                     <View style={styles.medicineList}>
                         <Text style={styles.medicineTime}>
                             <Text style={styles.bold}>Sáng:</Text>{" "}
