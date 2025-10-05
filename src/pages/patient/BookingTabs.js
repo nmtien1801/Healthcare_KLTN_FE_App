@@ -21,6 +21,8 @@ import { useSelector } from "react-redux";
 import ApiBooking from "../../apis/ApiBooking";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { sendStatus } from "../../utils/SetupSignFireBase";
+import { getBalanceService, withdrawService, depositService } from "../../apis/paymentService";
+import { useNavigation } from "@react-navigation/native";
 
 const DEVICE = Platform.OS === "web" ? "WEB" : "APP";
 
@@ -641,6 +643,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
   const [errorMessage, setErrorMessage] = useState("");
   const senderId = user?.uid;
   const receiverId = "1HwseYsBwxby5YnsLUWYzvRtCw53";
+  const BOOKING_FEE = 200000;
 
   // Fetch appointments from API
   useEffect(() => {
@@ -704,6 +707,7 @@ const UpcomingAppointment = ({ handleStartCall, refreshTrigger, onNewAppointment
     try {
       setIsCanceling(true);
       await ApiBooking.cancelBooking(appointmentToCancel);
+      await withdrawService(user.userId || user.uid, BOOKING_FEE);
 
       setAppointments((prev) =>
         prev.filter((appt) => appt._id !== appointmentToCancel)
@@ -1187,6 +1191,9 @@ const BookingNew = ({ handleSubmit }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const user = useSelector((state) => state.auth.user);
   const receiverId = "1HwseYsBwxby5YnsLUWYzvRtCw53";
+  const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] = useState(false);
+  const BOOKING_FEE = 200000;
+  const navigation = useNavigation();
 
   // Fetch doctors by date
   useEffect(() => {
@@ -1311,6 +1318,15 @@ const BookingNew = ({ handleSubmit }) => {
     try {
       setLoadingSubmit(true);
 
+      const balanceResponse = await getBalanceService(user.userId || user.uid);
+      const balance = balanceResponse?.DT?.balance || 0;
+
+      if (balance < BOOKING_FEE) {
+        setShowInsufficientBalanceModal(true);
+        return;
+      }
+
+
       const payload = {
         firebaseUid: user.uid,
         doctorId: selectedDoctor,
@@ -1323,6 +1339,7 @@ const BookingNew = ({ handleSubmit }) => {
       };
 
       const response = await ApiBooking.bookAppointment(payload);
+      await withdrawService(user.userId || user.uid, BOOKING_FEE);
 
       const newAppointment = {
         _id: response._id || response.id || Date.now().toString(),
@@ -1636,6 +1653,26 @@ const BookingNew = ({ handleSubmit }) => {
           <Text style={{ textAlign: 'center', marginBottom: 16 }}>{errorMessage}</Text>
           <Button variant="danger" onPress={() => setShowErrorModal(false)}>
             Đóng
+          </Button>
+        </CustomModal>
+        {/* Insufficient Balance Modal */}
+        <CustomModal
+          visible={showInsufficientBalanceModal}
+          onClose={() => setShowInsufficientBalanceModal(false)}
+          title="Số dư không đủ"
+          type="warning"
+        >
+          <Text style={{ textAlign: 'center', marginBottom: 16 }}>
+            Số dư tài khoản của bạn không đủ để đặt lịch khám. Vui lòng nạp thêm tiền.
+          </Text>
+          <Button
+            variant="warning"
+            onPress={() => {
+              setShowInsufficientBalanceModal(false);
+              navigation.navigate('payment'); // Điều hướng
+            }}
+          >
+            Nạp tiền ngay
           </Button>
         </CustomModal>
       </View>
