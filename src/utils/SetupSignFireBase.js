@@ -26,23 +26,25 @@ export const sendStatus = async (senderId, receiverId, statusText) => {
     }
 };
 
-export const listenStatus = (roomChats, receiverId, callback) => {
-    if (!roomChats || !receiverId) return () => { };
+export const listenStatus = (roomChats, callback) => { // ĐÃ XÓA receiverId khỏi tham số
+    if (!roomChats) return () => { };
 
     const q = query(
         collection(db, "signal", roomChats, "signal"),
-        where("receiverId", "==", receiverId),
+        // Đã loại bỏ điều kiện where("receiverId", "==", receiverId)
         where("type", "==", "status"),
         orderBy("timestamp", "desc"),
         limit(1)
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
-        const doc = snapshot.docs[0];
-        if (!doc) return;
-        callback(doc.data());
-    }, (err) => {
-        console.error("Firestore listener error:", err);
+        if (!snapshot.empty) {
+            const doc = snapshot.docs[0];
+            const signal = { id: doc.id, ...doc.data() };
+            callback(signal);
+        } else {
+            callback(null);
+        }
     });
 
     return unsub;

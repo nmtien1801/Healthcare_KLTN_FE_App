@@ -14,6 +14,7 @@ const ApiDoctor = {
     getPatientsAttention: () => ApiManager.get(`/doctor/patients-attention`),
     getPatientHealth: (patientId, period) => ApiManager.get(`/doctor/patient-health/${patientId}/${period}`),
     updatePatientHealthInfo: (patientId, data) => ApiManager.put(`/doctor/patient-health/${patientId}`, data),
+    updateAppointmentStatus: (id, data) => ApiManager.put(`/doctor/appointmentStatus/${id}`, data),
 }
 
 export default ApiDoctor;
