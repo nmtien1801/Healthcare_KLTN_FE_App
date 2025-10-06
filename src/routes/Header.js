@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     zIndex: 999,
+    marginTop: -20,
   },
   menuItem: {
     paddingVertical: 10,

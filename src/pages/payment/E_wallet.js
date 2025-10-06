@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import FlowPayment from "./FlowPayment";
-import { getBalance } from "../../redux/paymentSlice";
 import { useSelector, useDispatch } from "react-redux";
 const { width } = Dimensions.get("window");
 import { getBalance, deposit } from "../../redux/paymentSlice";
