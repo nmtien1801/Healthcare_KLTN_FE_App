@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   notificationContainer: {
-    marginRight: 16,
+    marginRight: 0,
     position: "relative",
   },
   badge: {
