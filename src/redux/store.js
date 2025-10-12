@@ -4,6 +4,7 @@ import foodAiReducer from "./foodAiSlice";
 import patientReducer from "./patientSlice";
 import medicineAiReducer from "./medicineAiSlice";
 import paymentReducer from "./paymentSlice";
+import foodReducer from "./foodSlice";
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     foodAi: foodAiReducer,
     patient: patientReducer,
     medicineAi: medicineAiReducer,
-    payment: paymentReducer
+    payment: paymentReducer,
+    food: foodReducer,
   },
 });

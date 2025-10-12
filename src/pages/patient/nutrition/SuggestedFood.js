@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { suggestFoodsByAi, updateMenuFood, getMenuFood } from '../../../redux/foodAiSlice';
-import { setWithExpiry, getWithExpiry } from '../../../components/customizeStorage';
+import { InsertFoods } from '../../../redux/foodSlice';
 
 const { width, height } = Dimensions.get('window');
 
@@ -77,7 +77,7 @@ export default function SuggestedFood() {
         );
 
         if (response.payload) {
-          setWithExpiry('food', JSON.stringify(response.payload.result));
+          await dispatch(InsertFoods({ userId: user.userId, data: response?.payload?.result.chosen }));
         }
       }
     } catch (error) {
