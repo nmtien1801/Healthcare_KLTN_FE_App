@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { getAuth, signOut } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NotificationDropdown from "../components/notifications/NotificationDropdown";
 
 const Header = () => {
   const auth = getAuth();
@@ -74,14 +75,7 @@ const Header = () => {
       {/* Notifications & Info */}
       <View style={styles.right}>
         <View style={styles.notificationContainer}>
-          <Icon name="bell" size={20} color="#6c757d" />
-          {user?.notificationsCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {user.notificationsCount}
-              </Text>
-            </View>
-          )}
+          {user && <NotificationDropdown />}
         </View>
 
         <View style={styles.userInfo}>
