@@ -11,7 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { GetListFood } from "../../../redux/foodSlice";
+import { GetListFood, updateStatusFood } from "../../../redux/foodSlice";
 import { useDispatch, useSelector } from "react-redux";
 
 const { width } = Dimensions.get("window");
@@ -626,6 +626,7 @@ export default function FoodTrackerApp() {
       if (food && food.payload.DT.length > 0) {
         let data = food.payload.DT;
         const mappedFoods = data.map((food) => ({
+          id: food?._id,
           image: food.image ?? "🍅",
           name: food.name,
           details: `${food.weight}g • ${food.calo}cal`,
@@ -635,7 +636,7 @@ export default function FoodTrackerApp() {
             `${food.chat_beo}g`,
           ],
           colors: ["success", "warning", "danger"],
-          checked: false,
+          checked: food.checked || false,
           meal: "sáng",
         }));
 
@@ -649,10 +650,17 @@ export default function FoodTrackerApp() {
     fetchFood();
   }, []);
 
-  const toggleChecked = (index) => {
+  const toggleChecked = async (index) => {
     const updatedFoods = [...foods];
     updatedFoods[index].checked = !updatedFoods[index].checked;
     setFoods(updatedFoods);
+
+    await dispatch(
+      updateStatusFood({
+        id: updatedFoods[index].id,
+        checked: updatedFoods[index].checked,
+      })
+    );
   };
 
   const toggleMealExpansion = (mealLabel) => {

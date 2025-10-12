@@ -1,5 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { InsertFoodsService, GetListFoodService } from "../apis/foodService";
+import {
+  InsertFoodsService,
+  GetListFoodService,
+  updateStatusFoodService,
+} from "../apis/foodService";
 
 const initialState = {
   totalCalo: 0,
@@ -17,6 +21,14 @@ export const InsertFoods = createAsyncThunk(
   "food/InsertFoods",
   async (data, thunkAPI) => {
     const response = await InsertFoodsService(data);
+    return response;
+  }
+);
+
+export const updateStatusFood = createAsyncThunk(
+  "food/updateStatusFood",
+  async ({ id, checked }, thunkAPI) => {
+    const response = await updateStatusFoodService(id, checked);
     return response;
   }
 );
@@ -59,6 +71,12 @@ const foodSlice = createSlice({
         state.totalCalo = newTotalCalo;
       })
       .addCase(InsertFoods.rejected, (state, action) => {});
+
+    // updateStatusFood
+    builder
+      .addCase(updateStatusFood.pending, (state) => {})
+      .addCase(updateStatusFood.fulfilled, (state, action) => {})
+      .addCase(updateStatusFood.rejected, (state, action) => {});
   },
 });
 
