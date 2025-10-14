@@ -79,7 +79,7 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     name: userId.username || apiPatient.name || "Không xác định",
     age: apiPatient.age || 0,
     patientCount: `${apiPatient.age || 0} tuổi`,
-    avatar: userId.avatar || apiPatient.avatar || "",
+    avatar: userId.avatar || apiPatient.avatar || "https://via.placeholder.com/150?text=User",
     disease: apiPatient.disease || "Không xác định",
     patientId: apiPatient.insuranceId || "-",
     status: apiPatient.status || "Ổn định",
@@ -131,7 +131,7 @@ export default function PatientTab({ handleStartCall }) {
   const senderId = user?.uid;
   const flatListRef = useRef(null);
 
-  // Lấy dữ liệu bệnh nhân và lịch hẹn từ API
+  // Fetch patients
   const fetchPatientsAndAppointments = async () => {
     setLoading(true);
     setError(null);
@@ -170,7 +170,7 @@ export default function PatientTab({ handleStartCall }) {
 
   // Realtime listener for updates
   useEffect(() => {
-    const receiverId = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2"; // Cố định nếu chỉ 1 patient, hoặc dynamic nếu nhiều
+    const receiverId = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2"; // Cố định nếu chỉ 1 patient
     const roomChats = senderId ? [senderId, receiverId].sort().join("_") : null;
 
     if (!roomChats) {
@@ -180,7 +180,7 @@ export default function PatientTab({ handleStartCall }) {
 
     fetchPatientsAndAppointments();
     const unsub = listenStatus(roomChats, (signal) => {
-      console.log("Nhận tín hiệu đầy đủ:", signal); // Log đầy đủ để debug
+      console.log("Nhận tín hiệu đầy đủ:", signal);
       if (signal && (signal.status === "update_patient_info" || signal.status === "update_patient_list")) {
         console.log("Cập nhật danh sách bệnh nhân...");
         fetchPatientsAndAppointments();
@@ -192,7 +192,7 @@ export default function PatientTab({ handleStartCall }) {
     return () => unsub && unsub();
   }, [senderId]);
 
-  // Realtime listener for chat messages (per patient)
+  // Realtime listener for chat messages
   useEffect(() => {
     if (!senderId || !chatPatient?.uid || !showChatModal) return;
 
@@ -234,7 +234,7 @@ export default function PatientTab({ handleStartCall }) {
 
   // Send message
   const sendMessage = async () => {
-    if (messageInput.trim() === "") return;
+    if (messageInput.trim() === "" || !chatPatient?.uid) return;
 
     setIsSending(true);
     const userMessage = messageInput.trim();
@@ -556,7 +556,7 @@ export default function PatientTab({ handleStartCall }) {
               <TouchableOpacity onPress={handleCloseChat} style={styles.backButton}>
                 <ArrowLeft color="#fff" size={24} />
               </TouchableOpacity>
-              <Text style={styles.chatHeaderTitle}>{chatPatient?.name || "Bệnh nhân"}</Text>
+              <Text style={styles.chatHeaderTitle}>{chatPatient?.name || "Chat với bệnh nhân"}</Text>
               <View style={styles.headerSpacer} />
             </View>
             <FlatList
@@ -602,6 +602,7 @@ export default function PatientTab({ handleStartCall }) {
                 </View>
               }
               showsVerticalScrollIndicator={false}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             />
             <View style={styles.chatInputContainer}>
               <TextInput
@@ -739,6 +740,7 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 8,
   },
   filterItem: {
     flex: 1,
@@ -746,7 +748,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#f1f5f9",
     borderRadius: 12,
-    marginRight: 8,
     borderWidth: 1,
     borderColor: "#d1d5db",
     overflow: "hidden",
@@ -755,8 +756,12 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     marginRight: 8,
   },
-  picker: {
+  pickerContainer: {
     flex: 1,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 12,
+  },
+  picker: {
     fontSize: 16,
     color: "#1e293b",
   },
@@ -780,6 +785,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginBottom: 8,
   },
   patientDetails: {
     flex: 1,
@@ -888,7 +894,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: "100%",
+    height: height * 0.8,
     backgroundColor: "#fff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -901,7 +907,7 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "linear-gradient(90deg, #3b82f6, #60a5fa)",
+    backgroundColor: "#3b82f6",
     paddingHorizontal: 16,
     paddingVertical: 20,
     borderTopLeftRadius: 24,
