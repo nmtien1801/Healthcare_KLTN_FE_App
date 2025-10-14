@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import Toast from "react-native-toast-message";
 import { Bell, Check, Trash2 } from "lucide-react-native";
 import ApiNotification from "../../apis/ApiNotification";
-import { listenStatus } from "../../utils/SetupSignFireBase";
+import { listenStatus, sendStatus } from "../../utils/SetupSignFireBase";
 import { formatDate } from "../../utils/formatDate";
 
 const NotificationDropdown = () => {
@@ -13,6 +13,13 @@ const NotificationDropdown = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [showAll, setShowAll] = useState(false);
+    // Tạm thời hardcode uid bác sĩ & bệnh nhân
+    const doctorHardcodeUid = "1HwseYsBwxby5YnsLUWYzvRtCw53";
+    const patientHardcodeUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
+    const isDoctor = user.uid === doctorHardcodeUid;
+    const doctorUid = isDoctor ? user.uid : doctorHardcodeUid;
+    const patientUid = isDoctor ? patientHardcodeUid : user.uid;
+    const roomChats = [doctorUid, patientUid].sort().join("_");
 
     const loadNotifications = async () => {
         try {
@@ -29,6 +36,16 @@ const NotificationDropdown = () => {
             setLoading(false);
         }
     };
+    // Load số lượng thông báo chưa đọc
+    const loadUnreadCount = async () => {
+        try {
+            const res = await ApiNotification.getUnreadCount();
+            setUnreadCount(res?.data?.unreadCount || 0);
+        } catch (error) {
+            console.error("Lỗi khi load số lượng chưa đọc:", error);
+        }
+    };
+
 
     const handleMarkAsRead = async (id) => {
         try {
@@ -37,6 +54,7 @@ const NotificationDropdown = () => {
                 prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
             );
             setUnreadCount((prev) => Math.max(prev - 1, 0));
+            sendStatus(doctorUid, patientUid, "notification_update");
         } catch (err) {
             console.log("Lỗi đánh dấu đã đọc:", err);
         }
@@ -46,6 +64,7 @@ const NotificationDropdown = () => {
         try {
             await ApiNotification.deleteNotification(id);
             setNotifications((prev) => prev.filter((n) => n.id !== id));
+            sendStatus(doctorUid, patientUid, "notification_delete");
         } catch (err) {
             console.log("Lỗi xóa:", err);
         }
@@ -56,6 +75,7 @@ const NotificationDropdown = () => {
             await ApiNotification.markAllAsRead();
             setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
             setUnreadCount(0);
+            sendStatus(doctorUid, patientUid, "notification_read_all");
         } catch (err) {
             console.log("Lỗi đánh dấu tất cả:", err);
         }
@@ -80,27 +100,44 @@ const NotificationDropdown = () => {
     useEffect(() => {
         if (!user?.uid) return;
 
+        // Load ban đầu
         loadNotifications();
-
-        const doctorUid = "1HwseYsBwxby5YnsLUWYzvRtCw53";
-        const patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
-        const isDoctor = user.uid === doctorUid;
-        const roomChats = [isDoctor ? doctorUid : patientUid, isDoctor ? patientUid : doctorUid].sort().join("_");
+        loadUnreadCount();
 
         const unsub = listenStatus(roomChats, async (signal) => {
-            if (!signal || signal.senderId === user.uid) return;
+            if (!signal) return;
 
-            const res = await ApiNotification.getNotificationsByUser();
-            if (res?.data?.length > 0) {
-                const latest = res.data[0];
-                setNotifications(res.data.map((n) => ({ ...n, id: n.id || n._id })));
-                setUnreadCount(res.data.filter((n) => !n.isRead).length);
+            try {
+                // Nếu chỉ là cập nhật, xóa hoặc đánh dấu đọc → reload mà không hiện toast
+                if (
+                    typeof signal === "string" &&
+                    ["notification_update", "notification_delete", "notification_read_all"].includes(signal)
+                ) {
+                    await Promise.all([loadNotifications(), loadUnreadCount()]);
+                    return;
+                }
 
-                Toast.show({
-                    type: "success",
-                    text1: latest.title,
-                    text2: latest.content,
-                });
+                // Ngược lại, nếu là tín hiệu mới thực sự → load và hiện toast
+                const res = await ApiNotification.getNotificationsByUser();
+                if (res?.data?.length > 0) {
+                    const normalized = res.data.map((n) => ({
+                        ...n,
+                        id: n.id || n._id,
+                    }));
+                    setNotifications(normalized);
+                    setUnreadCount(normalized.filter((n) => !n.isRead).length);
+
+                    const latest = res.data[0];
+                    if (!latest.isRead) {
+                        Toast.show({
+                            type: "success",
+                            text1: latest.title,
+                            text2: latest.content,
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi khi load thông báo realtime:", err);
             }
         });
 
