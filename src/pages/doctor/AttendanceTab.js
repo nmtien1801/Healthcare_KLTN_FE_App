@@ -12,10 +12,13 @@ import {
     Modal,
     SafeAreaView,
 } from 'react-native';
+import { useSelector } from "react-redux";
 import Icon from 'react-native-vector-icons/Feather';
 import ApiWorkShift from "../../apis/ApiWorkShift";
 import ApiDoctor from "../../apis/ApiDoctor";
 import { formatDate } from "../../utils/formatDate";
+import { listenStatus, sendStatus } from "../../utils/SetupSignFireBase";
+
 
 // Shift options
 const shiftOptions = [
@@ -400,22 +403,55 @@ const AttendanceTab = () => {
     const [workType, setWorkType] = useState("parttime");
     const [doctorInfo, setDoctorInfo] = useState(null);
     const [loadingDoctor, setLoadingDoctor] = useState(true);
+    const user = useSelector((state) => state.auth.user);
+    const firebaseUid = user.uid;
+    const doctorUid = user.uid;
+    const patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2"; // UID cố định của patient
+    const roomChats = [doctorUid, patientUid].sort().join("_"); // Room sẽ là uid_uid để lắng nghe tín hiệu tự gửi
 
     useEffect(() => {
+
+        const unsub = listenStatus(roomChats, async (signal) => {
+            if (!signal) return;
+            if (["createWorkShifts", "deleteManyWorkShifts", "checkInWorkShift", "checkOutWorkShift"].includes(signal.status)) {
+                try {
+                    await fetchDoctorInfo();
+                    await fetchShifts();
+
+                } catch (error) {
+                    console.error("Error syncing on signal:", error);
+                }
+            }
+        })
         const fetchDoctorInfo = async () => {
+            if (!firebaseUid) {
+                setInfoModalTitle("Thông báo");
+                setInfoModalMessage("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
+                setShowInfoModal(true);
+                setLoadingDoctor(false);
+                return;
+            }
+
             try {
                 setLoadingDoctor(true);
                 const response = await ApiDoctor.getDoctorInfo();
                 setDoctorInfo({
                     username: response.userId?.username || "Bác sĩ không xác định",
-                    specialty: response.specialty || "Chuyên khoa nội tiết",
+                    hospital: response.hospital || "Bệnh viện không xác định",
                     avatar: response.userId?.avatar || "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
+                    experience: response.exp || 0,
                 });
             } catch (error) {
                 console.error("Error fetching doctor info:", error);
                 setInfoModalTitle("Thông báo");
                 setInfoModalMessage(`${error.message}`);
                 setShowInfoModal(true);
+                setDoctorInfo({
+                    username: user?.username || "Bác sĩ không xác định",
+                    hospital: "Bệnh viện không xác định",
+                    avatarUrl: user?.avatar || "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
+                    experience: 0,
+                });
             } finally {
                 setLoadingDoctor(false);
             }
@@ -450,7 +486,7 @@ const AttendanceTab = () => {
                     const weekday = weekdays[day === 0 ? 6 : day - 1].key;
                     const shiftKey = shiftOptions.find(
                         (option) => option.start === shift.start && option.end === shift.end
-                    )?.key;
+                    )?.key || "parttime";
 
                     if (!groupedSchedules[weekStartStr].schedule[weekday]) {
                         groupedSchedules[weekStartStr].schedule[weekday] = [];
@@ -475,15 +511,20 @@ const AttendanceTab = () => {
                         if (checkInTime !== "-") {
                             const [inHour, inMinute] = checkInTime.split(":").map(Number);
                             const [startHour, startMinute] = shift.start.split(":").map(Number);
+
+                            // So sánh với giờ bắt đầu ca làm
                             if (inHour < startHour || (inHour === startHour && inMinute <= startMinute)) {
                                 status = "Đúng giờ";
                             } else {
                                 status = "Đi trễ";
                             }
+
+                            // Xét thêm trạng thái check-out
                             if (shift.attendance.checkedOut) {
-                                status = checkOutTime !== "-" ? status : "Đang làm việc";
+                                status = checkOutTime !== "-" ? status : "Online";
                             }
                         }
+
                         return {
                             date: shift.date,
                             checkIn: checkInTime,
@@ -500,14 +541,19 @@ const AttendanceTab = () => {
             }
         };
 
+        if (!firebaseUid) {
+            setInfoModalTitle("Thông báo");
+            setInfoModalMessage("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
+            setShowInfoModal(true);
+            return;
+        }
+
         fetchShifts();
 
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
-        return () => clearInterval(timer);
-    }, []);
-
+        return () => {
+            unsub(); // Cleanup listener
+        };
+    }, [user.uid, roomChats]);
     useEffect(() => {
         if (showScheduleFormModal) {
             const existingSchedule = savedSchedules.find((s) => s.weekStartDate === weekStartDate);
@@ -604,13 +650,16 @@ const AttendanceTab = () => {
                 const editingSchedule = savedSchedules.find((s) => s.weekStartDate === weekStartDate);
                 if (editingSchedule && editingSchedule.shiftIds.length > 0) {
                     await ApiWorkShift.deleteManyWorkShifts(editingSchedule.shiftIds);
+                    sendStatus(doctorUid, patientUid, "deleteManyWorkShifts");
                 }
                 await ApiWorkShift.createWorkShifts({ shifts: shiftsData });
+                sendStatus(doctorUid, patientUid, "createWorkShifts");
                 setInfoModalTitle("Thành công");
                 setInfoModalMessage("Lịch làm việc đã được cập nhật!");
                 setIsEditing(false);
             } else {
                 await ApiWorkShift.createWorkShifts({ shifts: shiftsData });
+                sendStatus(doctorUid, patientUid, "createWorkShifts");
                 setInfoModalTitle("Thành công");
                 setInfoModalMessage("Lịch làm việc đã được lưu!");
             }
@@ -692,6 +741,7 @@ const AttendanceTab = () => {
         if (scheduleToDelete && scheduleToDelete.length > 0) {
             try {
                 await ApiWorkShift.deleteManyWorkShifts(scheduleToDelete);
+                sendStatus(doctorUid, patientUid, "deleteManyWorkShifts");
                 setInfoModalTitle("Thành công");
                 setInfoModalMessage("Lịch làm việc đã được xóa!");
                 setShowInfoModal(true);
@@ -755,6 +805,7 @@ const AttendanceTab = () => {
                 minute: "2-digit",
             });
             await ApiWorkShift.checkInWorkShift("webcam");
+            sendStatus(doctorUid, patientUid, "checkInWorkShift");
 
             setCheckInTime(checkInTimeStr);
             setAttendanceHistory((prev) => {
@@ -808,6 +859,7 @@ const AttendanceTab = () => {
                 minute: "2-digit",
             });
             await ApiWorkShift.checkOutWorkShift("webcam");
+            sendStatus(doctorUid, patientUid, "checkOutWorkShift");
 
             setCheckOutTime(checkOutTimeStr);
             setAttendanceHistory((prev) => {
@@ -922,7 +974,7 @@ const AttendanceTab = () => {
                             <Text style={styles.buttonText}>Đăng ký lịch</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.actionButton, { backgroundColor: '#17a2b8' , marginLeft: 3}]}
+                            style={[styles.actionButton, { backgroundColor: '#17a2b8', marginLeft: 3 }]}
                             onPress={() => setShowSavedSchedulesModal(true)}
                         >
                             <Icon name="list" size={12} color="#fff" />

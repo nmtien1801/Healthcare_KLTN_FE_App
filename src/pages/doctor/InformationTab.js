@@ -12,16 +12,23 @@ import {
   Platform
 } from "react-native";
 import { Edit } from "lucide-react-native";
+import { useSelector } from "react-redux";
 import ApiDoctor from "../../apis/ApiDoctor";
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { listenStatus, sendStatus } from "../../utils/SetupSignFireBase";
 
-// Hàm format ngày
+// Hàm format ngày (cải tiến để xử lý lỗi)
 const formatDate = (date) => {
   if (!date) return "";
-  const d = new Date(date);
-  return d.toLocaleDateString("vi-VN");
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("vi-VN");
+  } catch (error) {
+    console.error("Error in formatDate:", error);
+    return "";
+  }
 };
-
 const ProfileHeader = ({ doctor }) => (
   <View style={styles.card}>
     <Image
@@ -221,74 +228,95 @@ export default function DoctorProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDoctorInfo = async () => {
-      try {
-        const res = await ApiDoctor.getDoctorInfo();
-        const data = res;
+  // Lấy user từ Redux
+  const user = useSelector((state) => state.auth.userInfo);
+  const doctorUid = user?.uid;
+  const patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
+  const roomChats = doctorUid ? [doctorUid, patientUid].sort().join("_") : null;
 
-        const mappedData = {
-          avatar: data.userId.avatar,
-          name: data.userId.username,
-          specialty: `Bác sĩ chuyên khoa ${data.specialty || "Nội tiết"}`,
-          hospital: data.hospital,
-          basicInfo: {
-            fullName: data.userId.username,
-            email: data.userId.email,
-            phone: data.userId.phone,
-            dob: formatDate(data.userId.dob),
-          },
-          professionalInfo: {
-            specialty: data.specialty || "Nội tiết",
-            hospital: data.hospital,
-            experienceYears: `${data.exp} năm`,
-            license: data.giay_phep,
-          },
-        };
+  // Fetch doctor info
+  const fetchDoctorInfo = async () => {
+    try {
+      console.log("Fetching doctor info...");
+      const res = await ApiDoctor.getDoctorInfo();
+      console.log("API response:", res); // Log dữ liệu API
+      const data = res;
+      const mappedData = {
+        avatar: data.userId.avatar || "",
+        name: data.userId.username || "Unknown",
+        specialty: `Bác sĩ chuyên khoa ${data.specialty || "Nội tiết"}`,
+        hospital: data.hospital || "",
+        basicInfo: {
+          fullName: data.userId.username || "",
+          email: data.userId.email || "",
+          phone: data.userId.phone || "",
+          dob: formatDate(data.userId.dob) || "",
+        },
+        professionalInfo: {
+          specialty: data.specialty || "Nội tiết",
+          hospital: data.hospital || "",
+          experienceYears: `${data.exp || 0} năm`,
+          license: data.giay_phep || "",
+        },
+        // Thêm timestamp để buộc re-render
+        _timestamp: Date.now(),
+      };
+      console.log("Mapped data:", mappedData); // Log dữ liệu đã ánh xạ
+      setDoctorData(mappedData);
+    } catch (error) {
+      console.error("Lỗi khi fetch doctor info:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        setDoctorData(mappedData);
-      } catch (error) {
-        console.error("Lỗi khi fetch doctor info:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDoctorInfo();
-  }, []);
-
+  // Save updates
   const handleSave = async (updatedData) => {
     try {
+      console.log("Saving updated data:", updatedData);
       await ApiDoctor.updateDoctor({
         username: updatedData.fullName,
         email: updatedData.email,
         phone: updatedData.phone,
         dob: updatedData.dob.split("/").reverse().join("-"),
         hospital: updatedData.hospital,
-        exp: parseInt(updatedData.experienceYears, 10),
+        exp: parseInt(updatedData.experienceYears, 10) || 0,
         giay_phep: updatedData.license,
       });
 
-      setDoctorData((prevData) => ({
-        ...prevData,
-        basicInfo: {
-          ...prevData.basicInfo,
-          fullName: updatedData.fullName,
-          email: updatedData.email,
-          phone: updatedData.phone,
-          dob: updatedData.dob,
-        },
-        professionalInfo: {
-          ...prevData.professionalInfo,
-          specialty: updatedData.specialty,
+      if (doctorUid) {
+        console.log("Sending status to room:", roomChats);
+        sendStatus(doctorUid, patientUid, "update_info");
+      } else {
+        console.error("Cannot send status: doctorUid is undefined");
+      }
+
+      // Cập nhật local state
+      setDoctorData((prevData) => {
+        const newData = {
+          ...prevData,
+          basicInfo: {
+            ...prevData.basicInfo,
+            fullName: updatedData.fullName,
+            email: updatedData.email,
+            phone: updatedData.phone,
+            dob: updatedData.dob,
+          },
+          professionalInfo: {
+            ...prevData.professionalInfo,
+            specialty: updatedData.specialty,
+            hospital: updatedData.hospital,
+            experienceYears: updatedData.experienceYears,
+            license: updatedData.license,
+          },
+          name: updatedData.fullName,
+          specialty: `Bác sĩ chuyên khoa ${updatedData.specialty}`,
           hospital: updatedData.hospital,
-          experienceYears: updatedData.experienceYears,
-          license: updatedData.license,
-        },
-        name: updatedData.fullName,
-        specialty: `Bác sĩ chuyên khoa ${updatedData.specialty}`,
-        hospital: updatedData.hospital,
-      }));
+          _timestamp: Date.now(), // Buộc re-render
+        };
+        console.log("Updated doctorData:", newData);
+        return newData;
+      });
 
       setIsEditing(false);
     } catch (error) {
@@ -300,6 +328,32 @@ export default function DoctorProfile() {
   const handleCancel = () => {
     setIsEditing(false);
   };
+
+  // Realtime sync
+  useEffect(() => {
+    if (!doctorUid || !roomChats) {
+      console.log("Cannot set up listener: doctorUid or roomChats is missing");
+      setLoading(false);
+      return;
+    }
+
+    console.log("Setting up listener for room:", roomChats);
+    fetchDoctorInfo();
+
+    const unsub = listenStatus(roomChats, (signal) => {
+      console.log("Received signal:", signal);
+      if (signal && signal.status === "update_info") {
+        console.log("Fetching new doctor info due to update signal");
+        // Thêm delay để đợi server cập nhật
+        setTimeout(fetchDoctorInfo, 500);
+      }
+    });
+
+    return () => {
+      console.log("Unsubscribing listener for room:", roomChats);
+      unsub && unsub();
+    };
+  }, [doctorUid, roomChats]);
 
   if (loading) {
     return (
