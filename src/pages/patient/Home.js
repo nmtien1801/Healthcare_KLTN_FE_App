@@ -11,7 +11,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ApiBooking from '../../apis/ApiBooking';
-import { fetchMedicines } from '../../redux/medicineAiSlice';
+import { fetchMedicines, updateStatusMedicine } from '../../redux/medicineAiSlice';
 import moment from "moment";
 
 const Home = () => {
@@ -80,10 +80,12 @@ const Home = () => {
       : [],
   };
 
-  const handleMedicationToggle = (index) => {
+  const handleMedicationToggle = async (index) => {
     const updated = [...medications];
-    updated[index].taken = !updated[index].taken;
+    updated[index].status = !updated[index].status;
     setMedications(updated);
+
+    await dispatch(updateStatusMedicine({ id: updated[index]._id, status: updated[index].status }))
   };
 
   useEffect(() => {
@@ -184,14 +186,14 @@ const Home = () => {
               <TouchableOpacity
                 style={[
                   styles.medicationButton,
-                  med.taken ? styles.takenButton : styles.untakenButton,
+                  med.status ? styles.takenButton : styles.untakenButton,
                 ]}
                 onPress={() => handleMedicationToggle(idx)}
               >
                 <Text style={styles.medicationButtonText}>
-                  {med.taken ? '' : 'Đánh dấu'}
+                  {med.status ? '' : 'Đánh dấu'}
                 </Text>
-                {med.taken && <Icon name="check" size={16} color="#FFF" />}
+                {med.status && <Icon name="check" size={16} color="#FFF" />}
               </TouchableOpacity>
             </View>
           ))

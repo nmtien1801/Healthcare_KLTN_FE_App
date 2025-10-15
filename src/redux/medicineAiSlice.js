@@ -2,20 +2,27 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   getTrendMedicine,
   applyMedicinesService,
-  fetchMedicinesService
+  fetchMedicinesService,
+  updateStatusMedicineService,
 } from "../apis/medicineAiService";
 
 const initialState = {
   trendMedicine: null,
   loading: false,
-  error: null
+  error: null,
 };
 
 export const fetchTrendMedicine = createAsyncThunk(
   "medicineAi/fetchTrendMedicine",
   async ({ age, gender, BMI, HbA1c, bloodSugar }, thunkAPI) => {
     try {
-      const response = await getTrendMedicine({ age, gender, BMI, HbA1c, bloodSugar });
+      const response = await getTrendMedicine({
+        age,
+        gender,
+        BMI,
+        HbA1c,
+        bloodSugar,
+      });
       return response.result;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.result || error.message);
@@ -26,7 +33,13 @@ export const fetchTrendMedicine = createAsyncThunk(
 export const applyMedicines = createAsyncThunk(
   "medicineAi/applyMedicines",
   async ({ userId, name, time, lieu_luong, status }, thunkAPI) => {
-    const response = await applyMedicinesService(userId, name, time, lieu_luong, status);
+    const response = await applyMedicinesService(
+      userId,
+      name,
+      time,
+      lieu_luong,
+      status
+    );
     return response;
   }
 );
@@ -35,7 +48,19 @@ export const fetchMedicines = createAsyncThunk(
   "medicineAi/fetchMedicines ",
   async ({ userId, date }, thunkAPI) => {
     try {
-      const response = await fetchMedicinesService(userId, date );
+      const response = await fetchMedicinesService(userId, date);
+      return response;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response || error.message);
+    }
+  }
+);
+
+export const updateStatusMedicine = createAsyncThunk(
+  "medicineAi/updateStatusMedicine ",
+  async ({id, status}, thunkAPI) => {
+    try {
+      const response = await updateStatusMedicineService(id, status);
       return response;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response || error.message);
@@ -54,7 +79,7 @@ const medicineAiSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null;
-    }
+    },
   },
 
   extraReducers: (builder) => {
@@ -76,15 +101,21 @@ const medicineAiSlice = createSlice({
 
     // applyMedicines
     builder
-      .addCase(applyMedicines.pending, (state) => { })
-      .addCase(applyMedicines.fulfilled, (state, action) => { })
-      .addCase(applyMedicines.rejected, (state, action) => { });
+      .addCase(applyMedicines.pending, (state) => {})
+      .addCase(applyMedicines.fulfilled, (state, action) => {})
+      .addCase(applyMedicines.rejected, (state, action) => {});
 
     // fetchMedicines
     builder
-      .addCase(fetchMedicines.pending, (state) => { })
-      .addCase(fetchMedicines.fulfilled, (state, action) => { })
-      .addCase(fetchMedicines.rejected, (state, action) => { });
+      .addCase(fetchMedicines.pending, (state) => {})
+      .addCase(fetchMedicines.fulfilled, (state, action) => {})
+      .addCase(fetchMedicines.rejected, (state, action) => {});
+
+    // updateStatusMedicine
+    builder
+      .addCase(updateStatusMedicine.pending, (state) => {})
+      .addCase(updateStatusMedicine.fulfilled, (state, action) => {})
+      .addCase(updateStatusMedicine.rejected, (state, action) => {});
   },
 });
 

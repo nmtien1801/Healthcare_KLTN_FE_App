@@ -456,7 +456,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
       try {
         // Fetch food
         const cached = await dispatch(GetListFood(user.userId));
-        if (cached.payload.DT && cached.payload.DT.length > 0) {
+        if (cached && cached?.payload?.DT && cached?.payload?.DT.length > 0) {
           setFood(cached.payload.DT);
           setLoading(false);
           return;
@@ -480,7 +480,12 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
           ).unwrap();
 
           if (response.result) {
-            await dispatch(InsertFoods({ userId: user.userId, data: response?.result.chosen }));
+            await dispatch(
+              InsertFoods({
+                userId: user.userId,
+                data: response?.result.chosen,
+              })
+            );
             setFood(response.result);
           }
         }

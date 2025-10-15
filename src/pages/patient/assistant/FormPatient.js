@@ -207,7 +207,7 @@ const FormPatient = () => {
             lieu_luong: lieuluong.trim(),
             Cachdung: cachDung?.trim(),
             time: time,
-            status: "chưa uống"
+            status: false
         };
     }
 
