@@ -12,29 +12,42 @@ import {
   Platform
 } from "react-native";
 import { Edit } from "lucide-react-native";
+import { useSelector } from "react-redux";
 import ApiDoctor from "../../apis/ApiDoctor";
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { listenStatus, sendStatus } from "../../utils/SetupSignFireBase";
 
-// Hàm format ngày
+// Hàm format ngày (cải tiến)
 const formatDate = (date) => {
   if (!date) return "";
-  const d = new Date(date);
-  return d.toLocaleDateString("vi-VN");
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("vi-VN");
+  } catch (error) {
+    console.error("Error in formatDate:", error);
+    return "";
+  }
 };
 
-const ProfileHeader = ({ doctor }) => (
-  <View style={styles.card}>
-    <Image
-      source={{ uri: doctor.avatar }}
-      style={styles.avatar}
-      resizeMode="cover"
-    />
-    <Text style={styles.name}>{doctor.name}</Text>
-    <Text style={styles.textMuted}>{doctor.specialty}</Text>
-    <Text style={styles.textMuted}>{doctor.hospital}</Text>
-  </View>
-);
+// ProfileHeader
+const ProfileHeader = ({ doctor }) => {
+  console.log("Rendering ProfileHeader with:", doctor); // Debug
+  return (
+    <View style={styles.card}>
+      <Image
+        source={{ uri: doctor.avatar }}
+        style={styles.avatar}
+        resizeMode="cover"
+      />
+      <Text style={styles.name}>{doctor.name}</Text>
+      <Text style={styles.textMuted}>{doctor.specialty}</Text>
+      <Text style={styles.textMuted}>{doctor.hospital}</Text>
+    </View>
+  );
+};
 
+// InfoSection
 const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     fullName: doctor.basicInfo.fullName,
@@ -47,7 +60,29 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
     license: doctor.professionalInfo.license,
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(formData.dob ? new Date(formData.dob.split("/").reverse().join("-")) : new Date());  // Chuyển dob string sang Date
+  const [selectedDate, setSelectedDate] = useState(
+    formData.dob ? new Date(formData.dob.split("/").reverse().join("-")) : new Date()
+  );
+
+  // Đồng bộ formData khi doctor props thay đổi
+  useEffect(() => {
+    console.log("Updating formData with new doctor props:", doctor);
+    setFormData({
+      fullName: doctor.basicInfo.fullName,
+      email: doctor.basicInfo.email,
+      phone: doctor.basicInfo.phone,
+      dob: doctor.basicInfo.dob,
+      specialty: doctor.professionalInfo.specialty,
+      hospital: doctor.professionalInfo.hospital,
+      experienceYears: doctor.professionalInfo.experienceYears,
+      license: doctor.professionalInfo.license,
+    });
+    setSelectedDate(
+      doctor.basicInfo.dob
+        ? new Date(doctor.basicInfo.dob.split("/").reverse().join("-"))
+        : new Date()
+    );
+  }, [doctor]);
 
   const handleChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
@@ -57,13 +92,11 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
-
     if (event?.type === 'set' && date) {
       const formattedDate = date.toLocaleDateString("vi-VN");
       handleChange("dob", formattedDate);
       setSelectedDate(date);
     }
-
     if (Platform.OS === 'ios' && (event?.type === 'set' || event?.type === 'dismissed')) {
       setShowDatePicker(false);
     }
@@ -82,7 +115,6 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
       }
     }
   };
-
 
   const toggleDatePicker = () => {
     if (Platform.OS === 'android' || Platform.OS === 'ios') {
@@ -109,6 +141,7 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
     { label: "Số giấy phép", name: "license", keyboardType: "default" },
   ];
 
+  console.log("Rendering InfoSection with:", doctor); // Debug
   return (
     <View style={styles.infoCard}>
       <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
@@ -191,12 +224,13 @@ const InfoSection = ({ doctor, isEditing, onSave, onCancel }) => {
   );
 };
 
+// SummaryCards
 const SummaryCards = ({ doctor }) => {
+  console.log("Rendering SummaryCards with:", doctor); // Debug
   const cards = [
     { title: "Chuyên khoa", value: doctor.professionalInfo.specialty, color: "#007bff" },
     { title: "Kinh nghiệm", value: doctor.professionalInfo.experienceYears, color: "#ffc107" },
     { title: "Bệnh viện", value: doctor.professionalInfo.hospital, color: "#28a745" },
-
   ];
 
   return (
@@ -216,79 +250,96 @@ const SummaryCards = ({ doctor }) => {
   );
 };
 
+// Main Component
 export default function DoctorProfile() {
   const [doctorData, setDoctorData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDoctorInfo = async () => {
-      try {
-        const res = await ApiDoctor.getDoctorInfo();
-        const data = res;
+  const user = useSelector((state) => state.auth.userInfo);
+  const doctorUid = user?.uid;
+  const patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
+  const roomChats = doctorUid ? [doctorUid, patientUid].sort().join("_") : null;
 
-        const mappedData = {
-          avatar: data.userId.avatar,
-          name: data.userId.username,
-          specialty: `Bác sĩ chuyên khoa ${data.specialty || "Nội tiết"}`,
-          hospital: data.hospital,
-          basicInfo: {
-            fullName: data.userId.username,
-            email: data.userId.email,
-            phone: data.userId.phone,
-            dob: formatDate(data.userId.dob),
-          },
-          professionalInfo: {
-            specialty: data.specialty || "Nội tiết",
-            hospital: data.hospital,
-            experienceYears: `${data.exp} năm`,
-            license: data.giay_phep,
-          },
-        };
-
-        setDoctorData(mappedData);
-      } catch (error) {
-        console.error("Lỗi khi fetch doctor info:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDoctorInfo();
-  }, []);
+  const fetchDoctorInfo = async () => {
+    try {
+      console.log("Fetching doctor info...");
+      const res = await ApiDoctor.getDoctorInfo();
+      console.log("API response:", res);
+      const data = res;
+      const mappedData = {
+        avatar: data.userId.avatar || "",
+        name: data.userId.username || "Unknown",
+        specialty: `Bác sĩ chuyên khoa ${data.specialty || "Nội tiết"}`,
+        hospital: data.hospital || "",
+        basicInfo: {
+          fullName: data.userId.username || "",
+          email: data.userId.email || "",
+          phone: data.userId.phone || "",
+          dob: formatDate(data.userId.dob) || "",
+        },
+        professionalInfo: {
+          specialty: data.specialty || "Nội tiết",
+          hospital: data.hospital || "",
+          experienceYears: `${data.exp || 0} năm`,
+          license: data.giay_phep || "",
+        },
+        _timestamp: Date.now(), // Buộc re-render
+      };
+      console.log("Mapped data:", mappedData);
+      setDoctorData(mappedData);
+    } catch (error) {
+      console.error("Lỗi khi fetch doctor info:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async (updatedData) => {
     try {
+      console.log("Saving updated data:", updatedData);
       await ApiDoctor.updateDoctor({
         username: updatedData.fullName,
         email: updatedData.email,
         phone: updatedData.phone,
         dob: updatedData.dob.split("/").reverse().join("-"),
         hospital: updatedData.hospital,
-        exp: parseInt(updatedData.experienceYears, 10),
+        exp: parseInt(updatedData.experienceYears, 10) || 0,
         giay_phep: updatedData.license,
       });
 
-      setDoctorData((prevData) => ({
-        ...prevData,
-        basicInfo: {
-          ...prevData.basicInfo,
-          fullName: updatedData.fullName,
-          email: updatedData.email,
-          phone: updatedData.phone,
-          dob: updatedData.dob,
-        },
-        professionalInfo: {
-          ...prevData.professionalInfo,
-          specialty: updatedData.specialty,
+      if (doctorUid) {
+        console.log("Sending status to room:", roomChats);
+        sendStatus(doctorUid, patientUid, "update_info");
+      } else {
+        console.error("Cannot send status: doctorUid is undefined");
+      }
+
+      setDoctorData((prevData) => {
+        const newData = {
+          ...prevData,
+          basicInfo: {
+            ...prevData.basicInfo,
+            fullName: updatedData.fullName,
+            email: updatedData.email,
+            phone: updatedData.phone,
+            dob: updatedData.dob,
+          },
+          professionalInfo: {
+            ...prevData.professionalInfo,
+            specialty: updatedData.specialty,
+            hospital: updatedData.hospital,
+            experienceYears: updatedData.experienceYears,
+            license: updatedData.license,
+          },
+          name: updatedData.fullName,
+          specialty: `Bác sĩ chuyên khoa ${updatedData.specialty}`,
           hospital: updatedData.hospital,
-          experienceYears: updatedData.experienceYears,
-          license: updatedData.license,
-        },
-        name: updatedData.fullName,
-        specialty: `Bác sĩ chuyên khoa ${updatedData.specialty}`,
-        hospital: updatedData.hospital,
-      }));
+          _timestamp: Date.now(), // Buộc re-render
+        };
+        console.log("Updated doctorData:", newData);
+        return newData;
+      });
 
       setIsEditing(false);
     } catch (error) {
@@ -300,6 +351,30 @@ export default function DoctorProfile() {
   const handleCancel = () => {
     setIsEditing(false);
   };
+
+  useEffect(() => {
+    if (!doctorUid || !roomChats) {
+      console.log("Cannot set up listener: doctorUid or roomChats is missing");
+      setLoading(false);
+      return;
+    }
+
+    console.log("Setting up listener for room:", roomChats);
+    fetchDoctorInfo();
+
+    const unsub = listenStatus(roomChats, (signal) => {
+      console.log("Received signal:", signal);
+      if (signal && signal.status === "update_info") {
+        console.log("Fetching new doctor info due to update signal");
+        setTimeout(fetchDoctorInfo, 500); // Delay để đợi server
+      }
+    });
+
+    return () => {
+      console.log("Unsubscribing listener for room:", roomChats);
+      unsub && unsub();
+    };
+  }, [doctorUid, roomChats]);
 
   if (loading) {
     return (
@@ -341,6 +416,7 @@ export default function DoctorProfile() {
   );
 }
 
+// Styles giữ nguyên
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -497,10 +573,6 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 24,
-  },
-  textContainer: {
-    flex: 1,
-    flexWrap: "wrap",
   },
   summaryTitle: {
     fontSize: 14,

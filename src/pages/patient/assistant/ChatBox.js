@@ -46,9 +46,9 @@ const ChatBox = () => {
 
         try {
             const res = await api.post("/ask", { query: currentQuestion });
-            const botMessage = { 
-                sender: "bot", 
-                text: res.data.answer || "Xin lỗi, tôi không thể trả lời câu hỏi này lúc này." 
+            const botMessage = {
+                sender: "bot",
+                text: res.data.answer || "Xin lỗi, tôi không thể trả lời câu hỏi này lúc này."
             };
             setMessages((prev) => [...prev, botMessage]);
         } catch (err) {
@@ -87,16 +87,16 @@ const ChatBox = () => {
 
     const formatTimestamp = () => {
         const now = new Date();
-        return now.toLocaleTimeString('vi-VN', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+        return now.toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit'
         });
     };
 
     const renderMessage = (msg, index) => {
         const isUser = msg.sender === "user";
         const isLastMessage = index === messages.length - 1;
-        
+
         return (
             <View
                 key={index}
@@ -131,25 +131,11 @@ const ChatBox = () => {
     };
 
     return (
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>🤖 Trợ lý AI</Text>
-                    <Text style={styles.headerSubtitle}>Chuyên gia tiểu đường</Text>
-                </View>
-                <TouchableOpacity
-                    style={styles.clearButton}
-                    onPress={clearChat}
-                >
-                    <Text style={styles.clearButtonText}>🗑️</Text>
-                </TouchableOpacity>
-            </View>
-
             {/* Messages */}
             <ScrollView
                 ref={scrollViewRef}
@@ -158,7 +144,7 @@ const ChatBox = () => {
                 showsVerticalScrollIndicator={false}
             >
                 {messages.map(renderMessage)}
-                
+
                 {/* Loading indicator */}
                 {loading && (
                     <View style={[styles.messageContainer, styles.botMessageContainer]}>
@@ -234,41 +220,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F9FAFB',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    headerContent: {
-        flex: 1,
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1F2937',
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginTop: 2,
-    },
-    clearButton: {
-        padding: 8,
-        borderRadius: 20,
-        backgroundColor: '#FEE2E2',
-    },
-    clearButtonText: {
-        fontSize: 18,
     },
     messagesContainer: {
         flex: 1,

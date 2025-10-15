@@ -73,9 +73,13 @@ const FormPatient = () => {
     }, [medicineError]);
 
     const handleInputChange = (name, value) => {
+        const formattedValue = value
+            .replace(/[^0-9.]/g, '')     // chỉ giữ số và dấu chấm
+            .replace(/(\..*)\./g, '$1'); // ngăn nhập nhiều dấu chấm
+
         setFormData((prev) => ({
             ...prev,
-            [name]: typeof value === 'string' && !isNaN(value) ? Number(value) : value,
+            [name]: typeof formattedValue === 'string' && !isNaN(formattedValue) ? Number(formattedValue) : formattedValue,
         }));
     };
 
@@ -88,20 +92,51 @@ const FormPatient = () => {
 
     const handleSubmit = async () => {
         setLoading(true);
+
+        const dataToSend = {
+            ...formData,
+            bmi: parseFloat(formData.bmi),
+            hbA1c_level: parseFloat(formData.hbA1c_level),
+            blood_glucose_level: parseFloat(formData.blood_glucose_level),
+        };
+
+        // Chuẩn bị phần mô tả hồ sơ bệnh nhân giống bản web
+        const infoText = `
+Hồ sơ bệnh nhân:    
+▸ Tuổi: ${formData.age}
+▸ Giới tính: ${formData.gender === "female" ? "Nữ" : "Nam"}
+▸ Khu vực: ${formData.location}
+▸ Huyết áp cao: ${formData.hypertension ? "Có" : "Không"}
+▸ Bệnh tim: ${formData.heart_disease ? "Có" : "Không"}
+▸ Hút thuốc: ${formData.smoking_history === "never" ? "Không" : "Có"}
+▸ BMI: ${formData.bmi}
+▸ HbA1c: ${formData.hbA1c_level}%
+▸ Đường huyết: ${formData.blood_glucose_level} mg/dL
+`;
+
         try {
-            const res = await api.post("/predict", formData);
-            const result = {
-                prediction: res.data.prediction === 1 ? "Có nguy cơ tiểu đường" : "Không nguy cơ tiểu đường",
-                probability: (res.data.probability * 100).toFixed(2)
-            };
-            setPredictionResult(result);
+            const res = await api.post("/predict", dataToSend);
+            const prediction = res.data.prediction === 1 ? "Có nguy cơ tiểu đường" : "Không có nguy cơ tiểu đường";
+            const probability = (res.data.probability).toFixed(2);
+            const diagnosis = res.data.diagnosis || "Không có thông tin";
+
+            const botMsg = `
+🔍 Kết quả: ${prediction}
+📊 Xác suất: ${probability}%
+🩺 Chẩn đoán: ${diagnosis}
+────────────────────────────
+👉 Lưu ý: Kết quả chỉ mang tính hỗ trợ tham khảo. 
+Vui lòng trao đổi thêm với bác sĩ để được tư vấn và chẩn đoán chính xác.
+`;
+
+            // Gộp hiển thị cả hồ sơ và kết quả vào Alert
             Alert.alert(
-                "Kết quả dự đoán",
-                `${result.prediction}\nXác suất: ${result.probability}%`
+                "Kết quả Dự đoán",
+                `${infoText}\n${botMsg}`
             );
         } catch (err) {
             console.error(err);
-            Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại!");
+            Alert.alert("Lỗi", "⚠️ Có lỗi xảy ra. Vui lòng thử lại!");
         } finally {
             setLoading(false);
         }
@@ -218,7 +253,7 @@ const FormPatient = () => {
             email: user.email,
             medicinePlan: medicines,
         }
-        
+
         Object.entries(medicines).forEach(([time, arr]) => {
             arr.forEach(item => {
                 const parsed = parseMedicine(item, time, user?.userId);
@@ -282,6 +317,7 @@ const FormPatient = () => {
                             value={formData.bmi.toString()}
                             onChangeText={(value) => handleInputChange('bmi', value)}
                             keyboardType="decimal-pad"
+                            inputMode="decimal"
                             placeholder="BMI"
                         />
                     </View>
@@ -292,6 +328,7 @@ const FormPatient = () => {
                             value={formData.hbA1c_level.toString()}
                             onChangeText={(value) => handleInputChange('hbA1c_level', value)}
                             keyboardType="decimal-pad"
+                            inputMode="decimal"
                             placeholder="HbA1c"
                         />
                     </View>
@@ -302,6 +339,7 @@ const FormPatient = () => {
                             value={formData.blood_glucose_level.toString()}
                             onChangeText={(value) => handleInputChange('blood_glucose_level', value)}
                             keyboardType="numeric"
+                            inputMode="decimal"
                             placeholder="mg/dL"
                         />
                     </View>

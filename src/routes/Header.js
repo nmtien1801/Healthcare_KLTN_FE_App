@@ -9,22 +9,23 @@ import {
   Modal,
   Pressable,
 } from "react-native";
-import { useDispatch } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { getAuth, signOut } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NotificationDropdown from "../components/notifications/NotificationDropdown";
 
 const Header = () => {
   const auth = getAuth();
-  const [notifications, setNotifications] = useState(5);
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const avatarRef = useRef(null);
 
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const user = useSelector((state) => state.auth.userInfo);
 
   const openMenu = () => {
     avatarRef.current?.measure((x, y, width, height, pageX, pageY) => {
@@ -38,9 +39,8 @@ const Header = () => {
       await signOut(auth); // Firebase sign out
       await dispatch(logout()); // Xóa Redux user
 
-      AsyncStorage.removeItem("access_Token");
-      // AsyncStorage.removeItem("refresh_Token");
 
+      await AsyncStorage.removeItem("access_Token");
       navigation.navigate("Login");
     } catch (error) {
       console.error("Lỗi khi logout:", error);
@@ -56,6 +56,14 @@ const Header = () => {
     navigation.navigate("payment");
   };
 
+  const handleProfile = () => {
+    if (user?.role === "doctor") {
+      navigation.navigate("InformationTab");
+    } else {
+      navigation.navigate("PersonalTabs");
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Logo & Title */}
@@ -67,17 +75,20 @@ const Header = () => {
       {/* Notifications & Info */}
       <View style={styles.right}>
         <View style={styles.notificationContainer}>
-          <Icon name="bell" size={20} color="#6c757d" />
-          {notifications > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{notifications}</Text>
-            </View>
-          )}
+          {user && <NotificationDropdown />}
         </View>
 
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>BS. Nguyễn Văn An</Text>
-          <Text style={styles.userDept}>Khoa Tim mạch</Text>
+          <Text style={styles.userName}>
+            {user?.role === "doctor"
+              ? `BS. ${user?.username || "Không tên"}`
+              : user?.username || "Người dùng"}
+          </Text>
+          <Text style={styles.userDept}>
+            {user?.role === "doctor"
+              ? user?.specialty || "Bác sĩ chuyên khoa"
+              : "Bệnh nhân"}
+          </Text>
         </View>
 
         {/* Avatar + Dropdown */}
@@ -85,7 +96,9 @@ const Header = () => {
           <View style={styles.avatarWrapper}>
             <Image
               source={{
-                uri: "https://readdy.ai/api/search-image?query=professional%20male%20doctor%20portrait%2C%20asian%20doctor%2C%20wearing%20white%20coat%2C%20stethoscope%2C%20friendly%20smile%2C%20high%20quality%2C%20studio%20lighting%2C%20medical%20professional%2C%20isolated%20on%20light%20blue%20background%2C%20centered%20composition&width=50&height=50&seq=doctor1&orientation=squarish",
+                uri: user?.avatar
+                  ? user.avatar
+                  : "https://readdy.ai/api/search-image?query=professional%20male%20doctor%20portrait%2C%20asian%20doctor%2C%20wearing%20white%20coat%2C%20stethoscope%2C%20friendly%20smile&width=50&height=50",
               }}
               style={styles.avatar}
             />
@@ -114,8 +127,8 @@ const Header = () => {
               },
             ]}
           >
-            <Pressable onPress={() => navigation.navigate("PersonalTabs")} style={styles.menuItem}>
-              <Text>Thông tin các nhân</Text>
+            <Pressable onPress={handleProfile} style={styles.menuItem}>
+              <Text>Thông tin cá nhân</Text>
             </Pressable>
             <Pressable onPress={handleChangePassword} style={styles.menuItem}>
               <Text>Đổi mật khẩu</Text>
@@ -125,7 +138,7 @@ const Header = () => {
             </Pressable>
             <View style={styles.divider} />
             <Pressable onPress={handleLogout} style={styles.menuItem}>
-              <Text>Đăng xuất</Text>
+              <Text style={{ color: "red" }}>Đăng xuất</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -168,7 +181,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   notificationContainer: {
-    marginRight: 16,
+    marginRight: 0,
     position: "relative",
   },
   badge: {

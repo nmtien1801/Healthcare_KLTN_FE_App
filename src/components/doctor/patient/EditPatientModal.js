@@ -12,11 +12,19 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import { X, Stethoscope, FileText } from "lucide-react-native";
 import ApiDoctor from "../../../apis/ApiDoctor";
+import { useSelector } from "react-redux";
+import { listenStatus, sendStatus } from "../../../utils/SetupSignFireBase";
 
 const { width, height } = Dimensions.get("window");
 
 const EditPatientModal = ({ show, onHide, patient, onSave }) => {
-    // State để lưu dữ liệu form, chỉ bao gồm các trường y tế trực tiếp
+    // Lấy user từ Redux
+    const user = useSelector((state) => state.auth.userInfo);
+    const doctorUid = user?.uid;
+    const patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
+    const roomChats = doctorUid ? [doctorUid, patientUid].sort().join("_") : null;
+
+    // State để lưu dữ liệu form
     const [formData, setFormData] = useState({
         disease: "",
         status: "Theo dõi",
@@ -39,12 +47,32 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
         }
     }, [patient]);
 
+    // Lắng nghe realtime từ Firebase
+    useEffect(() => {
+        if (!roomChats) {
+            return;
+        }
+
+
+        const unsubscribe = listenStatus(roomChats, (signal) => {
+
+            if (signal?.status === "update_patient_info") {
+                setFormData((prev) => ({
+                    ...prev,
+                    ...patient, // Cập nhật từ patient props
+                }));
+            }
+        });
+
+        return () => {
+            unsubscribe && unsubscribe();
+        };
+    }, [roomChats, patient]);
+
     // Hàm kiểm tra dữ liệu đầu vào
     const validateForm = () => {
         const newErrors = {};
-
         if (!formData.disease.trim()) newErrors.disease = "Bệnh là bắt buộc";
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -54,7 +82,17 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
         if (validateForm()) {
             try {
                 await ApiDoctor.updatePatientHealthInfo(patient.id, formData);
+
+                // Gửi tín hiệu realtime
+                if (doctorUid) {
+                    sendStatus(doctorUid, patientUid, "update_patient_info");
+                } else {
+                    console.error("Cannot send status: doctorUid is undefined");
+                }
+
+                // Cập nhật danh sách tại giao diện hiện tại
                 onSave({ ...patient, ...formData });
+
                 setErrors({});
                 onHide();
             } catch (error) {

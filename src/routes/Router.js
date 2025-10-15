@@ -483,6 +483,11 @@ export default function Router() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="InformationTab"
+          component={InformationTab}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="Diagnosis"
           component={Diagnosis}
           options={{ headerShown: false }}

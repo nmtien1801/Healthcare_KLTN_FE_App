@@ -12,8 +12,20 @@ import {
   Dimensions,
   FlatList,
 } from "react-native";
-import { Search, Filter, Eye, Edit, MessageSquare, Phone, ChevronDown, X, Bot, Send, ArrowLeft } from "lucide-react-native";
 import { Picker } from "@react-native-picker/picker";
+import {
+  Search,
+  Filter,
+  Eye,
+  Edit,
+  MessageSquare,
+  Phone,
+  ChevronDown,
+  X,
+  Bot,
+  Send,
+  ArrowLeft,
+} from "lucide-react-native";
 import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from "firebase/firestore";
 import { useSelector } from "react-redux";
 import { db } from "../../../firebase";
@@ -21,8 +33,9 @@ import ApiPatient from "../../apis/ApiPatient";
 import ApiDoctor from "../../apis/ApiDoctor";
 import ViewPatientModal from "../../components/doctor/patient/ViewPatientModal";
 import EditPatientModal from "../../components/doctor/patient/EditPatientModal";
+import { listenStatus } from "../../utils/SetupSignFireBase";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const mapPatientData = (apiPatient, pastAppointments = []) => {
   const statusColors = {
@@ -66,7 +79,7 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     name: userId.username || apiPatient.name || "Không xác định",
     age: apiPatient.age || 0,
     patientCount: `${apiPatient.age || 0} tuổi`,
-    avatar: userId.avatar || apiPatient.avatar || "",
+    avatar: userId.avatar || apiPatient.avatar || "https://via.placeholder.com/150?text=User",
     disease: apiPatient.disease || "Không xác định",
     patientId: apiPatient.insuranceId || "-",
     status: apiPatient.status || "Ổn định",
@@ -118,85 +131,108 @@ export default function PatientTab({ handleStartCall }) {
   const senderId = user?.uid;
   const flatListRef = useRef(null);
 
-  // Lấy dữ liệu bệnh nhân và lịch hẹn từ API
-  useEffect(() => {
-    const fetchPatientsAndAppointments = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await ApiPatient.getAllPatients();
-        let patients = Array.isArray(response) ? response : response.data || [];
-        if (!Array.isArray(patients)) {
-          setError("Dữ liệu không hợp lệ từ server.");
-          setLoading(false);
-          return;
-        }
+  // Fetch patients
+  const fetchPatientsAndAppointments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await ApiPatient.getAllPatients();
+      let patients = Array.isArray(response) ? response : response.data || [];
 
-        const patientsWithAppointments = await Promise.all(
-          patients.map(async (patient) => {
-            try {
-              const appointmentsResponse = await ApiDoctor.getPatientPastAppointments(patient._id);
-              const appointments = Array.isArray(appointmentsResponse)
-                ? appointmentsResponse
-                : appointmentsResponse.data || [];
-              return mapPatientData(patient, appointments);
-            } catch (err) {
-              console.error(`Lỗi khi lấy lịch hẹn cho bệnh nhân ${patient._id}:`, err.message);
-              return mapPatientData(patient, []);
-            }
-          })
-        );
-
-        setPatientList(patientsWithAppointments);
-      } catch (err) {
-        setError(err.response?.data?.message || "Không thể tải danh sách bệnh nhân.");
-      } finally {
-        setLoading(false);
+      if (!Array.isArray(patients)) {
+        setError("Dữ liệu không hợp lệ từ server.");
+        return;
       }
-    };
 
-    fetchPatientsAndAppointments();
-  }, []);
+      const patientsWithAppointments = await Promise.all(
+        patients.map(async (patient) => {
+          try {
+            const appointmentsResponse = await ApiDoctor.getPatientPastAppointments(patient._id);
+            const appointments = Array.isArray(appointmentsResponse)
+              ? appointmentsResponse
+              : appointmentsResponse.data || [];
+            return mapPatientData(patient, appointments);
+          } catch (err) {
+            console.error(`Lỗi khi lấy lịch hẹn của ${patient._id}:`, err.message);
+            return mapPatientData(patient, []);
+          }
+        })
+      );
 
-  // Thiết lập phòng chat động
-  const getRoomChats = (patientUid) => {
-    if (!senderId || !patientUid) return null;
-    return [senderId, patientUid].sort().join("_");
+      setPatientList(patientsWithAppointments);
+    } catch (err) {
+      console.error("Lỗi khi gọi API bệnh nhân:", err.message, err.response?.data);
+      setError("Không thể tải danh sách bệnh nhân.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Lắng nghe tin nhắn từ Firebase
+  // Realtime listener for updates
+  useEffect(() => {
+    const receiverId = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2"; // Cố định nếu chỉ 1 patient
+    const roomChats = senderId ? [senderId, receiverId].sort().join("_") : null;
+
+    if (!roomChats) {
+      setLoading(false);
+      return;
+    }
+
+    fetchPatientsAndAppointments();
+    const unsub = listenStatus(roomChats, (signal) => {
+      console.log("Nhận tín hiệu đầy đủ:", signal);
+      if (signal && (signal.status === "update_patient_info" || signal.status === "update_patient_list")) {
+        console.log("Cập nhật danh sách bệnh nhân...");
+        fetchPatientsAndAppointments();
+      } else {
+        console.log("Signal không hợp lệ hoặc null, không cập nhật.");
+      }
+    });
+
+    return () => unsub && unsub();
+  }, [senderId]);
+
+  // Realtime listener for chat messages
   useEffect(() => {
     if (!senderId || !chatPatient?.uid || !showChatModal) return;
 
-    const roomChats = getRoomChats(chatPatient.uid);
+    const roomChats = [senderId, chatPatient.uid].sort().join("_");
     const q = query(
       collection(db, "chats", roomChats, "messages"),
       orderBy("timestamp", "asc")
     );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      const messages = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          text: data.message || data.text || "",
-          sender: data.senderId === senderId ? "doctor" : "patient",
-          timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
-          originalData: data,
-        };
-      });
-      setChatMessages(messages);
-      if (flatListRef.current) {
-        flatListRef.current.scrollToEnd({ animated: true });
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const messages = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            text: data.message || data.text || "",
+            sender: data.senderId === senderId ? "doctor" : "patient",
+            timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
+            originalData: data,
+          };
+        });
+        setChatMessages(messages);
+      },
+      (error) => {
+        console.error("Lỗi lắng nghe tin nhắn:", error);
       }
-    }, (error) => {
-      console.error("Firebase listener error:", error);
-    });
+    );
 
     return () => unsub();
-  }, [senderId, chatPatient, showChatModal]);
+  }, [senderId, chatPatient?.uid, showChatModal]);
 
-  // Gửi tin nhắn
+  // Auto scroll to new message
+  useEffect(() => {
+    if (showChatModal && chatMessages.length > 0) {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [chatMessages, showChatModal]);
+
+  // Send message
   const sendMessage = async () => {
     if (messageInput.trim() === "" || !chatPatient?.uid) return;
 
@@ -215,7 +251,7 @@ export default function PatientTab({ handleStartCall }) {
     setChatMessages((prev) => [...prev, tempMessage]);
 
     try {
-      const roomChats = getRoomChats(chatPatient.uid);
+      const roomChats = [senderId, chatPatient.uid].sort().join("_");
       const docRef = await addDoc(collection(db, "chats", roomChats, "messages"), {
         senderId,
         receiverId: chatPatient.uid,
@@ -231,15 +267,67 @@ export default function PatientTab({ handleStartCall }) {
         )
       );
     } catch (err) {
-      console.error("Error sending message:", err);
+      console.error("Lỗi gửi tin nhắn:", err);
       setChatMessages((prev) => prev.filter((msg) => !msg.isTemp || msg.text !== userMessage));
-      setError("Không thể gửi tin nhắn.");
     } finally {
       setIsSending(false);
     }
   };
 
-  // Lọc và sắp xếp bệnh nhân
+  // Update patient
+  const handleUpdatePatient = (updatedPatient) => {
+    const statusColors = {
+      "Cần theo dõi": { color: "#ef4444", textColor: "#fff" },
+      "Đang điều trị": { color: "#f59e0b", textColor: "#fff" },
+      "Ổn định": { color: "#22c55e", textColor: "#fff" },
+    };
+
+    const updated = {
+      ...updatedPatient,
+      patientCount: `${updatedPatient.age || 0} tuổi`,
+      statusColor: statusColors[updatedPatient.status]?.color || "#6b7280",
+      statusTextColor: statusColors[updatedPatient.status]?.textColor || "#fff",
+      lastVisitDate: updatedPatient.lastVisitDate || new Date(),
+    };
+
+    setPatientList((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setShowEditModal(false);
+  };
+
+  // View and edit patient
+  const handleViewPatient = (patient) => {
+    setSelectedPatient(patient);
+    setShowViewModal(true);
+  };
+
+  const handleEditPatient = (patient) => {
+    setSelectedPatient(patient);
+    setShowViewModal(false);
+    setShowEditModal(true);
+  };
+
+  // Open chat
+  const handleOpenChat = (patient) => {
+    setChatPatient(patient);
+    setShowChatModal(true);
+  };
+
+  // Close chat
+  const handleCloseChat = () => {
+    setShowChatModal(false);
+    setChatPatient(null);
+    setChatMessages([]);
+    setMessageInput("");
+  };
+
+  // Page change
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  // Filtered and sorted patients
   const filteredAndSortedPatients = useMemo(() => {
     if (loading || error) return [];
 
@@ -270,67 +358,13 @@ export default function PatientTab({ handleStartCall }) {
     return filtered;
   }, [patientList, searchTerm, statusFilter, sortBy, loading, error]);
 
-  // Phân trang
+  // Pagination
   const totalPages = Math.ceil(filteredAndSortedPatients.length / patientsPerPage);
   const paginatedPatients = filteredAndSortedPatients.slice(
     (currentPage - 1) * patientsPerPage,
     currentPage * patientsPerPage
   );
 
-  // Cập nhật bệnh nhân
-  const handleUpdatePatient = (updatedPatient) => {
-    const statusColors = {
-      "Cần theo dõi": { color: "#ef4444", textColor: "#fff" },
-      "Đang điều trị": { color: "#f59e0b", textColor: "#fff" },
-      "Ổn định": { color: "#22c55e", textColor: "#fff" },
-    };
-
-    const updated = {
-      ...updatedPatient,
-      patientCount: `${updatedPatient.age || 0} tuổi`,
-      statusColor: statusColors[updatedPatient.status]?.color || "#6b7280",
-      statusTextColor: statusColors[updatedPatient.status]?.textColor || "#fff",
-      lastVisitDate: updatedPatient.lastVisitDate || new Date(),
-    };
-
-    setPatientList(patientList.map((p) => (p.id === updated.id ? updated : p)));
-    setShowEditModal(false);
-  };
-
-  // Xem và chỉnh sửa bệnh nhân
-  const handleViewPatient = (patient) => {
-    setSelectedPatient(patient);
-    setShowViewModal(true);
-  };
-
-  const handleEditPatient = (patient) => {
-    setSelectedPatient(patient);
-    setShowViewModal(false);
-    setShowEditModal(true);
-  };
-
-  // Mở chat với bệnh nhân
-  const handleOpenChat = (patient) => {
-    setChatPatient(patient);
-    setShowChatModal(true);
-  };
-
-  // Đóng chat
-  const handleCloseChat = () => {
-    setShowChatModal(false);
-    setChatPatient(null);
-    setChatMessages([]);
-    setMessageInput("");
-  };
-
-  // Điều hướng trang
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  // Hiển thị loading
   if (loading) {
     return (
       <View style={styles.container}>
@@ -343,14 +377,19 @@ export default function PatientTab({ handleStartCall }) {
     );
   }
 
-  // Hiển thị lỗi
   if (error) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Quản lý bệnh nhân</Text>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => setLoading(true)}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              setError(null);
+              fetchPatientsAndAppointments();
+            }}
+          >
             <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
         </View>
@@ -376,29 +415,33 @@ export default function PatientTab({ handleStartCall }) {
           <View style={styles.filterRow}>
             <View style={styles.filterItem}>
               <Filter color="#6b7280" size={20} style={styles.filterIcon} />
-              <Picker
-                selectedValue={statusFilter}
-                onValueChange={setStatusFilter}
-                style={styles.picker}
-              >
-                <Picker.Item label="Tất cả tình trạng" value="all" />
-                <Picker.Item label="Cần theo dõi" value="Cần theo dõi" />
-                <Picker.Item label="Đang điều trị" value="Đang điều trị" />
-                <Picker.Item label="Ổn định" value="Ổn định" />
-              </Picker>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={statusFilter}
+                  onValueChange={setStatusFilter}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Tất cả tình trạng" value="all" />
+                  <Picker.Item label="Cần theo dõi" value="Cần theo dõi" />
+                  <Picker.Item label="Đang điều trị" value="Đang điều trị" />
+                  <Picker.Item label="Ổn định" value="Ổn định" />
+                </Picker>
+              </View>
             </View>
             <View style={styles.filterItem}>
               <ChevronDown color="#6b7280" size={20} style={styles.filterIcon} />
-              <Picker
-                selectedValue={sortBy}
-                onValueChange={setSortBy}
-                style={styles.picker}
-              >
-                <Picker.Item label="Sắp xếp theo tên" value="name" />
-                <Picker.Item label="Sắp xếp theo tuổi" value="age" />
-                <Picker.Item label="Lần khám gần nhất" value="lastVisit" />
-                <Picker.Item label="Tình trạng" value="status" />
-              </Picker>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={sortBy}
+                  onValueChange={setSortBy}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Sắp xếp theo tên" value="name" />
+                  <Picker.Item label="Sắp xếp theo tuổi" value="age" />
+                  <Picker.Item label="Lần khám gần nhất" value="lastVisit" />
+                  <Picker.Item label="Tình trạng" value="status" />
+                </Picker>
+              </View>
             </View>
           </View>
         </View>
@@ -413,43 +456,56 @@ export default function PatientTab({ handleStartCall }) {
             </View>
           ) : (
             paginatedPatients.map((patient) => (
-              <View key={patient.id.toString()} style={styles.patientCard}>
+              <View key={patient.id} style={styles.patientCard}>
                 <View style={styles.patientInfo}>
-                  <Image source={{ uri: patient.avatar }} style={styles.avatar} />
+                  <Image
+                    source={{ uri: patient.avatar }}
+                    style={styles.avatar}
+                    onError={() => console.log("Error loading avatar for:", patient.name)}
+                  />
                   <View style={styles.patientDetails}>
                     <Text style={styles.patientName}>{patient.name}</Text>
                     <Text style={styles.patientDetail}>{patient.patientCount}</Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: patient.statusColor }]}>
-                    <Text style={[styles.statusText, { color: patient.statusTextColor }]}>{patient.status}</Text>
+                    <Text style={[styles.statusText, { color: patient.statusTextColor }]}>
+                      {patient.status}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.patientInfo}>
                   <View style={styles.patientDetails}>
                     <Text style={styles.patientDetail}>{patient.disease}</Text>
                     <Text style={styles.patientDetail}>ID: {patient.patientId}</Text>
-
                     <Text style={styles.lastVisit}>Lần khám cuối: {patient.lastVisit}</Text>
                   </View>
-
                   <View style={styles.patientRightSection}>
                     <View style={styles.actionButtons}>
-                      <TouchableOpacity style={styles.actionButton} onPress={() => handleViewPatient(patient)}>
-                        <Eye color="#06b6d4" size={10} />
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleViewPatient(patient)}
+                      >
+                        <Eye color="#06b6d4" size={20} />
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.actionButton} onPress={() => handleEditPatient(patient)}>
-                        <Edit color="#22c55e" size={10} />
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleEditPatient(patient)}
+                      >
+                        <Edit color="#22c55e" size={20} />
                       </TouchableOpacity>
                     </View>
                     <View style={styles.actionButtons}>
-                      <TouchableOpacity style={styles.actionButton} onPress={() => handleOpenChat(patient)}>
-                        <MessageSquare color="#3b82f6" size={10} />
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleOpenChat(patient)}
+                      >
+                        <MessageSquare color="#3b82f6" size={20} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.actionButton}
                         onPress={() => handleStartCall(user, { uid: patient.uid }, "doctor")}
                       >
-                        <Phone color="#f59e0b" size={10} />
+                        <Phone color="#f59e0b" size={20} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -500,7 +556,7 @@ export default function PatientTab({ handleStartCall }) {
               <TouchableOpacity onPress={handleCloseChat} style={styles.backButton}>
                 <ArrowLeft color="#fff" size={24} />
               </TouchableOpacity>
-              <Text style={styles.chatHeaderTitle}>{chatPatient?.name || "Bệnh nhân"}</Text>
+              <Text style={styles.chatHeaderTitle}>{chatPatient?.name || "Chat với bệnh nhân"}</Text>
               <View style={styles.headerSpacer} />
             </View>
             <FlatList
@@ -684,6 +740,7 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 8,
   },
   filterItem: {
     flex: 1,
@@ -691,7 +748,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#f1f5f9",
     borderRadius: 12,
-    marginRight: 8,
     borderWidth: 1,
     borderColor: "#d1d5db",
     overflow: "hidden",
@@ -700,8 +756,12 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     marginRight: 8,
   },
-  picker: {
+  pickerContainer: {
     flex: 1,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 12,
+  },
+  picker: {
     fontSize: 16,
     color: "#1e293b",
   },
@@ -725,6 +785,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    marginBottom: 8,
   },
   patientDetails: {
     flex: 1,
@@ -833,7 +894,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: "100%",
+    height: height * 0.8,
     backgroundColor: "#fff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -846,7 +907,7 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "linear-gradient(90deg, #3b82f6, #60a5fa)",
+    backgroundColor: "#3b82f6",
     paddingHorizontal: 16,
     paddingVertical: 20,
     borderTopLeftRadius: 24,

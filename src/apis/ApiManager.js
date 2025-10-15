@@ -48,6 +48,10 @@ export const ApiManager = {
         const res = await api.delete(url, { data });
         return res.data;
     },
+    patch: async (url, data) => {
+        const res = await api.patch(url, data);
+        return res.data;
+    },
 };
 
 export default ApiManager;
