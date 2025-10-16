@@ -38,7 +38,7 @@ export const acceptCall = async (incomingCall, user, dbCall, setCallStates) => {
         username: incomingCall.username || incomingCall.displayName || incomingCall.email || (incomingCall.role === "doctor" ? "Bác sĩ" : "Bệnh nhân"),
         role: incomingCall.role || "user"
       },
-      to: { 
+      to: {
         uid: user.uid,
         username: user.username || user.displayName || user.email || (user.role === "doctor" ? "Bác sĩ" : "Bệnh nhân"),
         role: user.role || "user"
@@ -55,7 +55,7 @@ export const acceptCall = async (incomingCall, user, dbCall, setCallStates) => {
 
     // Generate Jitsi URL immediately
     const jitsiUrl = generateJitsiUrl(incomingCall.uid, user.uid);
-    
+
     // Update local states
     setJitsiUrl(jitsiUrl);
     setIsCalling(true);
@@ -169,8 +169,8 @@ export const endCall = async (receiver, isInitiator, user, dbCall, setCallStates
 // Function to create call
 export const createCall = async (caller, callee, dbCall, setCallStates) => {
   if (!caller?.uid || !callee?.uid) {
-    console.error("Missing UID for caller or callee");
-    throw new Error("Missing required user information");
+    console.error("Thiếu UID của caller hoặc callee");
+    return;
   }
 
   const {
@@ -179,91 +179,53 @@ export const createCall = async (caller, callee, dbCall, setCallStates) => {
     setReceiver
   } = setCallStates;
 
+  setIsCalling(true);
+  setIsInitiator(true);
+  setReceiver(callee);
+
+  const callRef = ref(dbCall, `calls/${safeKey(callee.uid)}`);
+
+  const callData = {
+    from: {
+      uid: caller.uid,
+      username: caller.displayName || caller.email || (caller.role === "doctor" ? "Bác sĩ" : "Bệnh nhân"),
+      role: caller.role || "user"
+    },
+    to: {
+      uid: callee.uid,
+      username: callee.name || callee.username || (callee.role === "doctor" ? "Bác sĩ" : "Bệnh nhân"),
+      role: callee.role || "user"
+    },
+    timestamp: Date.now(),
+    status: "pending",
+  };
+
   try {
-    const calleeSafeKey = safeKey(callee.uid);
-    const callRef = ref(dbCall, `calls/${calleeSafeKey}`);
-    
-    // Check if there's already an active call for the callee
-    const existingCallSnapshot = await get(callRef);
-    if (existingCallSnapshot.exists()) {
-      const existingCall = existingCallSnapshot.val();
-      if (existingCall.status === "pending" || existingCall.status === "accepted") {
-        throw new Error("User is already in a call");
-      }
-    }
-
-    const callData = {
-      from: { 
-        uid: caller.uid,
-        username: caller.username || caller.displayName || caller.email || (caller.role === "doctor" ? "Bác sĩ" : "Bệnh nhân"),
-        role: caller.role || "user"
-      },
-      to: { 
-        uid: callee.uid,
-        username: callee.username || callee.name || callee.displayName || callee.email || (callee.role === "doctor" ? "Bác sĩ" : "Bệnh nhân"),
-        role: callee.role || "user"
-      },
-      timestamp: Date.now(),
-      status: "pending",
-    };
-
     await set(callRef, callData);
-
-    // Update local states
-    setIsCalling(false); // Will be set to true when accepted
-    setIsInitiator(true);
-    setReceiver(callee);
-
-    console.log("Call created successfully");
-  } catch (error) {
-    console.error("Error creating call:", error);
-    
-    // Reset states on failure
+  } catch (err) {
+    console.error("Lỗi khi ghi dữ liệu cuộc gọi:", err);
+    // Reset state nếu gọi thất bại
     setIsCalling(false);
     setIsInitiator(false);
     setReceiver(null);
-    
-    throw error;
   }
 };
 
-// Function to generate Jitsi URL
+// Hàm tạo Jitsi URL
 export const generateJitsiUrl = (fromUid, toUid) => {
-  if (!fromUid || !toUid) {
-    console.error("Missing UIDs for generating Jitsi URL");
-    return null;
-  }
-
-  try {
-    // Create a consistent room name regardless of who calls whom
-    const members = [fromUid, toUid].sort(); // Sort to ensure consistency
-    const roomName = members
-      .join("-")
-      .replace(/[.#$[\]@]/g, '_') // Remove special characters
-      .toLowerCase();
-    
-    // Add timestamp to make room unique for each call session
-    const timestamp = Date.now();
-    const uniqueRoomName = `${roomName}-${timestamp}`;
-    
-    const jitsiUrl = `https://meet.jit.si/${uniqueRoomName}`;
-    console.log("Generated Jitsi URL:", jitsiUrl);
-    
-    return jitsiUrl;
-  } catch (error) {
-    console.error("Error generating Jitsi URL:", error);
-    return null;
-  }
+  const members = [fromUid, toUid];
+  const membersString = members.join("-").replaceAll(/[.#$[\]]/g, '_');
+  return `https://meet.jit.si/${membersString}`;
 };
 
 // Function to check call status
 export const checkCallStatus = async (uid, dbCall) => {
   if (!uid) return null;
-  
+
   try {
     const callRef = ref(dbCall, `calls/${safeKey(uid)}`);
     const snapshot = await get(callRef);
-    
+
     if (snapshot.exists()) {
       return snapshot.val();
     }
@@ -277,7 +239,7 @@ export const checkCallStatus = async (uid, dbCall) => {
 // Function to cleanup stale calls
 export const cleanupStaleCall = async (uid, dbCall) => {
   if (!uid) return;
-  
+
   try {
     const callRef = ref(dbCall, `calls/${safeKey(uid)}`);
     await remove(callRef);
