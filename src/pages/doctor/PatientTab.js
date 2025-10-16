@@ -26,7 +26,14 @@ import {
   Send,
   ArrowLeft,
 } from "lucide-react-native";
-import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { useSelector } from "react-redux";
 import { db } from "../../../firebase";
 import ApiPatient from "../../apis/ApiPatient";
@@ -44,49 +51,64 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     "Ổn định": { color: "#22c55e", textColor: "#fff" },
   };
 
-  const hasHealthRecords = apiPatient.healthRecords && Array.isArray(apiPatient.healthRecords) && apiPatient.healthRecords.length > 0;
+  const hasHealthRecords =
+    apiPatient.healthRecords &&
+    Array.isArray(apiPatient.healthRecords) &&
+    apiPatient.healthRecords.length > 0;
   const healthRecords = hasHealthRecords
-    ? apiPatient.healthRecords.map(record => ({
-      id: record._id || `temp-${Date.now()}`,
-      date: record.date
-        ? new Date(record.date).toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
-        : "-",
-      bloodPressure: record.bloodPressure || "-",
-      heartRate: record.heartRate || "-",
-      bloodSugar: record.bloodSugar || "-",
-      recordedAt: record.recordedAt
-        ? new Date(record.recordedAt).toLocaleString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-        : "-",
-    }))
+    ? apiPatient.healthRecords.map((record) => ({
+        id: record._id || `temp-${Date.now()}`,
+        date: record.date
+          ? new Date(record.date).toLocaleDateString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })
+          : "-",
+        bloodPressure: record.bloodPressure || "-",
+        heartRate: record.heartRate || "-",
+        bloodSugar: record.bloodSugar || "-",
+        recordedAt: record.recordedAt
+          ? new Date(record.recordedAt).toLocaleString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "-",
+      }))
     : [];
 
   const userId = apiPatient.userId || {};
-  const lastAppointment = pastAppointments.length > 0 ? pastAppointments[0] : null;
-  const lastVisitDate = lastAppointment && lastAppointment.date ? new Date(lastAppointment.date) : null;
+  const lastAppointment =
+    pastAppointments.length > 0 ? pastAppointments[0] : null;
+  const lastVisitDate =
+    lastAppointment && lastAppointment.date
+      ? new Date(lastAppointment.date)
+      : null;
 
   return {
     id: apiPatient._id || `temp-${Date.now()}`,
+    uid: apiPatient.userId.uid,
     name: userId.username || apiPatient.name || "Không xác định",
     age: apiPatient.age || 0,
     patientCount: `${apiPatient.age || 0} tuổi`,
-    avatar: userId.avatar || apiPatient.avatar || "https://via.placeholder.com/150?text=User",
+    avatar:
+      userId.avatar ||
+      apiPatient.avatar ||
+      "https://via.placeholder.com/150?text=User",
     disease: apiPatient.disease || "Không xác định",
     patientId: apiPatient.insuranceId || "-",
     status: apiPatient.status || "Ổn định",
     statusColor: statusColors[apiPatient.status]?.color || "#6b7280",
     statusTextColor: statusColors[apiPatient.status]?.textColor || "#fff",
     lastVisit: lastVisitDate
-      ? lastVisitDate.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
+      ? lastVisitDate.toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
       : "Chưa có",
     lastVisitDate: lastVisitDate || new Date(),
     phone: userId.phone || apiPatient.phone || "",
@@ -99,10 +121,10 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     gender: userId.gender || "-",
     dob: userId.dob
       ? new Date(userId.dob).toLocaleDateString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
       : "-",
     role: userId.role || "-",
     healthRecords,
@@ -129,6 +151,7 @@ export default function PatientTab({ handleStartCall }) {
   const [isSending, setIsSending] = useState(false);
   const user = useSelector((state) => state.auth.userInfo);
   const senderId = user?.uid;
+  const [receiverId, setReceiverId] = useState();
   const flatListRef = useRef(null);
 
   // Fetch patients
@@ -147,13 +170,17 @@ export default function PatientTab({ handleStartCall }) {
       const patientsWithAppointments = await Promise.all(
         patients.map(async (patient) => {
           try {
-            const appointmentsResponse = await ApiDoctor.getPatientPastAppointments(patient._id);
+            const appointmentsResponse =
+              await ApiDoctor.getPatientPastAppointments(patient._id);
             const appointments = Array.isArray(appointmentsResponse)
               ? appointmentsResponse
               : appointmentsResponse.data || [];
             return mapPatientData(patient, appointments);
           } catch (err) {
-            console.error(`Lỗi khi lấy lịch hẹn của ${patient._id}:`, err.message);
+            console.error(
+              `Lỗi khi lấy lịch hẹn của ${patient._id}:`,
+              err.message
+            );
             return mapPatientData(patient, []);
           }
         })
@@ -161,7 +188,11 @@ export default function PatientTab({ handleStartCall }) {
 
       setPatientList(patientsWithAppointments);
     } catch (err) {
-      console.error("Lỗi khi gọi API bệnh nhân:", err.message, err.response?.data);
+      console.error(
+        "Lỗi khi gọi API bệnh nhân:",
+        err.message,
+        err.response?.data
+      );
       setError("Không thể tải danh sách bệnh nhân.");
     } finally {
       setLoading(false);
@@ -170,7 +201,6 @@ export default function PatientTab({ handleStartCall }) {
 
   // Realtime listener for updates
   useEffect(() => {
-    const receiverId = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2"; // Cố định nếu chỉ 1 patient
     const roomChats = senderId ? [senderId, receiverId].sort().join("_") : null;
 
     if (!roomChats) {
@@ -181,7 +211,11 @@ export default function PatientTab({ handleStartCall }) {
     fetchPatientsAndAppointments();
     const unsub = listenStatus(roomChats, (signal) => {
       console.log("Nhận tín hiệu đầy đủ:", signal);
-      if (signal && (signal.status === "update_patient_info" || signal.status === "update_patient_list")) {
+      if (
+        signal &&
+        (signal.status === "update_patient_info" ||
+          signal.status === "update_patient_list")
+      ) {
         console.log("Cập nhật danh sách bệnh nhân...");
         fetchPatientsAndAppointments();
       } else {
@@ -252,12 +286,15 @@ export default function PatientTab({ handleStartCall }) {
 
     try {
       const roomChats = [senderId, chatPatient.uid].sort().join("_");
-      const docRef = await addDoc(collection(db, "chats", roomChats, "messages"), {
-        senderId,
-        receiverId: chatPatient.uid,
-        message: userMessage,
-        timestamp: serverTimestamp(),
-      });
+      const docRef = await addDoc(
+        collection(db, "chats", roomChats, "messages"),
+        {
+          senderId,
+          receiverId: chatPatient.uid,
+          message: userMessage,
+          timestamp: serverTimestamp(),
+        }
+      );
 
       setChatMessages((prev) =>
         prev.map((msg) =>
@@ -268,7 +305,9 @@ export default function PatientTab({ handleStartCall }) {
       );
     } catch (err) {
       console.error("Lỗi gửi tin nhắn:", err);
-      setChatMessages((prev) => prev.filter((msg) => !msg.isTemp || msg.text !== userMessage));
+      setChatMessages((prev) =>
+        prev.filter((msg) => !msg.isTemp || msg.text !== userMessage)
+      );
     } finally {
       setIsSending(false);
     }
@@ -290,7 +329,9 @@ export default function PatientTab({ handleStartCall }) {
       lastVisitDate: updatedPatient.lastVisitDate || new Date(),
     };
 
-    setPatientList((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setPatientList((prev) =>
+      prev.map((p) => (p.id === updated.id ? updated : p))
+    );
     setShowEditModal(false);
   };
 
@@ -333,10 +374,17 @@ export default function PatientTab({ handleStartCall }) {
 
     const filtered = patientList.filter((patient) => {
       const matchesSearch =
-        (patient.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-        (patient.disease?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-        (patient.patientId?.toLowerCase() || "").includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || patient.status === statusFilter;
+        (patient.name?.toLowerCase() || "").includes(
+          searchTerm.toLowerCase()
+        ) ||
+        (patient.disease?.toLowerCase() || "").includes(
+          searchTerm.toLowerCase()
+        ) ||
+        (patient.patientId?.toLowerCase() || "").includes(
+          searchTerm.toLowerCase()
+        );
+      const matchesStatus =
+        statusFilter === "all" || patient.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
 
@@ -347,7 +395,9 @@ export default function PatientTab({ handleStartCall }) {
         case "age":
           return (a.age || 0) - (b.age || 0);
         case "lastVisit":
-          return (b.lastVisitDate || new Date()) - (a.lastVisitDate || new Date());
+          return (
+            (b.lastVisitDate || new Date()) - (a.lastVisitDate || new Date())
+          );
         case "status":
           return (a.status || "").localeCompare(b.status || "");
         default:
@@ -359,7 +409,9 @@ export default function PatientTab({ handleStartCall }) {
   }, [patientList, searchTerm, statusFilter, sortBy, loading, error]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredAndSortedPatients.length / patientsPerPage);
+  const totalPages = Math.ceil(
+    filteredAndSortedPatients.length / patientsPerPage
+  );
   const paginatedPatients = filteredAndSortedPatients.slice(
     (currentPage - 1) * patientsPerPage,
     currentPage * patientsPerPage
@@ -397,6 +449,11 @@ export default function PatientTab({ handleStartCall }) {
     );
   }
 
+  const handleShowChat = async (patient) => {
+    setShowChatbot(patient);
+    setReceiverId(patient.uid);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -429,7 +486,11 @@ export default function PatientTab({ handleStartCall }) {
               </View>
             </View>
             <View style={styles.filterItem}>
-              <ChevronDown color="#6b7280" size={20} style={styles.filterIcon} />
+              <ChevronDown
+                color="#6b7280"
+                size={20}
+                style={styles.filterIcon}
+              />
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={sortBy}
@@ -452,7 +513,9 @@ export default function PatientTab({ handleStartCall }) {
             <View style={styles.emptyContainer}>
               <Bot color="#6b7280" size={40} />
               <Text style={styles.emptyText}>Không tìm thấy bệnh nhân</Text>
-              <Text style={styles.emptySubText}>Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</Text>
+              <Text style={styles.emptySubText}>
+                Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc
+              </Text>
             </View>
           ) : (
             paginatedPatients.map((patient) => (
@@ -461,14 +524,28 @@ export default function PatientTab({ handleStartCall }) {
                   <Image
                     source={{ uri: patient.avatar }}
                     style={styles.avatar}
-                    onError={() => console.log("Error loading avatar for:", patient.name)}
+                    onError={() =>
+                      console.log("Error loading avatar for:", patient.name)
+                    }
                   />
                   <View style={styles.patientDetails}>
                     <Text style={styles.patientName}>{patient.name}</Text>
-                    <Text style={styles.patientDetail}>{patient.patientCount}</Text>
+                    <Text style={styles.patientDetail}>
+                      {patient.patientCount}
+                    </Text>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: patient.statusColor }]}>
-                    <Text style={[styles.statusText, { color: patient.statusTextColor }]}>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: patient.statusColor },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        { color: patient.statusTextColor },
+                      ]}
+                    >
                       {patient.status}
                     </Text>
                   </View>
@@ -476,8 +553,12 @@ export default function PatientTab({ handleStartCall }) {
                 <View style={styles.patientInfo}>
                   <View style={styles.patientDetails}>
                     <Text style={styles.patientDetail}>{patient.disease}</Text>
-                    <Text style={styles.patientDetail}>ID: {patient.patientId}</Text>
-                    <Text style={styles.lastVisit}>Lần khám cuối: {patient.lastVisit}</Text>
+                    <Text style={styles.patientDetail}>
+                      ID: {patient.patientId}
+                    </Text>
+                    <Text style={styles.lastVisit}>
+                      Lần khám cuối: {patient.lastVisit}
+                    </Text>
                   </View>
                   <View style={styles.patientRightSection}>
                     <View style={styles.actionButtons}>
@@ -503,7 +584,9 @@ export default function PatientTab({ handleStartCall }) {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.actionButton}
-                        onPress={() => handleStartCall(user, { uid: patient.uid }, "doctor")}
+                        onPress={() =>
+                          handleStartCall(user, { uid: patient.uid }, "doctor")
+                        }
                       >
                         <Phone color="#f59e0b" size={20} />
                       </TouchableOpacity>
@@ -519,7 +602,10 @@ export default function PatientTab({ handleStartCall }) {
         {filteredAndSortedPatients.length > patientsPerPage && (
           <View style={styles.paginationContainer}>
             <TouchableOpacity
-              style={[styles.pageButton, currentPage === 1 && styles.disabledButton]}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.disabledButton,
+              ]}
               onPress={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
             >
@@ -528,16 +614,27 @@ export default function PatientTab({ handleStartCall }) {
             {[...Array(totalPages).keys()].map((page) => (
               <TouchableOpacity
                 key={page + 1}
-                style={[styles.pageButton, currentPage === page + 1 && styles.activePageButton]}
+                style={[
+                  styles.pageButton,
+                  currentPage === page + 1 && styles.activePageButton,
+                ]}
                 onPress={() => handlePageChange(page + 1)}
               >
-                <Text style={[styles.pageButtonText, currentPage === page + 1 && styles.activePageButtonText]}>
+                <Text
+                  style={[
+                    styles.pageButtonText,
+                    currentPage === page + 1 && styles.activePageButtonText,
+                  ]}
+                >
                   {page + 1}
                 </Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
-              style={[styles.pageButton, currentPage === totalPages && styles.disabledButton]}
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.disabledButton,
+              ]}
               onPress={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
@@ -550,13 +647,22 @@ export default function PatientTab({ handleStartCall }) {
       {/* Chat Modal */}
       <Modal visible={showChatModal} animationType="slide" transparent={true}>
         <View style={styles.chatModalOverlay}>
-          <TouchableOpacity style={styles.chatModalBackdrop} activeOpacity={1} onPress={handleCloseChat} />
+          <TouchableOpacity
+            style={styles.chatModalBackdrop}
+            activeOpacity={1}
+            onPress={handleCloseChat}
+          />
           <View style={styles.chatModalContent}>
             <View style={styles.chatHeader}>
-              <TouchableOpacity onPress={handleCloseChat} style={styles.backButton}>
+              <TouchableOpacity
+                onPress={handleCloseChat}
+                style={styles.backButton}
+              >
                 <ArrowLeft color="#fff" size={24} />
               </TouchableOpacity>
-              <Text style={styles.chatHeaderTitle}>{chatPatient?.name || "Chat với bệnh nhân"}</Text>
+              <Text style={styles.chatHeaderTitle}>
+                {chatPatient?.name || "Chat với bệnh nhân"}
+              </Text>
               <View style={styles.headerSpacer} />
             </View>
             <FlatList
@@ -566,28 +672,47 @@ export default function PatientTab({ handleStartCall }) {
                 <View
                   style={[
                     styles.chatMessageContainer,
-                    item.sender === "doctor" ? styles.doctorMessageContainer : styles.patientMessageContainer,
+                    item.sender === "doctor"
+                      ? styles.doctorMessageContainer
+                      : styles.patientMessageContainer,
                   ]}
                 >
                   <View
                     style={[
                       styles.messageBubble,
-                      item.sender === "doctor" ? styles.doctorBubble : styles.patientBubble,
+                      item.sender === "doctor"
+                        ? styles.doctorBubble
+                        : styles.patientBubble,
                     ]}
                   >
                     <Text
                       style={[
                         styles.messageText,
-                        item.sender === "doctor" ? styles.doctorMessageText : styles.patientMessageText,
+                        item.sender === "doctor"
+                          ? styles.doctorMessageText
+                          : styles.patientMessageText,
                       ]}
                     >
                       {item.text}
                     </Text>
                   </View>
-                  <Text style={[styles.messageTime, item.sender === "doctor" ? styles.doctorTime : styles.patientTime]}>
+                  <Text
+                    style={[
+                      styles.messageTime,
+                      item.sender === "doctor"
+                        ? styles.doctorTime
+                        : styles.patientTime,
+                    ]}
+                  >
                     {item.timestamp instanceof Date
-                      ? item.timestamp.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
-                      : new Date(item.timestamp).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                      ? item.timestamp.toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : new Date(item.timestamp).toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                   </Text>
                 </View>
               )}
@@ -598,11 +723,15 @@ export default function PatientTab({ handleStartCall }) {
                 <View style={styles.emptyChat}>
                   <Bot color="#6b7280" size={40} />
                   <Text style={styles.emptyChatText}>Chưa có tin nhắn</Text>
-                  <Text style={styles.emptyChatSubText}>Bắt đầu cuộc trò chuyện với bệnh nhân</Text>
+                  <Text style={styles.emptyChatSubText}>
+                    Bắt đầu cuộc trò chuyện với bệnh nhân
+                  </Text>
                 </View>
               }
               showsVerticalScrollIndicator={false}
-              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              onContentSizeChange={() =>
+                flatListRef.current?.scrollToEnd({ animated: true })
+              }
             />
             <View style={styles.chatInputContainer}>
               <TextInput
@@ -617,7 +746,11 @@ export default function PatientTab({ handleStartCall }) {
                 maxLength={500}
               />
               <TouchableOpacity
-                style={[styles.sendButton, (!messageInput.trim() || isSending) && styles.disabledSendButton]}
+                style={[
+                  styles.sendButton,
+                  (!messageInput.trim() || isSending) &&
+                    styles.disabledSendButton,
+                ]}
                 onPress={sendMessage}
                 disabled={isSending || !messageInput.trim()}
               >

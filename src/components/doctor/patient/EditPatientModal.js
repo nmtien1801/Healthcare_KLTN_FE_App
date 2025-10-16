@@ -21,7 +21,7 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
     // Lấy user từ Redux
     const user = useSelector((state) => state.auth.userInfo);
     const doctorUid = user?.uid;
-    const patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
+    const patientUid = user?.uid;
     const roomChats = doctorUid ? [doctorUid, patientUid].sort().join("_") : null;
 
     // State để lưu dữ liệu form

@@ -12,13 +12,25 @@ import {
   Dimensions,
 } from "react-native";
 import { useSelector } from "react-redux";
-import { Search as SearchIcon, Clock, CalendarDays, Plus, Trash2, Edit, Eye } from "lucide-react-native";
+import {
+  Search as SearchIcon,
+  Clock,
+  CalendarDays,
+  Plus,
+  Trash2,
+  Edit,
+  Eye,
+} from "lucide-react-native";
 import AddAppointmentModal from "../../components/doctor/appointment/AddAppointmentModal";
 import ViewAppointmentModal from "../../components/doctor/appointment/ViewAppointmentModal";
 import EditAppointmentModal from "../../components/doctor/appointment/EditAppointmentModal";
 import ApiDoctor from "../../apis/ApiDoctor";
 import { getLabelFromOptions } from "../../utils/appointmentHelper";
-import { STATUS_COLORS, STATUS_OPTIONS, TYPE_OPTIONS } from "../../utils/appointmentConstants";
+import {
+  STATUS_COLORS,
+  STATUS_OPTIONS,
+  TYPE_OPTIONS,
+} from "../../utils/appointmentConstants";
 import { listenStatus, sendStatus } from "../../utils/SetupSignFireBase";
 import ApiNotification from "../../apis/ApiNotification";
 
@@ -54,6 +66,8 @@ export default function AppointmentTab() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
   const user = useSelector((state) => state.auth.userInfo);
+  const doctorUid = user.uid;
+  const [patientUid, setPatientUid] = useState("cq6SC0A1RZXdLwFE1TKGRJG8fgl2");
 
   const fetchAppointments = async () => {
     try {
@@ -71,13 +85,18 @@ export default function AppointmentTab() {
   }, []);
 
   // Lắng nghe tín hiệu hủy lịch qua Firestore (status message) trong chats
-  let doctorUid = "1HwseYsBwxby5YnsLUWYzvRtCw53";
-  let patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
   useEffect(() => {
     const roomChats = [doctorUid, patientUid].sort().join("_");
 
     const unsub = listenStatus(roomChats, async (signal) => {
-      if (signal?.status === "Đặt lịch" || signal?.status === "Hủy lịch" || signal?.status === "Xác nhận" || signal?.status === "Hủy bởi bác sĩ" || signal?.status === "Hoàn thành" || signal?.status === "Đang chờ") {
+      if (
+        signal?.status === "Đặt lịch" ||
+        signal?.status === "Hủy lịch" ||
+        signal?.status === "Xác nhận" ||
+        signal?.status === "Hủy bởi bác sĩ" ||
+        signal?.status === "Hoàn thành" ||
+        signal?.status === "Đang chờ"
+      ) {
         fetchAppointments();
       }
     });
@@ -88,6 +107,7 @@ export default function AppointmentTab() {
   const mapAppointment = (item) => {
     return {
       id: item._id,
+      uid: item.patientId?.userId?.uid || "",
       patientName: item.patientId?.userId?.username || "N/A",
       patientEmail: item.patientId?.userId?.email || "N/A",
       patientAge: item.patientId?.age || "N/A",
@@ -137,7 +157,10 @@ export default function AppointmentTab() {
         a.patientDisease.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.reason.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchDate = filterDate ? a.date === formatDate(new Date(filterDate).toISOString().split("T")[0]) : true;
+      const matchDate = filterDate
+        ? a.date ===
+          formatDate(new Date(filterDate).toISOString().split("T")[0])
+        : true;
       return matchSearch && matchDate;
     });
   }, [todayAppointments, searchTerm, filterDate]);
@@ -149,7 +172,10 @@ export default function AppointmentTab() {
         a.patientDisease.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.reason.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchDate = filterDate ? a.date === formatDate(new Date(filterDate).toISOString().split("T")[0]) : true;
+      const matchDate = filterDate
+        ? a.date ===
+          formatDate(new Date(filterDate).toISOString().split("T")[0])
+        : true;
       return matchSearch && matchDate;
     });
   }, [upcomingAppointments, searchTerm, filterDate]);
@@ -169,6 +195,7 @@ export default function AppointmentTab() {
 
   const handleViewAppointment = async (appointment) => {
     try {
+      setPatientUid(appointment.uid);
       const data = await ApiDoctor.getAppointmentById(appointment.id);
       const mapped = mapAppointment(data);
       setSelectedAppointment(mapped);
@@ -181,6 +208,7 @@ export default function AppointmentTab() {
 
   const handleEditAppointment = async (appointment) => {
     try {
+      setPatientUid(appointment.uid);
       const data = await ApiDoctor.getAppointmentById(appointment.id);
       const mapped = mapAppointment(data);
       setSelectedAppointment(mapped);
@@ -199,25 +227,26 @@ export default function AppointmentTab() {
         date: new Date(updatedAppointment.date).toISOString().split("T")[0], // Lưu trữ dưới dạng YYYY-MM-DD
       };
       await ApiDoctor.updateAppointment(updatedAppointment.id, payload);
-      const doctorUid = "1HwseYsBwxby5YnsLUWYzvRtCw53";
-      const patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2"; // Hardcode như code gốc
+
       if (payload.status === "confirmed") {
         await sendStatus(doctorUid, patientUid, "Xác nhận");
       } else if (payload.status === "canceled") {
         await sendStatus(doctorUid, patientUid, "Hủy bởi bác sĩ");
-      }
-      else if (payload.status === "completed") {
+      } else if (payload.status === "completed") {
         await sendStatus(doctorUid, patientUid, "Hoàn thành");
-      }
-      else if (payload.status === "pending") {
+      } else if (payload.status === "pending") {
         await sendStatus(doctorUid, patientUid, "Đang chờ");
       }
       await ApiNotification.createNotification({
         receiverId: patientUid,
         title: "Cập nhật lịch hẹn",
-        content: `Lịch hẹn của bạn vào ngày ${new Date(updatedAppointment.date).toLocaleDateString("vi-VN")} lúc ${updatedAppointment.time} đã được cập nhật.`,
+        content: `Lịch hẹn của bạn vào ngày ${new Date(
+          updatedAppointment.date
+        ).toLocaleDateString("vi-VN")} lúc ${
+          updatedAppointment.time
+        } đã được cập nhật.`,
         metadata: {
-          link: `/patient/appointments/${updatedAppointment.id}`
+          link: `/patient/appointments/${updatedAppointment.id}`,
         },
         avatar: user?.avatar || null,
       });
@@ -228,10 +257,14 @@ export default function AppointmentTab() {
         date: formatDate(updatedAppointment.date), // Chuyển đổi sang DD/MM/YYYY khi lưu vào state
       };
       setUpcomingAppointments((prev) =>
-        prev.map((app) => (app.id === updatedAppointment.id ? updatedMapped : app))
+        prev.map((app) =>
+          app.id === updatedAppointment.id ? updatedMapped : app
+        )
       );
       setTodayAppointments((prev) =>
-        prev.map((app) => (app.id === updatedAppointment.id ? updatedMapped : app))
+        prev.map((app) =>
+          app.id === updatedAppointment.id ? updatedMapped : app
+        )
       );
       setShowEditModal(false);
       setSelectedAppointment(updatedMapped);
@@ -242,6 +275,7 @@ export default function AppointmentTab() {
   };
 
   const handleDeleteAppointment = (appointment) => {
+    setPatientUid(appointment.uid)
     setAppointmentToDelete(appointment);
     setShowDeleteModal(true);
   };
@@ -250,15 +284,13 @@ export default function AppointmentTab() {
     try {
       if (!appointmentToDelete) return;
       await ApiDoctor.deleteAppointment(appointmentToDelete.id);
-      const doctorUid = "1HwseYsBwxby5YnsLUWYzvRtCw53";
-      const patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2"; // Hardcode
       await ApiNotification.createNotification({
         receiverId: patientUid,
         avatar: user?.avatar || null,
         title: "Lịch hẹn bị hủy",
         content: `Lịch hẹn của bạn vào ngày ${appointmentToDelete.date} lúc ${appointmentToDelete.time} đã bị hủy.`,
         metadata: {
-          link: `/patient/appointments/${appointmentToDelete.id}`
+          link: `/patient/appointments/${appointmentToDelete.id}`,
         },
       });
       await sendStatus(doctorUid, patientUid, "Hủy bởi bác sĩ");
@@ -290,15 +322,27 @@ export default function AppointmentTab() {
     return (
       <View style={styles.cardItem}>
         <View style={styles.cardHeader}>
-          <Image source={{ uri: appointment.patientAvatar }} style={styles.avatar} />
+          <Image
+            source={{ uri: appointment.patientAvatar }}
+            style={styles.avatar}
+          />
           <View style={styles.patientInfo}>
-            <Text style={styles.patientName}>
-              {appointment.patientName}
-            </Text>
+            <Text style={styles.patientName}>{appointment.patientName}</Text>
             <Text style={styles.patientAge}>{appointment.patientAge} tuổi</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[appointment.status]?.bg }]}>
-            <Text style={[styles.statusText, { color: STATUS_COLORS[appointment.status]?.text }]} numberOfLines={1}>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: STATUS_COLORS[appointment.status]?.bg },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                { color: STATUS_COLORS[appointment.status]?.text },
+              ]}
+              numberOfLines={1}
+            >
               {getLabelFromOptions(STATUS_OPTIONS, appointment.status)}
             </Text>
           </View>
@@ -367,7 +411,10 @@ export default function AppointmentTab() {
         <TouchableOpacity
           onPress={() => setPage((p) => Math.min(p + 1, totalPages))}
           disabled={currentPage === totalPages}
-          style={[styles.pagButton, currentPage === totalPages && styles.disabled]}
+          style={[
+            styles.pagButton,
+            currentPage === totalPages && styles.disabled,
+          ]}
         >
           <Text style={styles.pagText}>Sau</Text>
         </TouchableOpacity>
@@ -375,11 +422,28 @@ export default function AppointmentTab() {
     );
   };
 
-  const renderTable = (title, paginated, totalPages, page, setPage, isToday = false) => (
+  const renderTable = (
+    title,
+    paginated,
+    totalPages,
+    page,
+    setPage,
+    isToday = false
+  ) => (
     <View style={styles.card}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 5 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: 5,
+        }}
+      >
         <Text style={styles.sectionTitle}>{title}</Text>
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowAddModal(true)}
+        >
           <Plus size={16} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -405,11 +469,12 @@ export default function AppointmentTab() {
               keyboardType="numeric"
             />
           </View>
-
         </View>
       )}
       {isToday && (
-        <Text style={styles.appointmentCount}>Tổng {filteredToday.length} cuộc hẹn</Text>
+        <Text style={styles.appointmentCount}>
+          Tổng {filteredToday.length} cuộc hẹn
+        </Text>
       )}
       <FlatList
         data={paginated}
@@ -430,13 +495,26 @@ export default function AppointmentTab() {
   return (
     <View style={styles.container}>
       <FlatList
-        data={[{ key: 'content' }]}
+        data={[{ key: "content" }]}
         keyExtractor={(item) => item.key}
         showsVerticalScrollIndicator={false}
         renderItem={() => (
           <View style={{ paddingVertical: 20 }}>
-            {renderTable("Lịch Hẹn Hôm Nay", paginatedToday, totalTodayPages, todayPage, setTodayPage, true)}
-            {renderTable("Lịch Hẹn Sắp Tới", paginatedUpcoming, totalUpcomingPages, upcomingPage, setUpcomingPage)}
+            {renderTable(
+              "Lịch Hẹn Hôm Nay",
+              paginatedToday,
+              totalTodayPages,
+              todayPage,
+              setTodayPage,
+              true
+            )}
+            {renderTable(
+              "Lịch Hẹn Sắp Tới",
+              paginatedUpcoming,
+              totalUpcomingPages,
+              upcomingPage,
+              setUpcomingPage
+            )}
           </View>
         )}
       />
@@ -468,9 +546,18 @@ export default function AppointmentTab() {
             <Text style={styles.modalTitle}>Xác Nhận Xóa Lịch Hẹn</Text>
             <Text style={styles.modalBody}>
               Bạn có chắc chắn muốn xóa lịch hẹn của{"\n"}
-              <Text style={styles.modalBold}>{appointmentToDelete?.patientName}</Text>{"\n"}
-              vào ngày <Text style={styles.modalBold}>{appointmentToDelete?.date}</Text>{"\n"}
-              lúc <Text style={styles.modalBold}>{appointmentToDelete?.time}</Text> không?
+              <Text style={styles.modalBold}>
+                {appointmentToDelete?.patientName}
+              </Text>
+              {"\n"}
+              vào ngày{" "}
+              <Text style={styles.modalBold}>{appointmentToDelete?.date}</Text>
+              {"\n"}
+              lúc{" "}
+              <Text style={styles.modalBold}>
+                {appointmentToDelete?.time}
+              </Text>{" "}
+              không?
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity

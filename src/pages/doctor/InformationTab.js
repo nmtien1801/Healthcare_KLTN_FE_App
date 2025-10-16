@@ -258,7 +258,7 @@ export default function DoctorProfile() {
 
   const user = useSelector((state) => state.auth.userInfo);
   const doctorUid = user?.uid;
-  const patientUid = "cq6SC0A1RZXdLwFE1TKGRJG8fgl2";
+  const patientUid = user.uid;
   const roomChats = doctorUid ? [doctorUid, patientUid].sort().join("_") : null;
 
   const fetchDoctorInfo = async () => {
