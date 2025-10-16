@@ -674,6 +674,7 @@ const UpcomingAppointment = ({
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [cancelErrorMessage, setCancelErrorMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [receiverId, setReceiverId] = useState("");
   const senderId = user?.uid;
   const BOOKING_FEE = 200000;
 
@@ -758,7 +759,7 @@ const UpcomingAppointment = ({
         setCurrentPage(newTotalPages - 1);
       }
       await ApiNotification.createNotification({
-        receiverId: selectedDoctorData.uid,
+        receiverId: receiverId,
         title: "Bệnh nhân hủy lịch khám",
         content: `Bệnh nhân ${user.username || ""} đã hủy lịch khám.`,
         type: "system",
@@ -768,7 +769,7 @@ const UpcomingAppointment = ({
         avatar: user.avatar || "", // avatar người gửi (nếu có)
       });
       // gửi tín hiệu trạng thái hủy lịch tới bác sĩ qua Firestore
-      await sendStatus(user?.uid, selectedDoctorData?.uid, "Hủy lịch");
+      await sendStatus(user?.uid, receiverId, "Hủy lịch");
 
       setShowCancelModal(false);
       setAppointmentToCancel(null);
@@ -905,7 +906,7 @@ const UpcomingAppointment = ({
       }
     });
     return () => unsub();
-  }, [doctorUid, patientUid]);
+  }, [receiverId, senderId]);
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -1198,15 +1199,15 @@ const UpcomingAppointment = ({
                     >
                       {msg.timestamp && msg.timestamp instanceof Date
                         ? msg.timestamp.toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
                         : msg.timestamp
-                        ? new Date(msg.timestamp).toLocaleTimeString("vi-VN", {
+                          ? new Date(msg.timestamp).toLocaleTimeString("vi-VN", {
                             hour: "2-digit",
                             minute: "2-digit",
                           })
-                        : ""}
+                          : ""}
                     </Text>
                   </View>
                 ))
@@ -1522,20 +1523,18 @@ const BookingNew = ({ handleSubmit }) => {
         status: response.status || "pending",
       };
 
-      const successMsg = `Đặt lịch khám thành công với bác sĩ ${
-        selectedDoctorData.name
-      } vào ${selectedTime} ngày ${new Date(selectedDate).toLocaleDateString(
-        "vi-VN"
-      )}!`;
+      const successMsg = `Đặt lịch khám thành công với bác sĩ ${selectedDoctorData.name
+        } vào ${selectedTime} ngày ${new Date(selectedDate).toLocaleDateString(
+          "vi-VN"
+        )}!`;
 
       await ApiNotification.createNotification({
-        receiverId: receiverId,
+        receiverId: selectedDoctorData.uid,
         title: "Bệnh nhân mới đặt lịch khám",
-        content: `Bệnh nhân ${
-          user.username || ""
-        } đã đặt lịch khám vào lúc ${selectedTime} ngày ${new Date(
-          selectedDate
-        ).toLocaleDateString("vi-VN")}.`,
+        content: `Bệnh nhân ${user.username || ""
+          } đã đặt lịch khám vào lúc ${selectedTime} ngày ${new Date(
+            selectedDate
+          ).toLocaleDateString("vi-VN")}.`,
         type: "system",
         metadata: {
           link: `/appointments/${response._id}`, // đường dẫn chi tiết lịch hẹn (nếu có)
@@ -1543,7 +1542,7 @@ const BookingNew = ({ handleSubmit }) => {
         avatar: user.avatar || "", // avatar người gửi (nếu có)
       });
       // gửi tín hiệu trạng thái đặt lịch tới bác sĩ qua Firestore
-      await sendStatus(user?.uid, receiverId, "Đặt lịch");
+      await sendStatus(user?.uid, selectedDoctorData?.uid, "Đặt lịch");
       setSuccessMessage(successMsg);
       setShowSuccessModal(true);
 
@@ -1707,10 +1706,10 @@ const BookingNew = ({ handleSubmit }) => {
               <Text style={styles.datePickerText}>
                 {selectedDate && !isNaN(selectedDate)
                   ? selectedDate.toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })
                   : "Chọn ngày"}
               </Text>
             )}
@@ -1767,7 +1766,7 @@ const BookingNew = ({ handleSubmit }) => {
                     styles.datePickerContainer,
                     { marginBottom: 8 },
                     selectedDoctor ===
-                      (doctor.doctorId || doctor.id || doctor._id) && {
+                    (doctor.doctorId || doctor.id || doctor._id) && {
                       borderColor: "#007bff",
                       borderWidth: 2,
                     },
@@ -1821,12 +1820,12 @@ const BookingNew = ({ handleSubmit }) => {
                   </View>
                   {selectedDoctor ===
                     (doctor.doctorId || doctor.id || doctor._id) && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color="#007bff"
-                    />
-                  )}
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color="#007bff"
+                      />
+                    )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -1857,8 +1856,8 @@ const BookingNew = ({ handleSubmit }) => {
                     isSelected
                       ? styles.timeSlotActive
                       : canSelect
-                      ? styles.timeSlotInactive
-                      : styles.timeSlotDisabled,
+                        ? styles.timeSlotInactive
+                        : styles.timeSlotDisabled,
                   ]}
                   onPress={() => canSelect && setSelectedTime(time)}
                   disabled={!canSelect}
