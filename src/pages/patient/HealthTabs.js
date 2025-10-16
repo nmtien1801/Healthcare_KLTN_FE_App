@@ -21,6 +21,7 @@ import ApiBooking from "../../apis/ApiBooking";
 import { ECharts } from "react-native-echarts-wrapper";
 import { fetchMedicines } from "../../redux/medicineAiSlice";
 import { InsertFoods, GetListFood } from "../../redux/foodSlice";
+import { useFocusEffect } from "@react-navigation/native"; // mỗi lần vào thì tự useEffect lại
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -430,24 +431,31 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
     return result;
   };
 
-  useEffect(() => {
-    const fetchMedicine = async () => {
-      try {
-        let res = await dispatch(
-          fetchMedicines({
-            userId: user.userId,
-            date: new Date().toISOString(),
-          })
-        );
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchMedicine = async () => {
+        try {
+          let res = await dispatch(
+            fetchMedicines({
+              userId: user.userId,
+              date: new Date().toISOString(),
+            })
+          );
 
-        setMedicines(groupMedicinesByTime(res.payload.DT));
-      } catch (error) {
-        console.error("Lỗi khi lấy lịch hẹn:", error);
+          setMedicines(groupMedicinesByTime(res.payload.DT));
+        } catch (error) {
+          console.error("Lỗi khi lấy lịch hẹn:", error);
+        }
+      };
+
+      if (user && user.userId) {
+        fetchMedicine();
       }
-    };
 
-    fetchMedicine();
-  }, []);
+      // Hàm này sẽ chạy khi màn hình bị Unfocus (chuyển tab khác)
+      return () => {};
+    }, [])
+  );
 
   // render món ăn
   useEffect(() => {

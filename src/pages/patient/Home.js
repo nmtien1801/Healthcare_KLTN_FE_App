@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,17 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-} from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import ApiBooking from '../../apis/ApiBooking';
-import { fetchMedicines, updateStatusMedicine } from '../../redux/medicineAiSlice';
+} from "react-native";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigation } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import ApiBooking from "../../apis/ApiBooking";
+import {
+  fetchMedicines,
+  updateStatusMedicine,
+} from "../../redux/medicineAiSlice";
 import moment from "moment";
+import { useFocusEffect } from "@react-navigation/native"; // mỗi lần vào thì tự useEffect lại
 
 const Home = () => {
   const navigation = useNavigation();
@@ -24,7 +28,7 @@ const Home = () => {
   const dispatch = useDispatch();
 
   const calculateAge = (user) => {
-    if (!user?.dob) return '';
+    if (!user?.dob) return "";
     const dob = new Date(user.dob);
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -56,7 +60,7 @@ const Home = () => {
           setNearestAppointment(sortedAppointments[0]);
         }
       } catch (error) {
-        console.error('Lỗi khi lấy lịch hẹn:', error);
+        console.error("Lỗi khi lấy lịch hẹn:", error);
       } finally {
         setLoading(false);
       }
@@ -67,14 +71,14 @@ const Home = () => {
 
   // Handle user data with fallback values
   const userData = {
-    name: user?.username || 'Khách',
-    age: user ? calculateAge(user) : '',
-    gender: user?.gender || 'N/A',
-    condition: 'Tiểu đường type 2',
-    doctor: nearestAppointment?.doctorId?.userId?.username || 'Chưa có',
+    name: user?.username || "Khách",
+    age: user ? calculateAge(user) : "",
+    gender: user?.gender || "N/A",
+    condition: "Tiểu đường type 2",
+    doctor: nearestAppointment?.doctorId?.userId?.username || "Chưa có",
     nextAppointment: nearestAppointment?.date
-      ? new Date(nearestAppointment.date).toLocaleDateString('vi-VN')
-      : '13/09/2025',
+      ? new Date(nearestAppointment.date).toLocaleDateString("vi-VN")
+      : "13/09/2025",
     bloodSugar: bloodSugar?.DT?.bloodSugarData
       ? Object.values(bloodSugar.DT.bloodSugarData).map((item) => item.value)
       : [],
@@ -85,21 +89,38 @@ const Home = () => {
     updated[index].status = !updated[index].status;
     setMedications(updated);
 
-    await dispatch(updateStatusMedicine({ id: updated[index]._id, status: updated[index].status }))
+    await dispatch(
+      updateStatusMedicine({
+        id: updated[index]._id,
+        status: updated[index].status,
+      })
+    );
   };
 
-  useEffect(() => {
-    const fetchMedicine = async () => {
-      try {
-        let res = await dispatch(fetchMedicines({ userId: user.userId, date: new Date().toISOString() }));
-        setMedications(res.payload.DT);
-      } catch (error) {
-        console.error('Lỗi khi lấy lịch hẹn:', error);
-      }
-    };
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchMedicine = async () => {
+        try {
+          let res = await dispatch(
+            fetchMedicines({
+              userId: user.userId,
+              date: new Date().toISOString(),
+            })
+          );
+          setMedications(res.payload.DT);
+        } catch (error) {
+          console.error("Lỗi khi lấy lịch hẹn:", error);
+        }
+      };
 
-    fetchMedicine();
-  }, []);
+      if (user && user.userId) {
+        fetchMedicine();
+      }
+
+      // Hàm này sẽ chạy khi màn hình bị Unfocus (chuyển tab khác)
+      return () => {};
+    }, [])
+  );
 
   if (loading) {
     return (
@@ -111,7 +132,10 @@ const Home = () => {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+    >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Chăm sóc sức khỏe - Tiểu đường</Text>
@@ -122,7 +146,9 @@ const Home = () => {
       <View style={styles.card}>
         <View style={styles.patientHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{userData.name ? userData.name.charAt(0) : 'K'}</Text>
+            <Text style={styles.avatarText}>
+              {userData.name ? userData.name.charAt(0) : "K"}
+            </Text>
           </View>
           <View>
             <Text style={styles.patientName}>{userData.name}</Text>
@@ -133,7 +159,7 @@ const Home = () => {
         <View style={styles.patientInfo}>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Tuổi</Text>
-            <Text style={styles.infoValue}>{userData.age || 'N/A'}</Text>
+            <Text style={styles.infoValue}>{userData.age || "N/A"}</Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Giới tính</Text>
@@ -155,14 +181,17 @@ const Home = () => {
           <Text style={styles.cardTitle}>Đường huyết hôm nay</Text>
           <TouchableOpacity
             style={styles.detailButton}
-            onPress={() => navigation.navigate('Sức khỏe')}
+            onPress={() => navigation.navigate("Sức khỏe")}
           >
             <Text style={styles.detailButtonText}>Xem Chi tiết</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.bloodSugarCard}>
           <Text style={styles.bloodSugarValue}>
-            {userData.bloodSugar.length > 0 ? userData.bloodSugar.slice(-1)[0] : 'N/A'} mmol/L
+            {userData.bloodSugar.length > 0
+              ? userData.bloodSugar.slice(-1)[0]
+              : "N/A"}{" "}
+            mmol/L
           </Text>
           <Text style={styles.bloodSugarDate}>23/06/2025</Text>
           <View style={styles.badge}>
@@ -181,7 +210,9 @@ const Home = () => {
                 <Text style={styles.medicationName}>
                   {med.name} {med.dosage}
                 </Text>
-                <Text style={styles.medicationTime}>{moment(med.time).format("HH:mm:ss")}</Text>
+                <Text style={styles.medicationTime}>
+                  {moment(med.time).format("HH:mm:ss")}
+                </Text>
               </View>
               <TouchableOpacity
                 style={[
@@ -191,7 +222,7 @@ const Home = () => {
                 onPress={() => handleMedicationToggle(idx)}
               >
                 <Text style={styles.medicationButtonText}>
-                  {med.status ? '' : 'Đánh dấu'}
+                  {med.status ? "" : "Đánh dấu"}
                 </Text>
                 {med.status && <Icon name="check" size={16} color="#FFF" />}
               </TouchableOpacity>
@@ -210,7 +241,7 @@ const Home = () => {
         </View>
         <TouchableOpacity
           style={styles.chatButton}
-          onPress={() => navigation.navigate('Trợ lý AI')}
+          onPress={() => navigation.navigate("Trợ lý AI")}
         >
           <Icon name="chat" size={16} color="#3B82F6" />
           <Text style={styles.chatButtonText}>Chat ngay</Text>
@@ -223,7 +254,7 @@ const Home = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
   },
   contentContainer: {
     padding: 16,
@@ -231,218 +262,218 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 8,
     fontSize: 16,
-    color: '#3B82F6',
+    color: "#3B82F6",
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#3B82F6',
+    fontWeight: "bold",
+    color: "#3B82F6",
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 4,
   },
   card: {
-    backgroundColor: '#FFF',
+    backgroundColor: "#FFF",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   patientHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#3B82F6',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#3B82F6",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   avatarText: {
     fontSize: 24,
-    color: '#FFF',
-    fontWeight: 'bold',
+    color: "#FFF",
+    fontWeight: "bold",
   },
   patientName: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1E3A8A',
+    fontWeight: "600",
+    color: "#1E3A8A",
   },
   patientCondition: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
   },
   divider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: "#E5E7EB",
     marginVertical: 12,
   },
   patientInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   infoItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   infoLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
   },
   infoValue: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#1E3A8A',
+    fontWeight: "500",
+    color: "#1E3A8A",
   },
   nextAppointment: {
     fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: "#6B7280",
+    textAlign: "center",
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1E3A8A',
+    fontWeight: "600",
+    color: "#1E3A8A",
   },
   detailButton: {
     borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderColor: "#3B82F6",
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
   detailButtonText: {
     fontSize: 12,
-    color: '#3B82F6',
+    color: "#3B82F6",
   },
   bloodSugarCard: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderRadius: 8,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   bloodSugarValue: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#3B82F6',
+    fontWeight: "bold",
+    color: "#3B82F6",
     marginBottom: 4,
   },
   bloodSugarDate: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
     marginBottom: 8,
   },
   badge: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingVertical: 4,
     paddingHorizontal: 12,
   },
   badgeText: {
     fontSize: 12,
-    color: '#1F2937',
+    color: "#1F2937",
   },
   medicationItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
   },
   medicationName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1E3A8A',
+    fontWeight: "600",
+    color: "#1E3A8A",
   },
   medicationTime: {
     fontSize: 12,
-    color: '#6B7280',
+    color: "#6B7280",
   },
   medicationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
   takenButton: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: "#2E7D32",
   },
   untakenButton: {
     borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderColor: "#3B82F6",
   },
   medicationButtonText: {
     fontSize: 12,
-    color: '#3B82F6',
+    color: "#3B82F6",
     marginRight: 4,
   },
   noMedications: {
     fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
+    color: "#6B7280",
+    textAlign: "center",
   },
   chatCard: {
-    backgroundColor: '#6366F1',
+    backgroundColor: "#6366F1",
     borderRadius: 12,
     padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   chatTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: "600",
+    color: "#FFF",
   },
   chatSubtitle: {
     fontSize: 12,
-    color: '#E5E7EB',
+    color: "#E5E7EB",
   },
   chatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF",
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
   chatButtonText: {
     fontSize: 12,
-    color: '#3B82F6',
+    color: "#3B82F6",
     marginLeft: 4,
   },
 });

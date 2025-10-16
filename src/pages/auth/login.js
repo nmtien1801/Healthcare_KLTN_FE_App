@@ -63,7 +63,6 @@ export default function LoginForm() {
     const user = result.user;
 
     try {
-      
       if (user) {
         const idToken = await user.getIdToken();
         const res = await dispatch(Login({ user }));
