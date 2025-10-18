@@ -19,31 +19,29 @@ import { fetchBloodSugar, saveBloodSugar } from "../../redux/patientSlice";
 import { useNavigation } from "@react-navigation/native";
 import ApiBooking from "../../apis/ApiBooking";
 import { ECharts } from "react-native-echarts-wrapper";
-import { fetchMedicines } from "../../redux/medicineAiSlice";
 import { InsertFoods, GetListFood } from "../../redux/foodSlice";
 import { useFocusEffect } from "@react-navigation/native"; // mỗi lần vào thì tự useEffect lại
 
 const { width: screenWidth } = Dimensions.get("window");
 
-const Following = ({ user, nearestAppointment }) => {
+const Following = ({ user, nearestAppointment, warning }) => {
   const bloodSugar = useSelector((state) => state.patient.bloodSugar);
   const latestReading =
     Array.isArray(bloodSugar?.DT?.bloodSugarData) &&
     bloodSugar.DT.bloodSugarData.length > 0
       ? bloodSugar.DT.bloodSugarData[0].value
       : 0;
+  const safeWarning = Array.isArray(warning) ? warning : [];
+  const warningCount = safeWarning.length;
 
   const readingStatus = {
-    status:
-      latestReading < 6
-        ? "normal"
-        : latestReading < 7
-        ? "prediabetes"
-        : "danger",
-    color:
-      latestReading < 6 ? "#28a745" : latestReading < 7 ? "#ffc107" : "#dc3545",
-    bgColor:
-      latestReading < 6 ? "#d4edda" : latestReading < 7 ? "#fff3cd" : "#f8d7da",
+    status: warningCount > 1 ? "danger" : "normal",
+    color: warningCount > 1 ? "#dc3545" : "#28a745",
+    bgColor: warningCount > 1 ? "#f8d7da" : "#d4edda",
+    content:
+      warningCount > 1
+        ? safeWarning.join("\n\n")
+        : "Chỉ số đường huyết trong mức bình thường",
   };
 
   return (
@@ -127,6 +125,25 @@ const Following = ({ user, nearestAppointment }) => {
           </View>
         </View>
 
+        {/* Cảnh báo */}
+        <View style={styles.infoCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Icon name="warning" size={18} color="#007bff" />
+            </View>
+            <Text style={styles.cardTitle}>Tình trạng hiện tại</Text>
+          </View>
+          <View style={styles.infoList}>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoValue, { color: "#dc3545" }]}>
+                {readingStatus.content}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.cardsRow}>
         {/* Appointment */}
         <View style={styles.appointmentCard}>
           <View style={styles.cardHeader}>
@@ -240,16 +257,61 @@ const getYesterdayAvg = ({ dailyBloodSugar }) => {
   return { fasting, postMeal, avg };
 };
 
-const Chart = ({ bloodSugar }) => {
-  let dailyBloodSugar = { dates: [], fastingData: [], postMealData: [] };
+// ✅ Kiểm tra ngưỡng cao và hiển thị alert
+const checkHighThreshold = (dailyBloodSugar, setWarning) => {
+  const todayIndex = dailyBloodSugar.dates.length - 1;
+  const todayDate = dailyBloodSugar.dates[todayIndex];
+  const todayFastingValue = dailyBloodSugar.fastingData[todayIndex];
+  const todayPostMealValue = dailyBloodSugar.postMealData[todayIndex];
 
-  if (bloodSugar?.length > 0) {
-    try {
-      dailyBloodSugar = bloodSugarDaily({ bloodSugar });
-    } catch (error) {
-      console.error("Error processing bloodSugar data:", error);
-    }
+  const warnings = [];
+  warnings.push(`Ngày ${todayDate}: `);
+  // 2. Kiểm tra chỉ số lúc đói của ngày hôm nay (ngưỡng >= 7.0)
+  if (todayFastingValue !== null && todayFastingValue >= 7.0) {
+    warnings.push(
+      ` - Đường huyết lúc đói cao (${todayFastingValue.toFixed(3)} mmol/L).`
+    );
   }
+
+  // 3. Kiểm tra chỉ số sau ăn của ngày hôm nay (ngưỡng >= 11.1)
+  if (todayPostMealValue !== null && todayPostMealValue >= 11.1) {
+    warnings.push(
+      ` - Đường huyết sau ăn cao (${todayPostMealValue.toFixed(3)} mmol/L).`
+    );
+  }
+
+  // 4. Hiển thị alert nếu có cảnh báo
+  if (warnings.length > 0) {
+    console.log("ssssssss ", warnings);
+    setWarning(warnings);
+  } else {
+    setWarning([]);
+  }
+};
+
+const Chart = ({ bloodSugar, setWarning }) => {
+  const [dailyBloodSugar, setDailyBloodSugar] = useState({
+    dates: [],
+    fastingData: [],
+    postMealData: [],
+  });
+
+  useEffect(() => {
+    if (bloodSugar?.length > 0) {
+      try {
+        const processed = bloodSugarDaily({ bloodSugar });
+        setDailyBloodSugar(processed);
+
+        // Gọi hàm cảnh báo sau khi đã process xong
+        checkHighThreshold(processed, setWarning);
+      } catch (error) {
+        console.error("Error processing bloodSugar data:", error);
+      }
+    } else {
+      setDailyBloodSugar({ dates: [], fastingData: [], postMealData: [] });
+      setWarning([]);
+    }
+  }, [bloodSugar, setWarning]);
 
   // Build last 7 days view to match subtitle
   const last7Labels = dailyBloodSugar.dates.slice(-7);
@@ -307,7 +369,7 @@ const Chart = ({ bloodSugar }) => {
       splitLine: { lineStyle: { color: "#e5e7eb", type: "dashed" } },
       axisLabel: {
         color: "#6b7280",
-        fontSize: 10,
+        fontSize: 13,
         formatter: "{value} mmol/L",
       },
     },
@@ -318,7 +380,7 @@ const Chart = ({ bloodSugar }) => {
         type: "line",
         smooth: true,
         showSymbol: true,
-        symbolSize: 6,
+        symbolSize: 3,
         lineStyle: { color: "#3b82f6", width: 2 },
         itemStyle: { color: "#3b82f6" },
         areaStyle: { opacity: 0.06 },
@@ -328,12 +390,12 @@ const Chart = ({ bloodSugar }) => {
             {
               yAxis: 5.6,
               lineStyle: { color: "#10b981" },
-              label: { formatter: "Ngưỡng bình thường (đói)" },
+              label: { formatter: "Trước ăn" },
             },
             {
               yAxis: 7.0,
               lineStyle: { color: "#ef4444" },
-              label: { formatter: "Ngưỡng cao" },
+              label: { formatter: "Ngưỡng cao (đói)" },
             },
           ],
         },
@@ -354,12 +416,12 @@ const Chart = ({ bloodSugar }) => {
             {
               yAxis: 7.8,
               lineStyle: { color: "#10b981" },
-              label: { formatter: "Ngưỡng bình thường (sau ăn)" },
+              label: { formatter: "Sau ăn" },
             },
             {
               yAxis: 11.1,
               lineStyle: { color: "#ef4444" },
-              label: { formatter: "Ngưỡng cao" },
+              label: { formatter: "Ngưỡng cao (sau ăn)" },
             },
           ],
         },
@@ -403,59 +465,9 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
   const [food, setFood] = useState(null);
   const totalCalo = useSelector((state) => state.food.totalCalo);
   const [showAllFood, setShowAllFood] = useState(false);
-  const [medicines, setMedicines] = useState({
-    sang: [],
-    trua: [],
-    toi: [],
-  });
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigation = useNavigation();
-
-  // Hàm phân loại thuốc theo giờ
-  const groupMedicinesByTime = (data) => {
-    const result = { sang: [], trua: [], toi: [] };
-
-    data.forEach((item) => {
-      const hour = new Date(item.time).getHours(); // lấy giờ từ time
-
-      if (hour >= 5 && hour < 11) {
-        result.sang.push(`${item.name} (${item.lieu_luong})`);
-      } else if (hour >= 11 && hour < 17) {
-        result.trua.push(`${item.name} (${item.lieu_luong})`);
-      } else {
-        result.toi.push(`${item.name} (${item.lieu_luong})`);
-      }
-    });
-
-    return result;
-  };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const fetchMedicine = async () => {
-        try {
-          let res = await dispatch(
-            fetchMedicines({
-              userId: user.userId,
-              date: new Date().toISOString(),
-            })
-          );
-
-          setMedicines(groupMedicinesByTime(res.payload.DT));
-        } catch (error) {
-          console.error("Lỗi khi lấy lịch hẹn:", error);
-        }
-      };
-
-      if (user && user.userId) {
-        fetchMedicine();
-      }
-
-      // Hàm này sẽ chạy khi màn hình bị Unfocus (chuyển tab khác)
-      return () => {};
-    }, [])
-  );
 
   // render món ăn
   useEffect(() => {
@@ -530,62 +542,6 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
             </Text>
           </View>
 
-          {/* KẾ HOẠCH THUỐC */}
-          <View style={styles.medicineCard}>
-            <Text style={styles.medicineTitle}>📋 Kế hoạch dùng thuốc</Text>
-            {medicines.sang.length === 0 &&
-            medicines.trua.length === 0 &&
-            medicines.toi.length === 0 ? (
-              <Text style={styles.noMedicineText}>
-                Chưa có đơn thuốc. Vui lòng khởi tạo để có thể áp dụng theo dõi.
-              </Text>
-            ) : (
-              <View style={styles.medicineList}>
-                <Text style={styles.medicineItem}>
-                  <Text style={styles.boldText}>Sáng:</Text>{" "}
-                  {medicines.sang.length > 0
-                    ? medicines.sang.join(", ")
-                    : "Không dùng"}
-                </Text>
-                <Text style={styles.medicineItem}>
-                  <Text style={styles.boldText}>Trưa:</Text>{" "}
-                  {medicines.trua.length > 0
-                    ? medicines.trua.join(", ")
-                    : "Không dùng"}
-                </Text>
-                <Text style={styles.medicineItem}>
-                  <Text style={styles.boldText}>Tối:</Text>{" "}
-                  {medicines.toi.length > 0
-                    ? medicines.toi.join(", ")
-                    : "Không dùng"}
-                </Text>
-              </View>
-            )}
-            <View style={styles.buttonContainer}>
-              {medicines.sang.length === 0 &&
-              medicines.trua.length === 0 &&
-              medicines.toi.length === 0 ? (
-                <TouchableOpacity
-                  style={styles.diagnosisButton}
-                  onPress={() => navigation.navigate("Trợ lý AI")}
-                  accessibilityLabel="Chẩn đoán"
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.diagnosisButtonText}>Chẩn đoán</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={styles.appliedButton}
-                  disabled
-                  accessibilityLabel="Đã áp dụng đơn thuốc"
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.appliedButtonText}>Đã áp dụng</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
           {/* KẾ HOẠCH DINH DƯỠNG */}
           <View style={styles.nutritionCard}>
             <Text style={styles.nutritionTitle}>🥗 Kế hoạch dinh dưỡng</Text>
@@ -653,6 +609,7 @@ const HealthTabs = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const user = useSelector((state) => state.auth.user);
+  const [warning, setWarning] = useState([]); // chỉ số cảnh báo
 
   useEffect(() => {
     const fetchData = async () => {
@@ -667,10 +624,10 @@ const HealthTabs = () => {
         // Fetch blood sugar data
         const [postMealRes, fastingRes] = await Promise.all([
           dispatch(
-            fetchBloodSugar({ userId: user.userId, type: "postMeal", days: 7 })
+            fetchBloodSugar({ userId: user.userId, type: "postMeal", days: 6 })
           ).unwrap(),
           dispatch(
-            fetchBloodSugar({ userId: user.userId, type: "fasting", days: 7 })
+            fetchBloodSugar({ userId: user.userId, type: "fasting", days: 6 })
           ).unwrap(),
         ]);
 
@@ -809,8 +766,12 @@ const HealthTabs = () => {
       style={styles.mainContainer}
       contentContainerStyle={styles.contentContainer}
     >
-      <Following user={user} nearestAppointment={nearestAppointment} />
-      <Chart bloodSugar={bloodSugar} />
+      <Following
+        user={user}
+        nearestAppointment={nearestAppointment}
+        warning={warning}
+      />
+      <Chart bloodSugar={bloodSugar} setWarning={setWarning} />
       <View style={styles.bottomSection}>
         <View style={styles.inputCard}>
           <Text style={styles.inputTitle}>Nhập chỉ số mới</Text>
@@ -1253,61 +1214,10 @@ const styles = StyleSheet.create({
     color: "#6c757d",
     fontStyle: "italic",
   },
-  medicineCard: {
-    backgroundColor: "#d4edda",
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#c3e6cb",
-  },
-  medicineTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#155724",
-    marginBottom: 8,
-  },
-  noMedicineText: {
-    fontSize: 12,
-    color: "#6c757d",
-    marginBottom: 8,
-  },
-  medicineList: {
-    marginBottom: 12,
-    paddingLeft: 16,
-  },
-  medicineItem: {
-    fontSize: 14,
-    color: "#155724",
-    marginBottom: 4,
-  },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 8,
-  },
-  diagnosisButton: {
-    backgroundColor: "#28a745",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  diagnosisButtonText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  appliedButton: {
-    backgroundColor: "#28a745",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    opacity: 0.6,
-  },
-  appliedButtonText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "600",
   },
   nutritionCard: {
     backgroundColor: "#fff3cd",
