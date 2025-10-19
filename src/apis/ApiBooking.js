@@ -12,6 +12,7 @@ const ApiBooking = {
         ApiManager.get(`/booking/workhours/${doctorId}`),
     bookAppointment: (payload) => ApiManager.post("/booking/book", payload),
     getDoctorWorkHoursByDate: (doctorId, date) => ApiManager.get(`/booking/workhoursByDate/${doctorId}`, { params: { date } }),
+    createFollowUpAppointment: (payload) => ApiManager.post("/booking/followUp", payload),
 };
 
 export default ApiBooking;

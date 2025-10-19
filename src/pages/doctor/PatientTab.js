@@ -24,6 +24,7 @@ import {
   X,
   Bot,
   Send,
+  PlusCircle,
   ArrowLeft,
 } from "lucide-react-native";
 import {
@@ -40,6 +41,7 @@ import ApiPatient from "../../apis/ApiPatient";
 import ApiDoctor from "../../apis/ApiDoctor";
 import ViewPatientModal from "../../components/doctor/patient/ViewPatientModal";
 import EditPatientModal from "../../components/doctor/patient/EditPatientModal";
+import CreateFollowUpModal from "../../components/doctor/appointment/CreateFollowUpModal";
 import { listenStatusByReceiver } from "../../utils/SetupSignFireBase";
 
 const { width, height } = Dimensions.get("window");
@@ -57,27 +59,27 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     apiPatient.healthRecords.length > 0;
   const healthRecords = hasHealthRecords
     ? apiPatient.healthRecords.map((record) => ({
-        id: record._id || `temp-${Date.now()}`,
-        date: record.date
-          ? new Date(record.date).toLocaleDateString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            })
-          : "-",
-        bloodPressure: record.bloodPressure || "-",
-        heartRate: record.heartRate || "-",
-        bloodSugar: record.bloodSugar || "-",
-        recordedAt: record.recordedAt
-          ? new Date(record.recordedAt).toLocaleString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "-",
-      }))
+      id: record._id || `temp-${Date.now()}`,
+      date: record.date
+        ? new Date(record.date).toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+        : "-",
+      bloodPressure: record.bloodPressure || "-",
+      heartRate: record.heartRate || "-",
+      bloodSugar: record.bloodSugar || "-",
+      recordedAt: record.recordedAt
+        ? new Date(record.recordedAt).toLocaleString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+        : "-",
+    }))
     : [];
 
   const userId = apiPatient.userId || {};
@@ -106,10 +108,10 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     statusTextColor: statusColors[apiPatient.status]?.textColor || "#fff",
     lastVisit: lastVisitDate
       ? lastVisitDate.toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
       : "Chưa có",
     lastVisitDate: lastVisitDate || new Date(),
     phone: userId.phone || apiPatient.phone || "",
@@ -122,10 +124,10 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     gender: userId.gender || "-",
     dob: userId.dob
       ? new Date(userId.dob).toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
       : "-",
     role: userId.role || "-",
     healthRecords,
@@ -146,6 +148,7 @@ export default function PatientTab({ handleStartCall }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [chatPatient, setChatPatient] = useState(null);
   const [messageInput, setMessageInput] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
@@ -342,6 +345,19 @@ export default function PatientTab({ handleStartCall }) {
     setShowViewModal(false);
     setShowEditModal(true);
   };
+
+  // Hàm mở modal tái khám
+  const handleCreateFollowUp = (patient) => {
+    setSelectedPatient(patient);
+    setShowFollowUpModal(true);
+  };
+
+  // Hàm xử lý sau khi tạo lịch hẹn thành công
+  const handleFollowUpCreated = async () => {
+    setShowFollowUpModal(false);
+    await fetchPatientsAndAppointments(); // Làm mới danh sách bệnh nhân để cập nhật lần khám gần nhất
+  };
+
 
   // Open chat
   const handleOpenChat = (patient) => {
@@ -586,6 +602,12 @@ export default function PatientTab({ handleStartCall }) {
                       >
                         <Phone color="#f59e0b" size={20} />
                       </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleCreateFollowUp(patient)}
+                      >
+                        <PlusCircle color="#22c55e" size={20} />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </View>
@@ -702,13 +724,13 @@ export default function PatientTab({ handleStartCall }) {
                   >
                     {item.timestamp instanceof Date
                       ? item.timestamp.toLocaleTimeString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
                       : new Date(item.timestamp).toLocaleTimeString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                   </Text>
                 </View>
               )}
@@ -745,7 +767,7 @@ export default function PatientTab({ handleStartCall }) {
                 style={[
                   styles.sendButton,
                   (!messageInput.trim() || isSending) &&
-                    styles.disabledSendButton,
+                  styles.disabledSendButton,
                 ]}
                 onPress={sendMessage}
                 disabled={isSending || !messageInput.trim()}
@@ -776,6 +798,13 @@ export default function PatientTab({ handleStartCall }) {
           onSave={handleUpdatePatient}
         />
       )}
+
+      <CreateFollowUpModal
+        visible={showFollowUpModal}
+        onClose={() => setShowFollowUpModal(false)}
+        patient={selectedPatient}
+        onSave={handleFollowUpCreated}
+      />
     </View>
   );
 }
