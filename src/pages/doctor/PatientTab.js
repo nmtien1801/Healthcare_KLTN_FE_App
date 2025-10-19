@@ -24,6 +24,7 @@ import {
   X,
   Bot,
   Send,
+  PlusCircle,
   ArrowLeft,
 } from "lucide-react-native";
 import {
@@ -40,6 +41,7 @@ import ApiPatient from "../../apis/ApiPatient";
 import ApiDoctor from "../../apis/ApiDoctor";
 import ViewPatientModal from "../../components/doctor/patient/ViewPatientModal";
 import EditPatientModal from "../../components/doctor/patient/EditPatientModal";
+import CreateFollowUpModal from "../../components/doctor/appointment/CreateFollowUpModal";
 import { listenStatusByReceiver } from "../../utils/SetupSignFireBase";
 
 const { width, height } = Dimensions.get("window");
@@ -146,6 +148,7 @@ export default function PatientTab({ handleStartCall }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [chatPatient, setChatPatient] = useState(null);
   const [messageInput, setMessageInput] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
@@ -342,6 +345,19 @@ export default function PatientTab({ handleStartCall }) {
     setShowViewModal(false);
     setShowEditModal(true);
   };
+
+  // Hàm mở modal tái khám
+  const handleCreateFollowUp = (patient) => {
+    setSelectedPatient(patient);
+    setShowFollowUpModal(true);
+  };
+
+  // Hàm xử lý sau khi tạo lịch hẹn thành công
+  const handleFollowUpCreated = async () => {
+    setShowFollowUpModal(false);
+    await fetchPatientsAndAppointments(); // Làm mới danh sách bệnh nhân để cập nhật lần khám gần nhất
+  };
+
 
   // Open chat
   const handleOpenChat = (patient) => {
@@ -586,6 +602,12 @@ export default function PatientTab({ handleStartCall }) {
                       >
                         <Phone color="#f59e0b" size={20} />
                       </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleCreateFollowUp(patient)}
+                      >
+                        <PlusCircle color="#22c55e" size={20} />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </View>
@@ -776,6 +798,13 @@ export default function PatientTab({ handleStartCall }) {
           onSave={handleUpdatePatient}
         />
       )}
+
+      <CreateFollowUpModal
+        visible={showFollowUpModal}
+        onClose={() => setShowFollowUpModal(false)}
+        patient={selectedPatient}
+        onSave={handleFollowUpCreated}
+      />
     </View>
   );
 }
