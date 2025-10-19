@@ -207,28 +207,31 @@ const CreateFollowUpModal = ({ visible, onClose, patient, onSave }) => {
 
                         {showTimeList && (
                             <View style={styles.timeList}>
-                                {availableTimes.map((time) => (
-                                    <TouchableOpacity
-                                        key={time}
-                                        onPress={() => {
-                                            setFormData((prev) => ({
-                                                ...prev,
-                                                time,
-                                            }));
-                                            setShowTimeList(false);
-                                        }}
-                                        style={[
-                                            styles.timeItem,
-                                            formData.time === time && {
-                                                backgroundColor: "#e9ecef",
-                                            },
-                                        ]}
-                                    >
-                                        <Text>{time}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                                <ScrollView nestedScrollEnabled>
+                                    {availableTimes.map((time) => (
+                                        <TouchableOpacity
+                                            key={time}
+                                            onPress={() => {
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    time,
+                                                }));
+                                                setShowTimeList(false);
+                                            }}
+                                            style={[
+                                                styles.timeItem,
+                                                formData.time === time && {
+                                                    backgroundColor: "#e9ecef",
+                                                },
+                                            ]}
+                                        >
+                                            <Text>{time}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
                             </View>
                         )}
+
 
                         {/* Loại lịch hẹn */}
                         <Text style={styles.label}>Loại lịch hẹn</Text>
@@ -357,7 +360,15 @@ const styles = StyleSheet.create({
     datePickerContainer: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, marginTop: 5 },
     datePickerText: { flex: 1, fontSize: 14 },
     pickerButton: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, marginTop: 5 },
-    timeList: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, maxHeight: 150, marginTop: 5 },
+    timeList: {
+        borderWidth: 1,
+        borderColor: "#ccc",
+        borderRadius: 8,
+        maxHeight: 200,
+        marginTop: 5,
+        overflow: "hidden",
+    },
+
     timeItem: { padding: 8 },
     row: { flexDirection: "row", justifyContent: "space-between" },
     typeButton: { flex: 1, borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, alignItems: "center", margin: 3 },
