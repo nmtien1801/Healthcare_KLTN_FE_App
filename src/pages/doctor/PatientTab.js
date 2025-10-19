@@ -202,13 +202,13 @@ export default function PatientTab({ handleStartCall }) {
 
   // Lắng nghe tín hiệu realtime từ Firebase
   useEffect(() => {
-    if (!doctorUid) {
+    if (!senderId) {
       setLoading(false);
       return;
     }
     fetchPatientsAndAppointments(); // Gọi lần đầu khi component mount
 
-    const unsub = listenStatusByReceiver(doctorUid, async (signal) => {
+    const unsub = listenStatusByReceiver(senderId, async (signal) => {
       const statusCode = [
         "update_patient_info",
         "update_patient_list"
@@ -220,7 +220,7 @@ export default function PatientTab({ handleStartCall }) {
     });
 
     return () => unsub();
-  }, [doctorUid]);
+  }, [senderId]);
 
   // Realtime listener for chat messages
   useEffect(() => {
