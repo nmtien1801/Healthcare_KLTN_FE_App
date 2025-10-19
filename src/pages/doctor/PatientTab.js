@@ -57,27 +57,27 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     apiPatient.healthRecords.length > 0;
   const healthRecords = hasHealthRecords
     ? apiPatient.healthRecords.map((record) => ({
-        id: record._id || `temp-${Date.now()}`,
-        date: record.date
-          ? new Date(record.date).toLocaleDateString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            })
-          : "-",
-        bloodPressure: record.bloodPressure || "-",
-        heartRate: record.heartRate || "-",
-        bloodSugar: record.bloodSugar || "-",
-        recordedAt: record.recordedAt
-          ? new Date(record.recordedAt).toLocaleString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "-",
-      }))
+      id: record._id || `temp-${Date.now()}`,
+      date: record.date
+        ? new Date(record.date).toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+        : "-",
+      bloodPressure: record.bloodPressure || "-",
+      heartRate: record.heartRate || "-",
+      bloodSugar: record.bloodSugar || "-",
+      recordedAt: record.recordedAt
+        ? new Date(record.recordedAt).toLocaleString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+        : "-",
+    }))
     : [];
 
   const userId = apiPatient.userId || {};
@@ -106,10 +106,10 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     statusTextColor: statusColors[apiPatient.status]?.textColor || "#fff",
     lastVisit: lastVisitDate
       ? lastVisitDate.toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
       : "Chưa có",
     lastVisitDate: lastVisitDate || new Date(),
     phone: userId.phone || apiPatient.phone || "",
@@ -122,10 +122,10 @@ const mapPatientData = (apiPatient, pastAppointments = []) => {
     gender: userId.gender || "-",
     dob: userId.dob
       ? new Date(userId.dob).toLocaleDateString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
       : "-",
     role: userId.role || "-",
     healthRecords,
@@ -202,13 +202,13 @@ export default function PatientTab({ handleStartCall }) {
 
   // Lắng nghe tín hiệu realtime từ Firebase
   useEffect(() => {
-    if (!doctorUid) {
+    if (!senderId) {
       setLoading(false);
       return;
     }
     fetchPatientsAndAppointments(); // Gọi lần đầu khi component mount
 
-    const unsub = listenStatusByReceiver(doctorUid, async (signal) => {
+    const unsub = listenStatusByReceiver(senderId, async (signal) => {
       const statusCode = [
         "update_patient_info",
         "update_patient_list"
@@ -220,7 +220,7 @@ export default function PatientTab({ handleStartCall }) {
     });
 
     return () => unsub();
-  }, [doctorUid]);
+  }, [senderId]);
 
   // Realtime listener for chat messages
   useEffect(() => {
@@ -702,13 +702,13 @@ export default function PatientTab({ handleStartCall }) {
                   >
                     {item.timestamp instanceof Date
                       ? item.timestamp.toLocaleTimeString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
                       : new Date(item.timestamp).toLocaleTimeString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                   </Text>
                 </View>
               )}
@@ -745,7 +745,7 @@ export default function PatientTab({ handleStartCall }) {
                 style={[
                   styles.sendButton,
                   (!messageInput.trim() || isSending) &&
-                    styles.disabledSendButton,
+                  styles.disabledSendButton,
                 ]}
                 onPress={sendMessage}
                 disabled={isSending || !messageInput.trim()}
