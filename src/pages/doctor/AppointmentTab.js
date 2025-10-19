@@ -122,6 +122,7 @@ export default function AppointmentTab() {
       date: formatDate(new Date(item.date).toISOString().split("T")[0]), // Sử dụng formatDate
       time: item.time,
       type: item.type,
+      isFollowUp: item.isFollowUp === true ? "Tái khám" : "Khám mới",
       reason: item.reason || "Tạm thời chưa có",
       doctor: item.doctorId?.userId?.username || "Tạm thời chưa có",
       notes: item.notes || "Tạm thời chưa có",
@@ -163,7 +164,7 @@ export default function AppointmentTab() {
         a.reason.toLowerCase().includes(searchTerm.toLowerCase());
       const matchDate = filterDate
         ? a.date ===
-          formatDate(new Date(filterDate).toISOString().split("T")[0])
+        formatDate(new Date(filterDate).toISOString().split("T")[0])
         : true;
       return matchSearch && matchDate;
     });
@@ -178,7 +179,7 @@ export default function AppointmentTab() {
         a.reason.toLowerCase().includes(searchTerm.toLowerCase());
       const matchDate = filterDate
         ? a.date ===
-          formatDate(new Date(filterDate).toISOString().split("T")[0])
+        formatDate(new Date(filterDate).toISOString().split("T")[0])
         : true;
       return matchSearch && matchDate;
     });
@@ -246,9 +247,8 @@ export default function AppointmentTab() {
         title: "Cập nhật lịch hẹn",
         content: `Lịch hẹn của bạn vào ngày ${new Date(
           updatedAppointment.date
-        ).toLocaleDateString("vi-VN")} lúc ${
-          updatedAppointment.time
-        } đã được cập nhật.`,
+        ).toLocaleDateString("vi-VN")} lúc ${updatedAppointment.time
+          } đã được cập nhật.`,
         metadata: {
           link: `/patient/appointments/${updatedAppointment.id}`,
         },
@@ -363,8 +363,12 @@ export default function AppointmentTab() {
             <Text style={styles.cardText}>{appointment.date}</Text>
           </View>
           <Text style={styles.cardText}>
-            <Text style={styles.cardLabel}>Loại: </Text>
+            <Text style={styles.cardLabel}>Địa điểm: </Text>
             {getLabelFromOptions(TYPE_OPTIONS, appointment.type)}
+          </Text>
+          <Text style={styles.cardText}>
+            <Text style={styles.cardLabel}>Loại: </Text>
+            {appointment.isFollowUp}
           </Text>
           <Text style={styles.cardText}>
             <Text style={styles.cardLabel}>Lý do: </Text>
