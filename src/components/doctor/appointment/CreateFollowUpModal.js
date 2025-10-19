@@ -79,6 +79,7 @@ const CreateFollowUpModal = ({ visible, onClose, patient, onSave }) => {
         try {
             const formattedDate = formData.date.toISOString().split("T")[0];
             const formattedTime = formData.time;
+            const fullDateTime = `${formattedDate}T${formattedTime}`;
 
             const response = await ApiBooking.createFollowUpAppointment({
                 firebaseUid: user.uid,
@@ -104,11 +105,11 @@ const CreateFollowUpModal = ({ visible, onClose, patient, onSave }) => {
                 email_Patient: patient.email,
                 email_Docter: user.email,
                 period: 30,
-                time: formattedTime,
+                time: fullDateTime,
                 location: formData.type,
             });
 
-            setSuccessMessage(`Đặt lịch tái khám  thành công với bệnh nhân ${patient.name} vào ${formattedDate} lúc ${formattedTime}!`);
+            setSuccessMessage(`Đặt lịch tái khám thành công với bệnh nhân ${patient.name} vào ${formattedDate} lúc ${formattedTime}!`);
             setSuccessResponse(response);
             setShowSuccessModal(true);
         } catch (err) {
