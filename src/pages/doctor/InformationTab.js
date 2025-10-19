@@ -15,7 +15,7 @@ import { Edit } from "lucide-react-native";
 import { useSelector } from "react-redux";
 import ApiDoctor from "../../apis/ApiDoctor";
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { listenStatus, sendStatus } from "../../utils/SetupSignFireBase";
+import { listenStatusByReceiver, sendStatus } from "../../utils/SetupSignFireBase";
 
 // Hàm format ngày (cải tiến)
 const formatDate = (date) => {
@@ -352,29 +352,25 @@ export default function DoctorProfile() {
     setIsEditing(false);
   };
 
+  // Lắng nghe tín hiệu realtime từ Firebase
   useEffect(() => {
     if (!doctorUid || !roomChats) {
-      console.log("Cannot set up listener: doctorUid or roomChats is missing");
       setLoading(false);
       return;
     }
-
-    console.log("Setting up listener for room:", roomChats);
     fetchDoctorInfo();
+    const unsub = listenStatusByReceiver(doctorUid, async (signal) => {
+      const statusCode = [
+        "update_info",
+      ];
 
-    const unsub = listenStatus(roomChats, (signal) => {
-      console.log("Received signal:", signal);
-      if (signal && signal.status === "update_info") {
-        console.log("Fetching new doctor info due to update signal");
-        setTimeout(fetchDoctorInfo, 500); // Delay để đợi server
+      if (statusCode.includes(signal?.status)) {
+        await fetchDoctorInfo();
       }
     });
 
-    return () => {
-      console.log("Unsubscribing listener for room:", roomChats);
-      unsub && unsub();
-    };
-  }, [doctorUid, roomChats]);
+    return () => unsub();
+  }, [doctorUid]);
 
   if (loading) {
     return (

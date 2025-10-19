@@ -40,7 +40,7 @@ import ApiPatient from "../../apis/ApiPatient";
 import ApiDoctor from "../../apis/ApiDoctor";
 import ViewPatientModal from "../../components/doctor/patient/ViewPatientModal";
 import EditPatientModal from "../../components/doctor/patient/EditPatientModal";
-import { listenStatus } from "../../utils/SetupSignFireBase";
+import { listenStatusByReceiver } from "../../utils/SetupSignFireBase";
 
 const { width, height } = Dimensions.get("window");
 
@@ -200,32 +200,27 @@ export default function PatientTab({ handleStartCall }) {
     }
   };
 
-  // Realtime listener for updates
+  // Lắng nghe tín hiệu realtime từ Firebase
   useEffect(() => {
-    const roomChats = senderId ? [senderId, receiverId].sort().join("_") : null;
-
-    if (!roomChats) {
+    if (!doctorUid) {
       setLoading(false);
       return;
     }
+    fetchPatientsAndAppointments(); // Gọi lần đầu khi component mount
 
-    fetchPatientsAndAppointments();
-    const unsub = listenStatus(roomChats, (signal) => {
-      console.log("Nhận tín hiệu đầy đủ:", signal);
-      if (
-        signal &&
-        (signal.status === "update_patient_info" ||
-          signal.status === "update_patient_list")
-      ) {
-        console.log("Cập nhật danh sách bệnh nhân...");
-        fetchPatientsAndAppointments();
-      } else {
-        console.log("Signal không hợp lệ hoặc null, không cập nhật.");
+    const unsub = listenStatusByReceiver(doctorUid, async (signal) => {
+      const statusCode = [
+        "update_patient_info",
+        "update_patient_list"
+      ];
+
+      if (statusCode.includes(signal?.status)) {
+        await fetchPatientsAndAppointments();
       }
     });
 
-    return () => unsub && unsub();
-  }, [senderId]);
+    return () => unsub();
+  }, [doctorUid]);
 
   // Realtime listener for chat messages
   useEffect(() => {

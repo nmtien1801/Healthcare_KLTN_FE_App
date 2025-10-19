@@ -49,3 +49,26 @@ export const listenStatus = (roomChats, callback) => { // ĐÃ XÓA receiverId k
 
     return unsub;
 };
+
+export const listenStatusByReceiver = (receiverUid, callback) => {
+    if (!receiverUid) return () => {};
+
+    const q = query(
+        collectionGroup(db, "signal"),
+        where("receiverId", "==", receiverUid),
+        where("type", "==", "status"),
+        orderBy("timestamp", "desc"),
+        limit(20) // Lấy 20 signals gần nhất
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added" || change.type === "modified") {
+                const signal = { id: change.doc.id, ...change.doc.data() };
+                callback(signal);
+            }
+        });
+    });
+
+    return unsub;
+};

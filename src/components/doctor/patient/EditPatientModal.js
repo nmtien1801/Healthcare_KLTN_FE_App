@@ -13,7 +13,10 @@ import { Picker } from "@react-native-picker/picker";
 import { X, Stethoscope, FileText, Plus, Trash2 } from "lucide-react-native";
 import ApiDoctor from "../../../apis/ApiDoctor";
 import { useDispatch, useSelector } from "react-redux";
-import { listenStatus, sendStatus } from "../../../utils/SetupSignFireBase";
+import {
+  listenStatusByReceiver,
+  sendStatus,
+} from "../../../utils/SetupSignFireBase";
 import { applyMedicines, fetchMedicines } from "../../../redux/medicineAiSlice";
 
 const { width, height } = Dimensions.get("window");
@@ -101,25 +104,21 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
     }
   }, [patient]);
 
-  // Lắng nghe realtime từ Firebase
+  // Lắng nghe tín hiệu realtime từ Firebase
   useEffect(() => {
-    if (!roomChats) {
-      return;
-    }
+    const unsub = listenStatusByReceiver(doctorUid, async (signal) => {
+      const statusCode = ["update_patient_info"];
 
-    const unsubscribe = listenStatus(roomChats, (signal) => {
-      if (signal?.status === "update_patient_info") {
+      if (statusCode.includes(signal?.status)) {
         setFormData((prev) => ({
           ...prev,
-          ...patient, // Cập nhật từ patient props
+          ...patient,
         }));
       }
     });
 
-    return () => {
-      unsubscribe && unsubscribe();
-    };
-  }, [roomChats, patient]);
+    return () => unsub();
+  }, [doctorUid, patient]);
 
   // Hàm thêm thuốc mới
   const addMedicine = (time) => {
@@ -590,59 +589,59 @@ const styles = StyleSheet.create({
   },
 
   // thuốc
-   medicineSection: {
+  medicineSection: {
     marginTop: 16,
     gap: 12,
   },
   sectionTitle: {
     fontSize: width * 0.045,
-    fontWeight: '600',
-    color: '#4F46E5',
+    fontWeight: "600",
+    color: "#4F46E5",
     marginBottom: 8,
   },
   timeBlock: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: "#e9ecef",
     padding: 12,
     marginBottom: 12,
   },
   timeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   timeLabel: {
     fontSize: width * 0.042,
-    fontWeight: '600',
-    color: '#4F46E5',
+    fontWeight: "600",
+    color: "#4F46E5",
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#4F46E5',
-    backgroundColor: '#ffffff',
+    borderColor: "#4F46E5",
+    backgroundColor: "#ffffff",
   },
   addButtonText: {
     fontSize: width * 0.035,
-    color: '#4F46E5',
-    fontWeight: '500',
+    color: "#4F46E5",
+    fontWeight: "500",
     marginLeft: 4,
   },
   emptyContainer: {
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   emptyText: {
     fontSize: width * 0.035,
-    color: '#9ca3af',
+    color: "#9ca3af",
   },
   medicineList: {
     gap: 8,
@@ -651,35 +650,35 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   medicineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   medicineInput: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 6,
     padding: 10,
     fontSize: width * 0.037,
-    color: '#333',
+    color: "#333",
     borderWidth: 1,
-    borderColor: '#e0e4e8',
+    borderColor: "#e0e4e8",
   },
   inputError: {
-    borderColor: '#dc3545',
+    borderColor: "#dc3545",
   },
   deleteButton: {
     padding: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#dc3545',
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#dc3545",
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   errorText: {
     fontSize: width * 0.032,
-    color: '#dc3545',
+    color: "#dc3545",
     marginLeft: 4,
     marginTop: 2,
   },
