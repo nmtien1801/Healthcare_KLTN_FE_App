@@ -17,7 +17,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import ApiWorkShift from "../../apis/ApiWorkShift";
 import ApiDoctor from "../../apis/ApiDoctor";
 import { formatDate } from "../../utils/formatDate";
-import { listenStatus, sendStatus } from "../../utils/SetupSignFireBase";
+import { listenStatusByReceiver, sendStatus } from "../../utils/SetupSignFireBase";
 
 
 // Shift options
@@ -404,14 +404,13 @@ const AttendanceTab = () => {
     const [doctorInfo, setDoctorInfo] = useState(null);
     const [loadingDoctor, setLoadingDoctor] = useState(true);
     const user = useSelector((state) => state.auth.user);
-    const firebaseUid = user.uid;
-    const doctorUid = user.uid;
-    const patientUid = user.uid;
-    const roomChats = [doctorUid, patientUid].sort().join("_");
+    const [receiverId, setReceiverId] = useState();
+    const senderId = user.uid;
+    const roomChats = [senderId, receiverId].sort().join("_");
 
     useEffect(() => {
 
-        const unsub = listenStatus(roomChats, async (signal) => {
+        const unsub = listenStatusByReceiver(senderId, async (signal) => {
             if (!signal) return;
             if (["createWorkShifts", "deleteManyWorkShifts", "checkInWorkShift", "checkOutWorkShift"].includes(signal.status)) {
                 try {
@@ -424,7 +423,7 @@ const AttendanceTab = () => {
             }
         })
         const fetchDoctorInfo = async () => {
-            if (!firebaseUid) {
+            if (!senderId) {
                 setInfoModalTitle("Thông báo");
                 setInfoModalMessage("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
                 setShowInfoModal(true);
@@ -541,7 +540,7 @@ const AttendanceTab = () => {
             }
         };
 
-        if (!firebaseUid) {
+        if (!senderId) {
             setInfoModalTitle("Thông báo");
             setInfoModalMessage("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
             setShowInfoModal(true);
@@ -650,16 +649,16 @@ const AttendanceTab = () => {
                 const editingSchedule = savedSchedules.find((s) => s.weekStartDate === weekStartDate);
                 if (editingSchedule && editingSchedule.shiftIds.length > 0) {
                     await ApiWorkShift.deleteManyWorkShifts(editingSchedule.shiftIds);
-                    sendStatus(doctorUid, patientUid, "deleteManyWorkShifts");
+                    sendStatus(senderId, receiverId, "deleteManyWorkShifts");
                 }
                 await ApiWorkShift.createWorkShifts({ shifts: shiftsData });
-                sendStatus(doctorUid, patientUid, "createWorkShifts");
+                sendStatus(senderId, receiverId, "createWorkShifts");
                 setInfoModalTitle("Thành công");
                 setInfoModalMessage("Lịch làm việc đã được cập nhật!");
                 setIsEditing(false);
             } else {
                 await ApiWorkShift.createWorkShifts({ shifts: shiftsData });
-                sendStatus(doctorUid, patientUid, "createWorkShifts");
+                sendStatus(senderId, receiverId, "createWorkShifts");
                 setInfoModalTitle("Thành công");
                 setInfoModalMessage("Lịch làm việc đã được lưu!");
             }
@@ -741,7 +740,7 @@ const AttendanceTab = () => {
         if (scheduleToDelete && scheduleToDelete.length > 0) {
             try {
                 await ApiWorkShift.deleteManyWorkShifts(scheduleToDelete);
-                sendStatus(doctorUid, patientUid, "deleteManyWorkShifts");
+                sendStatus(senderId, receiverId, "deleteManyWorkShifts");
                 setInfoModalTitle("Thành công");
                 setInfoModalMessage("Lịch làm việc đã được xóa!");
                 setShowInfoModal(true);
@@ -805,7 +804,7 @@ const AttendanceTab = () => {
                 minute: "2-digit",
             });
             await ApiWorkShift.checkInWorkShift("webcam");
-            sendStatus(doctorUid, patientUid, "checkInWorkShift");
+            sendStatus(senderId, receiverId, "checkInWorkShift");
 
             setCheckInTime(checkInTimeStr);
             setAttendanceHistory((prev) => {
@@ -859,7 +858,7 @@ const AttendanceTab = () => {
                 minute: "2-digit",
             });
             await ApiWorkShift.checkOutWorkShift("webcam");
-            sendStatus(doctorUid, patientUid, "checkOutWorkShift");
+            sendStatus(senderId, receiverId, "checkOutWorkShift");
 
             setCheckOutTime(checkOutTimeStr);
             setAttendanceHistory((prev) => {
