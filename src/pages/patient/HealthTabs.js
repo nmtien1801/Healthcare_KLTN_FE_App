@@ -442,7 +442,7 @@ const Chart = ({ bloodSugar, setWarning }) => {
               label: { formatter: "Sau ăn" },
             },
             {
-              yAxis: 11.1,
+              yAxis: 10,
               lineStyle: { color: "#ef4444" },
               label: { formatter: "Ngưỡng cao (sau ăn)" },
             },
