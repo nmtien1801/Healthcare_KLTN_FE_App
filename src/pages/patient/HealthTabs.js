@@ -20,7 +20,7 @@ import { useNavigation } from "@react-navigation/native";
 import ApiBooking from "../../apis/ApiBooking";
 import { ECharts } from "react-native-echarts-wrapper";
 import { InsertFoods, GetListFood } from "../../redux/foodSlice";
-import { useFocusEffect } from "@react-navigation/native"; // mỗi lần vào thì tự useEffect lại
+import ApiNotification from "../../apis/ApiNotification";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -43,6 +43,29 @@ const Following = ({ user, nearestAppointment, warning }) => {
         ? safeWarning.join("\n\n")
         : "Chỉ số đường huyết trong mức bình thường",
   };
+
+  useEffect(() => {
+    if (warningCount > 1) {
+      const fetchWarning = async () => {
+        try {
+          await ApiNotification.createNotification({
+            receiverId: user.uid,
+            title: "Cảnh báo vượt mức nguy hiểm đường huyết",
+            content: safeWarning.join("\n"),
+            type: "system",
+            metadata: {
+              link: `/patient/appointments/${user.uid}`,
+            },
+            avatar: user.avatar || "",
+          });
+        } catch (err) {
+          console.error("Lỗi khi gửi cảnh báo:", err);
+        }
+      };
+
+      fetchWarning();
+    }
+  }, [warningCount, safeWarning, user]);
 
   return (
     <View style={styles.container}>

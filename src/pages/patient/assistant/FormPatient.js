@@ -13,23 +13,11 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import { useDispatch, useSelector } from "react-redux";
 import { api } from "../../../apis/assistant";
-import {
-  fetchTrendMedicine,
-  selectMedicineLoading,
-  selectTrendMedicine,
-  selectMedicineError,
-  applyMedicines,
-  fetchMedicines,
-} from "../../../redux/medicineAiSlice";
-import { useFocusEffect } from "@react-navigation/native"; // mỗi lần vào thì tự useEffect lại
 
 const FormPatient = () => {
   const currentYear = new Date().getFullYear();
   const dispatch = useDispatch();
   let user = useSelector((state) => state.auth.userInfo);
-  const medicineLoading = useSelector(selectMedicineLoading);
-  const trendMedicine = useSelector(selectTrendMedicine);
-  const medicineError = useSelector(selectMedicineError);
 
   const [formData, setFormData] = useState({
     year: currentYear,
@@ -49,29 +37,9 @@ const FormPatient = () => {
     blood_glucose_level: 125,
   });
 
-  const [medicines, setMedicines] = useState({
-    sang: [],
-    trua: [],
-    toi: [],
-  });
-
-  const [prescriptionStatus, setPrescriptionStatus] = useState("not_created");
+ 
   const [loading, setLoading] = useState(false);
   const [predictionResult, setPredictionResult] = useState(null);
-
-  // Monitor medicine data changes
-  useEffect(() => {
-    if (trendMedicine && prescriptionStatus === "created") {
-      Alert.alert("Thành công", "Đã nhận được khuyến nghị thuốc từ AI");
-    }
-  }, [trendMedicine, prescriptionStatus]);
-
-  // Monitor medicine errors
-  useEffect(() => {
-    if (medicineError) {
-      Alert.alert("Lỗi", `Lỗi khi lấy dữ liệu thuốc: ${medicineError}`);
-    }
-  }, [medicineError]);
 
   const handleInputChange = (name, value) => {
     const formattedValue = value
@@ -143,159 +111,6 @@ Vui lòng trao đổi thêm với bác sĩ để được tư vấn và chẩn �
       Alert.alert("Lỗi", "⚠️ Có lỗi xảy ra. Vui lòng thử lại!");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Categorize medicines by time
-  const categorizeMedicines = (list) => {
-    const sang = [];
-    const trua = [];
-    const toi = [];
-
-    const instructions = {
-      sang: "uống sau ăn",
-      trua: "uống trước ăn",
-      toi: "tiêm trước khi đi ngủ",
-    };
-
-    list.forEach((m) => {
-      const hour = m.time.split("T")[1].split(":")[0];
-      const hourNum = parseInt(hour, 10);
-
-      if (hourNum >= 5 && hourNum < 11) {
-        sang.push(`${m.name} ${m.lieu_luong} - ${instructions.sang}`);
-      } else if (hourNum >= 11 && hourNum < 17) {
-        trua.push(`${m.name} ${m.lieu_luong} - ${instructions.trua}`);
-      } else if (hourNum >= 17 && hourNum <= 22) {
-        toi.push(`${m.name} ${m.lieu_luong} - ${instructions.toi}`);
-      }
-    });
-
-    return { sang, trua, toi };
-  };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const fetchMedicine = async () => {
-        const today = new Date();
-        const res = await dispatch(
-          fetchMedicines({ userId: user.userId, date: today })
-        );
-
-        if (res?.payload?.DT) {
-          const data = res.payload.DT;
-
-          // ✅ Nếu DB đã có thuốc, coi như đơn đã được áp dụng
-          if (data.length > 0) {
-            setPrescriptionStatus("applied");
-          }
-
-          const categorized = categorizeMedicines(data);
-          setMedicines(categorized);
-
-          // Nếu chưa có thuốc, giữ logic cũ
-          if (data.length === 0) {
-            const hasAny = (arr) => Array.isArray(arr) && arr.length > 0;
-            if (
-              hasAny(categorized.sang) ||
-              hasAny(categorized.trua) ||
-              hasAny(categorized.toi)
-            ) {
-              setPrescriptionStatus("created");
-            } else {
-              setPrescriptionStatus("not_created");
-            }
-          }
-        }
-      };
-
-      if (user && user.userId) {
-        fetchMedicine();
-      }
-
-      // Hàm này sẽ chạy khi màn hình bị Unfocus (chuyển tab khác)
-      return () => {};
-    }, [])
-  );
-
-  const createPrescription = async () => {
-    try {
-      const medicineData = {
-        age: formData.age,
-        gender: formData.gender === "female" ? "female" : "male",
-        BMI: formData.bmi,
-        HbA1c: formData.hbA1c_level,
-        bloodSugar: formData.blood_glucose_level,
-      };
-
-      let res = await dispatch(fetchTrendMedicine(medicineData)).unwrap();
-      setMedicines(res);
-      setPrescriptionStatus("created");
-      Alert.alert(
-        "Thành công",
-        "Đã tạo đơn thuốc dựa trên thông tin bệnh nhân và AI phân tích."
-      );
-    } catch (error) {
-      console.error("Lỗi khi tạo đơn thuốc:", error);
-      Alert.alert("Lỗi", "Có lỗi xảy ra khi tạo đơn thuốc. Vui lòng thử lại!");
-    }
-  };
-
-  function parseMedicine(item, time, userId) {
-    const [thuocLieu, cachDung] = item.split(" - ");
-    const parts = thuocLieu?.trim().split(" ") || [];
-    const idx = parts.findIndex((p) => /\d/.test(p));
-
-    let thuoc = thuocLieu || "";
-    let lieuluong = "";
-
-    if (idx !== -1) {
-      thuoc = parts.slice(0, idx).join(" ");
-      lieuluong = parts.slice(idx).join(" ");
-    }
-
-    return {
-      userId,
-      name: thuoc.trim(),
-      lieu_luong: lieuluong.trim(),
-      Cachdung: cachDung?.trim(),
-      time: time,
-      status: false,
-    };
-  }
-
-  const applyPrescriptionOneWeek = async () => {
-    if (prescriptionStatus !== "created") return;
-
-    let data = {
-      email: user.email,
-      medicinePlan: medicines,
-    };
-
-    Object.entries(medicines).forEach(([time, arr]) => {
-      arr.forEach((item) => {
-        const parsed = parseMedicine(item, time, user?.userId);
-        dispatch(applyMedicines(parsed));
-      });
-    });
-
-    setPrescriptionStatus("applied");
-    Alert.alert(
-      "Thành công",
-      "Đã áp dụng đơn thuốc trong 1 tuần. Hãy theo dõi chỉ số thường xuyên."
-    );
-  };
-
-  const getPrescriptionStatusColor = () => {
-    switch (prescriptionStatus) {
-      case "not_created":
-        return "#F59E0B";
-      case "created":
-        return "#10B981";
-      case "applied":
-        return "#6B7280";
-      default:
-        return "#F59E0B";
     }
   };
 
@@ -413,76 +228,6 @@ Vui lòng trao đổi thêm với bác sĩ để được tư vấn và chẩn �
               <Picker.Item label="Từng hút" value="ever" />
               <Picker.Item label="Hiện tại" value="current" />
             </Picker>
-          </View>
-        </View>
-
-        {/* Medicine Plan */}
-        <View
-          style={[
-            styles.medicineContainer,
-            { borderLeftColor: getPrescriptionStatusColor() },
-          ]}
-        >
-          <Text style={styles.medicineTitle}>📋 Kế hoạch dùng thuốc</Text>
-          {prescriptionStatus === "not_created" && (
-            <Text style={styles.medicineSubtitle}>
-              Chưa có đơn thuốc. Vui lòng khởi tạo để có thể áp dụng theo dõi.
-            </Text>
-          )}
-
-          <View style={styles.medicineList}>
-            <Text style={styles.medicineTime}>
-              <Text style={styles.bold}>Sáng:</Text>{" "}
-              {medicines?.sang?.length > 0
-                ? medicines.sang.join(", ")
-                : "Không dùng"}
-            </Text>
-            <Text style={styles.medicineTime}>
-              <Text style={styles.bold}>Trưa:</Text>{" "}
-              {medicines?.trua?.length > 0
-                ? medicines.trua.join(", ")
-                : "Không dùng"}
-            </Text>
-            <Text style={styles.medicineTime}>
-              <Text style={styles.bold}>Tối:</Text>{" "}
-              {medicines?.toi?.length > 0
-                ? medicines.toi.join(", ")
-                : "Không dùng"}
-            </Text>
-          </View>
-
-          <View style={styles.medicineButtons}>
-            {prescriptionStatus === "not_created" && (
-              <TouchableOpacity
-                style={[styles.button, styles.warningButton]}
-                onPress={createPrescription}
-                disabled={medicineLoading}
-              >
-                {medicineLoading ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text style={styles.buttonText}>Tạo đơn thuốc</Text>
-                )}
-              </TouchableOpacity>
-            )}
-            {prescriptionStatus === "created" && (
-              <TouchableOpacity
-                style={[styles.button, styles.successButton]}
-                onPress={applyPrescriptionOneWeek}
-              >
-                <Text style={styles.buttonText}>Áp dụng 1 tuần</Text>
-              </TouchableOpacity>
-            )}
-            {prescriptionStatus === "applied" && (
-              <TouchableOpacity
-                style={[styles.button, styles.disabledButton]}
-                disabled
-              >
-                <Text style={[styles.buttonText, styles.disabledText]}>
-                  Đã áp dụng
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
         </View>
 
