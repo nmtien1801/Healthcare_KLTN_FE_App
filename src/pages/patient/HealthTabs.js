@@ -305,7 +305,6 @@ const checkHighThreshold = (dailyBloodSugar, setWarning) => {
 
   // 4. Hiển thị alert nếu có cảnh báo
   if (warnings.length > 0) {
-    console.log("ssssssss ", warnings);
     setWarning(warnings);
   } else {
     setWarning([]);
@@ -634,66 +633,63 @@ const HealthTabs = () => {
   const user = useSelector((state) => state.auth.user);
   const [warning, setWarning] = useState([]); // chỉ số cảnh báo
 
+  const fetchData = async () => {
+    if (!user?.userId) {
+      console.log("No userId, skipping data fetch");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Fetch blood sugar data
+      const [postMealRes, fastingRes] = await Promise.all([
+        dispatch(
+          fetchBloodSugar({ userId: user.userId, type: "postMeal", days: 6 })
+        ).unwrap(),
+        dispatch(
+          fetchBloodSugar({ userId: user.userId, type: "fasting", days: 6 })
+        ).unwrap(),
+      ]);
+
+      const allData = [];
+      const postMealData =
+        postMealRes?.DT?.bloodSugarData || postMealRes?.DT || postMealRes || [];
+      const fastingData =
+        fastingRes?.DT?.bloodSugarData || fastingRes?.DT || fastingRes || [];
+
+      if (Array.isArray(postMealData)) {
+        allData.push(...postMealData);
+      }
+      if (Array.isArray(fastingData)) {
+        allData.push(...fastingData);
+      }
+
+      setBloodSugar(allData);
+
+      // Fetch nearest appointment
+      const appointments = await ApiBooking.getUpcomingAppointments();
+      if (appointments?.length > 0) {
+        const sortedAppointments = appointments.sort((a, b) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
+          if (dateA.getTime() === dateB.getTime()) {
+            return a.time.localeCompare(b.time);
+          }
+          return dateA - dateB;
+        });
+        setNearestAppointment(sortedAppointments[0]);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      Alert.alert("Lỗi", "Không thể tải dữ liệu. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.userId) {
-        console.log("No userId, skipping data fetch");
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        // Fetch blood sugar data
-        const [postMealRes, fastingRes] = await Promise.all([
-          dispatch(
-            fetchBloodSugar({ userId: user.userId, type: "postMeal", days: 6 })
-          ).unwrap(),
-          dispatch(
-            fetchBloodSugar({ userId: user.userId, type: "fasting", days: 6 })
-          ).unwrap(),
-        ]);
-
-        const allData = [];
-        const postMealData =
-          postMealRes?.DT?.bloodSugarData ||
-          postMealRes?.DT ||
-          postMealRes ||
-          [];
-        const fastingData =
-          fastingRes?.DT?.bloodSugarData || fastingRes?.DT || fastingRes || [];
-
-        if (Array.isArray(postMealData)) {
-          allData.push(...postMealData);
-        }
-        if (Array.isArray(fastingData)) {
-          allData.push(...fastingData);
-        }
-
-        setBloodSugar(allData);
-
-        // Fetch nearest appointment
-        const appointments = await ApiBooking.getUpcomingAppointments();
-        if (appointments?.length > 0) {
-          const sortedAppointments = appointments.sort((a, b) => {
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
-            if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
-            if (dateA.getTime() === dateB.getTime()) {
-              return a.time.localeCompare(b.time);
-            }
-            return dateA - dateB;
-          });
-          setNearestAppointment(sortedAppointments[0]);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        Alert.alert("Lỗi", "Không thể tải dữ liệu. Vui lòng thử lại.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [user?.userId, dispatch]);
 
@@ -748,25 +744,7 @@ const HealthTabs = () => {
       Alert.alert("Thành công", "Đã lưu chỉ số đường huyết thành công!");
 
       // Refresh blood sugar data
-      const [postMealRes, fastingRes] = await Promise.all([
-        dispatch(
-          fetchBloodSugar({ userId: user.userId, type: "postMeal", days: 7 })
-        ).unwrap(),
-        dispatch(
-          fetchBloodSugar({ userId: user.userId, type: "fasting", days: 7 })
-        ).unwrap(),
-      ]);
-
-      const allData = [];
-      const postMealData =
-        postMealRes?.DT?.bloodSugarData || postMealRes?.DT || postMealRes || [];
-      const fastingData =
-        fastingRes?.DT?.bloodSugarData || fastingRes?.DT || fastingRes || [];
-
-      if (Array.isArray(postMealData)) allData.push(...postMealData);
-      if (Array.isArray(fastingData)) allData.push(...fastingData);
-
-      setBloodSugar(allData);
+      await fetchData()
     } catch (error) {
       console.error("API error:", error);
       Alert.alert("Lỗi", "Có lỗi xảy ra khi lưu dữ liệu. Vui lòng thử lại!");
