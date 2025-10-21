@@ -8,9 +8,11 @@ import {
     StyleSheet,
     ActivityIndicator,
     Dimensions,
+    ScrollView,
 } from "react-native";
-import { X } from "lucide-react-native";
+import { X, Pill, ChevronDown, ChevronUp } from "lucide-react-native";
 import ApiDoctor from "../../../apis/ApiDoctor";
+import ApiPatient from "../../../apis/ApiPatient";
 
 const { width } = Dimensions.get("window");
 
@@ -18,35 +20,54 @@ const PastAppointmentsModal = ({ show, onHide, patientId }) => {
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [expandedId, setExpandedId] = useState(null);
+    const [medicines, setMedicines] = useState({});
+    const [loadingMed, setLoadingMed] = useState(false);
 
-    // Gọi API để lấy lịch hẹn đã khám
+    // Lấy lịch hẹn đã khám
     useEffect(() => {
         if (!show || !patientId) return;
-
         const fetchPastAppointments = async () => {
             setLoading(true);
             setError(null);
             try {
                 const response = await ApiDoctor.getPatientPastAppointments(patientId);
-                console.log("Past Appointments Data:", response); // Debug
                 setAppointments(Array.isArray(response) ? response : response.data || []);
             } catch (err) {
-                console.error("Lỗi khi gọi API lịch hẹn:", err.message, err.response?.data);
-                setError(
-                    err.response?.data?.message || "Không thể tải danh sách lịch hẹn. Vui lòng thử lại sau."
-                );
+                console.error(err);
+                setError("Không thể tải danh sách lịch hẹn.");
             } finally {
                 setLoading(false);
             }
         };
-
         fetchPastAppointments();
     }, [show, patientId]);
+
+    // Mở/đóng lịch hẹn và load thuốc
+    const handleToggle = async (id) => {
+        if (expandedId === id) {
+            setExpandedId(null);
+            return;
+        }
+        setExpandedId(id);
+        if (!medicines[id]) {
+            setLoadingMed(true);
+            try {
+                const res = await ApiPatient.getMedicinesByAppointment(id);
+                setMedicines((prev) => ({ ...prev, [id]: res?.DT || res?.data || [] }));
+            } catch (error) {
+                console.error("Lỗi tải thuốc:", error);
+            } finally {
+                setLoadingMed(false);
+            }
+        }
+    };
+
 
     if (!show) return null;
 
     return (
-        <Modal visible={show} animationType="slide" transparent={true}>
+        <Modal visible={show} animationType="slide" transparent>
             <View style={styles.modalOverlay}>
                 <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onHide} />
                 <View style={[styles.modalContent, { maxWidth: width * 0.9 }]}>
@@ -56,50 +77,66 @@ const PastAppointmentsModal = ({ show, onHide, patientId }) => {
                             <X color="#1f2937" size={24} />
                         </TouchableOpacity>
                     </View>
-                    <View style={styles.modalBody}>
+
+                    <ScrollView style={styles.modalBody}>
                         {loading ? (
-                            <View style={styles.loadingContainer}>
+                            <View style={styles.center}>
                                 <ActivityIndicator size="large" color="#2563eb" />
                                 <Text style={styles.loadingText}>Đang tải danh sách lịch hẹn...</Text>
                             </View>
                         ) : error ? (
-                            <View style={styles.errorContainer}>
-                                <Text style={styles.errorText}>{error}</Text>
-                            </View>
+                            <Text style={styles.errorText}>{error}</Text>
                         ) : appointments.length > 0 ? (
-                            <FlatList
-                                data={appointments}
-                                renderItem={({ item: appt }) => (
-                                    <View style={styles.tableRow}>
-                                        <Text style={styles.tableCell}>
-                                            {new Date(appt.date).toLocaleDateString("vi-VN", {
-                                                day: "2-digit",
-                                                month: "2-digit",
-                                                year: "numeric",
-                                            })}
+                            appointments.map((appt) => (
+                                <View key={appt._id} style={styles.appointmentCard}>
+                                    <TouchableOpacity
+                                        style={styles.appointmentHeader}
+                                        onPress={() => handleToggle(appt._id)}
+                                    >
+                                        <Text style={styles.dateText}>
+                                            {new Date(appt.date).toLocaleDateString("vi-VN")}
                                         </Text>
-                                        <Text style={styles.tableCell}>{appt.time || "-"}</Text>
-                                        <Text style={styles.tableCell}>
+                                        <Text style={styles.timeText}>{appt.time || "-"}</Text>
+                                        <Text style={styles.doctorText}>
                                             {appt.doctorId?.userId?.username || "Không xác định"}
                                         </Text>
-                                        <Text style={styles.tableCell}>{appt.doctorId?.hospital || "-"}</Text>
-                                    </View>
-                                )}
-                                keyExtractor={(item) => item._id}
-                                ListHeaderComponent={() => (
-                                    <View style={styles.tableHeader}>
-                                        <Text style={styles.tableHeaderCell}>Ngày</Text>
-                                        <Text style={styles.tableHeaderCell}>Giờ</Text>
-                                        <Text style={styles.tableHeaderCell}>Bác sĩ</Text>
-                                        <Text style={styles.tableHeaderCell}>Bệnh viện</Text>
-                                    </View>
-                                )}
-                                showsVerticalScrollIndicator={false}
-                            />
+                                        {expandedId === appt._id ? (
+                                            <ChevronUp size={18} color="#2563eb" />
+                                        ) : (
+                                            <ChevronDown size={18} color="#2563eb" />
+                                        )}
+                                    </TouchableOpacity>
+
+                                    {expandedId === appt._id && (
+                                        <View style={styles.medicineContainer}>
+                                            {loadingMed ? (
+                                                <ActivityIndicator size="small" color="#2563eb" />
+                                            ) : medicines[appt._id]?.length > 0 ? (
+                                                medicines[appt._id].map((med) => (
+                                                    <View key={med._id} style={styles.medicineItem}>
+                                                        <Pill size={18} color="#2563eb" />
+                                                        <View style={{ flex: 1, marginLeft: 8 }}>
+                                                            <Text style={styles.medName}>{med.name}</Text>
+                                                            <Text style={styles.medDose}>
+                                                                Liều lượng: {med.lieu_luong}
+                                                            </Text>
+                                                        </View>
+                                                    </View>
+                                                ))
+                                            ) : (
+                                                <Text style={styles.emptyText}>
+                                                    Không có thuốc trong ngày khám này.
+                                                </Text>
+                                            )}
+                                        </View>
+                                    )}
+                                </View>
+                            ))
                         ) : (
                             <Text style={styles.emptyText}>Không có lịch hẹn nào trong quá khứ.</Text>
                         )}
-                    </View>
+                    </ScrollView>
+
                     <View style={styles.modalFooter}>
                         <TouchableOpacity style={styles.footerButton} onPress={onHide}>
                             <Text style={styles.footerButtonText}>Đóng</Text>
@@ -118,9 +155,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-    modalBackdrop: {
-        flex: 1,
-    },
+    modalBackdrop: { flex: 1 },
     modalContent: {
         backgroundColor: "#fff",
         borderRadius: 16,
@@ -133,82 +168,45 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
         backgroundColor: "#f8f9fa",
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        padding: 16,
         borderBottomWidth: 1,
         borderBottomColor: "#e5e7eb",
     },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#1f2937",
-    },
-    modalBody: {
-        padding: 16,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 32,
-    },
-    loadingText: {
-        fontSize: 16,
-        color: "#6b7280",
-        marginTop: 12,
-    },
-    errorContainer: {
-        backgroundColor: "#fee2e2",
+    modalTitle: { fontSize: 20, fontWeight: "700", color: "#1f2937" },
+    modalBody: { padding: 16 },
+    appointmentCard: {
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
         borderRadius: 12,
-        padding: 16,
+        marginBottom: 12,
+        backgroundColor: "#f9fafb",
+        overflow: "hidden",
+    },
+    appointmentHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
         alignItems: "center",
+        padding: 12,
     },
-    errorText: {
-        fontSize: 16,
-        color: "#dc2626",
-        textAlign: "center",
+    medicineContainer: {
+        padding: 10,
+        backgroundColor: "#fff",
+        borderTopWidth: 1,
+        borderTopColor: "#e5e7eb",
     },
-    tableHeader: {
+    medicineItem: {
         flexDirection: "row",
-        backgroundColor: "#f8f9fa",
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#e0e7ff",
+        alignItems: "center",
+        paddingVertical: 6,
     },
-    tableHeaderCell: {
-        flex: 1,
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1e40af",
-        textAlign: "center",
-    },
-    tableRow: {
-        flexDirection: "row",
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#e5e7eb",
-    },
-    tableCell: {
-        flex: 1,
-        fontSize: 14,
-        color: "#1f2937",
-        textAlign: "center",
-    },
+    medName: { fontWeight: "600", color: "#1f2937" },
+    medDose: { color: "#6b7280", fontSize: 12 },
     emptyText: {
         fontSize: 14,
         color: "#6b7280",
         fontStyle: "italic",
         textAlign: "center",
-        padding: 16,
-    },
-    modalFooter: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: "#e5e7eb",
+        paddingVertical: 10,
     },
     footerButton: {
         paddingVertical: 8,
