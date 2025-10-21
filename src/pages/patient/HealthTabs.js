@@ -35,7 +35,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
   const warningCount = safeWarning.length;
 
   const readingStatus = {
-    status: warningCount > 1 ? "danger" : "normal",
+    status: warningCount > 1 ? "#dc3545" : "#28a745",
     color: warningCount > 1 ? "#dc3545" : "#28a745",
     bgColor: warningCount > 1 ? "#f8d7da" : "#d4edda",
     content:
@@ -46,9 +46,10 @@ const Following = ({ user, nearestAppointment, warning }) => {
 
   useEffect(() => {
     if (warningCount > 1) {
+      
       const fetchWarning = async () => {
         try {
-          await ApiNotification.createNotification({
+          let a = await ApiNotification.createNotification({
             receiverId: user.uid,
             title: "Cảnh báo vượt mức nguy hiểm đường huyết",
             content: safeWarning.join("\n"),
@@ -58,6 +59,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
             },
             avatar: user.avatar || "",
           });
+          console.log('sssssss ', a);
         } catch (err) {
           console.error("Lỗi khi gửi cảnh báo:", err);
         }
@@ -65,7 +67,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
 
       fetchWarning();
     }
-  }, [warningCount, safeWarning, user]);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -158,7 +160,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
           </View>
           <View style={styles.infoList}>
             <View style={styles.infoRow}>
-              <Text style={[styles.infoValue, { color: "#dc3545" }]}>
+              <Text style={[styles.infoValue, { color: readingStatus.status }]}>
                 {readingStatus.content}
               </Text>
             </View>
@@ -347,9 +349,7 @@ const Chart = ({ bloodSugar, setWarning }) => {
   const yMin = yVals.length
     ? Math.max(0, Math.floor((Math.min(...yVals) - 0.6) * 10) / 10)
     : 3.5;
-  const yMax = yVals.length
-    ? Math.ceil((Math.max(...yVals) + 0.6) * 10) / 10
-    : 11.5;
+  const yMax = 13
 
   const option = {
     tooltip: {
@@ -727,7 +727,6 @@ const HealthTabs = () => {
           userId: user?.userId,
           value: inputValue,
           type: inputType === "before" ? "fasting" : "postMeal",
-          time: new Date().toISOString(),
         })
       ).unwrap();
 
