@@ -110,7 +110,7 @@ const NotificationDropdown = () => {
                 // Nếu chỉ là cập nhật, xóa hoặc đánh dấu đọc → reload mà không hiện toast
                 if (
                     typeof signal === "string" &&
-                    ["notification_update", "notification_delete", "notification_read_all"].includes(signal)
+                    ["notification_update", "notification_delete", "notification_read_all", "warning"].includes(signal)
                 ) {
                     await Promise.all([loadNotifications(), loadUnreadCount()]);
                     return;

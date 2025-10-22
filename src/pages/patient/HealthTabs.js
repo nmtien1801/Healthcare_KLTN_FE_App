@@ -21,6 +21,7 @@ import ApiBooking from "../../apis/ApiBooking";
 import { ECharts } from "react-native-echarts-wrapper";
 import { InsertFoods, GetListFood } from "../../redux/foodSlice";
 import ApiNotification from "../../apis/ApiNotification";
+import { sendStatus } from "../../utils/SetupSignFireBase";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -28,7 +29,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
   const bloodSugar = useSelector((state) => state.patient.bloodSugar);
   const latestReading =
     Array.isArray(bloodSugar?.DT?.bloodSugarData) &&
-    bloodSugar.DT.bloodSugarData.length > 0
+      bloodSugar.DT.bloodSugarData.length > 0
       ? bloodSugar.DT.bloodSugarData[0].value
       : 0;
   const safeWarning = Array.isArray(warning) ? warning : [];
@@ -46,7 +47,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
 
   useEffect(() => {
     if (warningCount > 1) {
-      
+
       const fetchWarning = async () => {
         try {
           let a = await ApiNotification.createNotification({
@@ -59,7 +60,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
             },
             avatar: user.avatar || "",
           });
-          console.log('sssssss ', a);
+          await sendStatus(user?.uid, user?.uid, "warning");
         } catch (err) {
           console.error("Lỗi khi gửi cảnh báo:", err);
         }
