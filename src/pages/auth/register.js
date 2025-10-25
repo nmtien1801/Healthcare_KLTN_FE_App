@@ -7,8 +7,15 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-import { Eye, EyeOff, RefreshCw, Calendar, ChevronDown, ChevronUp } from "lucide-react-native";
-import DateTimePicker from '@react-native-community/datetimepicker';
+import {
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useDispatch, useSelector } from "react-redux";
 import { register, verifyEmail } from "../../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
@@ -36,7 +43,7 @@ export default function LoginForm() {
     confirmPassword: "",
     captcha: "",
     gender: "",
-    dob: new Date(), // Khởi tạo với Date object
+    dob: null, // Khởi tạo với Date object
     avatar: "",
     code: "",
   });
@@ -47,25 +54,26 @@ export default function LoginForm() {
       return "";
     }
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
   // Xử lý thay đổi ngày sinh
   const handleDateChange = (event, date) => {
-    console.log('DatePicker onChange:', { event: event?.type, date });
-    
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       setShowDatePicker(false);
     }
 
-    if (event?.type === 'set' && date) {
-      console.log('Setting new birth date:', date.toLocaleDateString('vi-VN'));
+    if (event?.type === "set" && date) {
+      console.log("Setting new birth date:", date.toLocaleDateString("vi-VN"));
       handleChange("dob", date);
     }
-    
-    if (Platform.OS === 'ios' && (event?.type === 'set' || event?.type === 'dismissed')) {
+
+    if (
+      Platform.OS === "ios" &&
+      (event?.type === "set" || event?.type === "dismissed")
+    ) {
       setShowDatePicker(false);
     }
   };
@@ -73,7 +81,7 @@ export default function LoginForm() {
   // Xử lý thay đổi ngày trên web
   const handleWebDateChange = (event) => {
     const dateString = event.target.value;
-    console.log('Web date input changed:', dateString);
+    console.log("Web date input changed:", dateString);
     if (dateString) {
       const newDate = new Date(dateString);
       if (!isNaN(newDate)) {
@@ -84,8 +92,7 @@ export default function LoginForm() {
 
   // Toggle date picker
   const toggleDatePicker = () => {
-    console.log('Toggle date picker, current state:', showDatePicker);
-    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+    if (Platform.OS === "android" || Platform.OS === "ios") {
       setShowDatePicker(!showDatePicker);
     }
   };
@@ -98,20 +105,22 @@ export default function LoginForm() {
   };
 
   useEffect(() => {
-    let timer;
-    if (startTime && countdown > 0) {
-      timer = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        const remaining = Math.max(0, 60 - elapsed);
-        setCountdown(remaining);
+    if (!startTime) return;
 
-        if (remaining === 0) {
-          setStartTime(null);
-        }
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [startTime, countdown]);
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, 60 - elapsed);
+      setCountdown(remaining);
+
+      if (remaining === 0) {
+        setStartTime(null);
+      }
+    };
+
+    tick(); // gọi ngay 1 lần
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [startTime]);
 
   const handleSubmit = async () => {
     setErrorMessage("");
@@ -158,21 +167,6 @@ export default function LoginForm() {
       return;
     }
 
-    // Kiểm tra tuổi hợp lệ (ít nhất 13 tuổi)
-    const today = new Date();
-    const birthDate = new Date(formData.dob);
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    
-    if (age < 13) {
-      setErrorMessage("Bạn phải ít nhất 13 tuổi để đăng ký");
-      return;
-    }
-
     // kiểm tra code verify email
     let currentTime = Date.now();
     if (currentTime - code.timestamp > 60000) {
@@ -180,24 +174,30 @@ export default function LoginForm() {
     } else if (+formData.captcha !== +code.code) {
       setErrorMessage("❌ Mã không đúng");
     } else {
-      // Chuyển đổi dob thành string trước khi gửi
-      const formDataToSend = {
-        ...formData,
-        dob: getDateString(formData.dob)
-      };
 
-      // Gửi thông tin đăng ký đi mongo
-      let res = await dispatch(register(formDataToSend));
-      if (res.payload.EC === 0) {
-        // Gửi thông tin đăng ký đi firebase
-        await createUserWithEmailAndPassword(
-          auth,
-          formData.email,
-          formData.password
-        );
-        navigation.navigate("Login");
-      } else {
-        setErrorMessage(res.payload.EM);
+
+      // Gửi thông tin đăng ký đi firebase
+      let result = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      console.log("sssssss ", result.user.uid);
+
+      if (result.user) {
+        // Gửi thông tin đăng ký đi mongo
+        // Chuyển đổi dob thành string trước khi gửi
+              const formDataToSend = {
+                ...formData,
+                dob: getDateString(formData.dob),
+                uid: result.user.uid
+              };
+        let res = await dispatch(register(formDataToSend));
+        if (res.payload.EC === 0) {
+          navigation.navigate("Login");
+        } else {
+          setErrorMessage(res.payload.EM);
+        }
       }
     }
   };
@@ -338,22 +338,22 @@ export default function LoginForm() {
         <View style={styles.inputContainer}>
           <TouchableOpacity
             style={styles.dateInputContainer}
-            onPress={Platform.OS === 'web' ? undefined : toggleDatePicker}
+            onPress={Platform.OS === "web" ? undefined : toggleDatePicker}
           >
             <Calendar size={20} color="#555" style={{ marginRight: 8 }} />
-            
-            {Platform.OS === 'web' ? (
+
+            {Platform.OS === "web" ? (
               <input
                 type="date"
                 style={{
                   flex: 1,
-                  border: 'none',
-                  outline: 'none',
+                  border: "none",
+                  outline: "none",
                   fontSize: 16,
-                  backgroundColor: 'transparent',
+                  backgroundColor: "transparent",
                   height: 30,
                 }}
-                value={formData.dob ? getDateString(formData.dob) : ''}
+                value={formData.dob ? getDateString(formData.dob) : ""}
                 onChange={handleWebDateChange}
                 max={getDateString(new Date())} // Không cho chọn ngày tương lai
               />
@@ -368,29 +368,30 @@ export default function LoginForm() {
                   : "Chọn ngày sinh"}
               </Text>
             )}
-            
-            {Platform.OS !== 'web' && (
-              showDatePicker ? (
+
+            {Platform.OS !== "web" &&
+              (showDatePicker ? (
                 <ChevronUp size={16} color="#666" />
               ) : (
                 <ChevronDown size={16} color="#666" />
-              )
-            )}
+              ))}
           </TouchableOpacity>
         </View>
 
         {/* DateTimePicker cho mobile */}
-        {Platform.OS !== 'web' && showDatePicker && (
+        {Platform.OS !== "web" && showDatePicker && (
           <DateTimePicker
             testID="dobDateTimePicker"
-            value={formData.dob && !isNaN(formData.dob) ? formData.dob : new Date()}
+            value={
+              formData.dob && !isNaN(formData.dob) ? formData.dob : new Date()
+            }
             mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={handleDateChange}
             maximumDate={new Date()} // Không cho chọn ngày tương lai
             minimumDate={new Date(1900, 0, 1)} // Giới hạn từ năm 1900
             locale="vi-VN"
-            style={{ backgroundColor: '#ffffff' }}
+            style={{ backgroundColor: "#ffffff" }}
           />
         )}
 
@@ -462,14 +463,14 @@ const styles = StyleSheet.create({
   },
   dateInputContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     height: 50,
   },
   dateText: {
     flex: 1,
     fontSize: 16,
-    color: formData => (formData.dob && !isNaN(formData.dob)) ? '#000' : '#999',
+    color: "#000",
   },
   iconButton: {
     padding: 10,

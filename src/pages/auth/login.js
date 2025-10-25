@@ -84,7 +84,6 @@ export default function LoginForm() {
               gender: res.payload.DT.gender,
             })
           );
-          Alert.alert("Thành công", "Đăng nhập thành công!");
           if (res.payload.DT.role === "doctor") {
             navigation.navigate("DoctorTab", { screen: "Tổng quan" });
           } else if (res.payload.DT.role === "patient") {

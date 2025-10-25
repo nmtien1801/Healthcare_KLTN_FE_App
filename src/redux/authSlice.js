@@ -28,7 +28,6 @@ export const register = createAsyncThunk(
   "auth/register",
   async (formData, thunkAPI) => {
     const response = await registerService({ formData });
-    console.log("sss", response);
 
     return response;
   }

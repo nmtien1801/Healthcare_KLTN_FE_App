@@ -1019,7 +1019,9 @@ const UpcomingAppointment = ({
                   <View style={styles.detailRow}>
                     <Ionicons name="location" size={20} color="#007bff" />
                     <Text style={styles.detailText}>
-                      {appointment.isFollowUp === true ? "Tái khám" : "Khám mới"}
+                      {appointment.isFollowUp === true
+                        ? "Tái khám"
+                        : "Khám mới"}
                     </Text>
                   </View>
                 </View>
