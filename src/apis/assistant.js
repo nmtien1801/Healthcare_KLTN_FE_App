@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Platform } from "react-native";
 
-const URL_ANDROID = "http://192.168.1.2:5678";
+const URL_ANDROID = "http://192.168.1.81:5678";
 const URL_WEB = "http://localhost:5678";
 const BASE_URL =
     Platform.OS === "android" || Platform.OS === "ios" ? URL_ANDROID : URL_WEB;

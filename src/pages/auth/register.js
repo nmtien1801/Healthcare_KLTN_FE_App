@@ -182,7 +182,6 @@ export default function LoginForm() {
         formData.email,
         formData.password
       );
-      console.log("sssssss ", result.user.uid);
 
       if (result.user) {
         // Gửi thông tin đăng ký đi mongo
