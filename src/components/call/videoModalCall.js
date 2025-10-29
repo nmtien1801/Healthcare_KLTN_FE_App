@@ -7,14 +7,13 @@ import {
   StyleSheet,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from "react-native";
 import WebView from "react-native-webview";
 const { width, height } = Dimensions.get("window");
 
 // Modal hiển thị WebView Jitsi
 const VideoCallModal = ({ jitsiUrl, onClose, visible = true }) => {
-  console.log('sssssssss ',jitsiUrl);
-  
   return (
     <Modal
       visible={visible}
@@ -44,18 +43,16 @@ const VideoCallModal = ({ jitsiUrl, onClose, visible = true }) => {
                   Đang chờ kết nối cuộc gọi...
                 </Text>
               </View>
-            ) : (
-              // <iframe
-              //   src={jitsiUrl}
-              //   title="Video Call"
-              //   allow="camera; microphone; fullscreen; display-capture; screen-wake-lock"
-              //   style={{ width: "100%", height: "100%", border: "none" }}
-              //   sandbox="allow-scripts allow-same-origin"
-              // />
-              <WebView
-                source={{ uri: jitsiUrl }}
-                style={{ flex: 1 }}
+            ) : Platform.OS === "web" ? (
+              <iframe
+                src={jitsiUrl}
+                title="Video Call"
+                allow="camera; microphone; fullscreen; display-capture; screen-wake-lock"
+                style={{ width: "100%", height: "100%", border: "none" }}
+                sandbox="allow-scripts allow-same-origin"
               />
+            ) : (
+              <WebView source={{ uri: jitsiUrl }} style={{ flex: 1 }} />
             )}
           </View>
         </View>
