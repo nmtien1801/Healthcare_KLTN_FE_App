@@ -1,9 +1,11 @@
 <!-- build -->
+npx expo prebuild --clean
+npx expo run:android
+
 eas build -p android --profile preview --clear-cache
 eas build -p android --profile production
 eas build -p ios --profile production
 
-eas build -p android --profile preview
 <!-- submit -->
 eas submit -p android --latest
 eas submit -p ios --latest

@@ -6,7 +6,9 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "sdkVersion": "53.0.23",
+    "platforms": ["ios", "android", "web"],
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,6 +23,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "gradleCommand": ":app:assembleRelease",
+      "kotlinVersion": "1.8.21",
       "package": "com.nmtien1801.snackde4abce27deb44a78255b299a9869928",
       "buildToolsVersion": "34.0.0",
       "compileSdkVersion": 34,
@@ -34,6 +38,21 @@
       "eas": {
         "projectId": "f04917d4-16e1-4a92-a14f-3bd3050d9c7f"
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "34.0.0",
+            "kotlinVersion": "1.8.21",
+            "enableProguardInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false
+          }
+        }
+      ]
+    ]
   }
 }
