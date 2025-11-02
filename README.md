@@ -1,3 +1,8 @@
+<!-- login -->
+npm install -g eas-cli
+eas login
+eas build:configure
+
 <!-- build -->
 npx expo prebuild --clean
 npx expo run:android
@@ -5,6 +10,10 @@ npx expo run:android
 eas build -p android --profile preview --clear-cache
 eas build -p android --profile production
 eas build -p ios --profile production
+
+<!-- build local : cd android -->
+.\gradlew assembleDebug
+.\gradlew assembleDebug --stacktrace --info --debug                                                             
 
 <!-- submit -->
 eas submit -p android --latest

@@ -26,10 +26,10 @@
       "gradleCommand": ":app:assembleRelease",
       "kotlinVersion": "1.8.21",
       "package": "com.nmtien1801.snackde4abce27deb44a78255b299a9869928",
-      "buildToolsVersion": "34.0.0",
-      "compileSdkVersion": 34,
+      "buildToolsVersion": "35.0.0",
+      "compileSdkVersion": 35,
       "targetSdkVersion": 34,
-      "minSdkVersion": 23
+      "minSdkVersion": 24
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -44,10 +44,10 @@
         "expo-build-properties",
         {
           "android": {
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34,
-            "buildToolsVersion": "34.0.0",
-            "kotlinVersion": "1.8.21",
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "kotlinVersion": "1.9.25",
             "enableProguardInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false
           }
