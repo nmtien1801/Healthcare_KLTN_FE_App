@@ -38,8 +38,7 @@ import {
 } from "../../apis/paymentService";
 import { useNavigation } from "@react-navigation/native";
 import ApiNotification from "../../apis/ApiNotification";
-
-const DEVICE = Platform.OS === "web" ? "WEB" : "APP";
+import { BOOKING_FEE} from '@env';
 
 const styles = StyleSheet.create({
   container: {
@@ -676,7 +675,6 @@ const UpcomingAppointment = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [receiverId, setReceiverId] = useState("");
   const senderId = user?.uid;
-  const BOOKING_FEE = 200000;
 
   // Fetch appointments from API
   const fetchAppointments = async () => {
@@ -1356,7 +1354,6 @@ const BookingNew = ({ handleSubmit }) => {
   const [receiverId, setReceiverId] = useState();
   const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] =
     useState(false);
-  const BOOKING_FEE = 200000;
   const navigation = useNavigation();
 
   // Fetch doctors by date

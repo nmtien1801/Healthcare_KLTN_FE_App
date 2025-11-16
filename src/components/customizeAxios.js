@@ -2,10 +2,7 @@ import axios from "axios";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
-//SEARCH: axios npm github
-
-const URL_ANDROID = "http://192.168.1.81:8080/api";
-const URL_WEB = "http://localhost:8080/api";
+import { URL_ANDROID, URL_WEB } from '@env';
 
 const baseUrl =
   Platform.OS === "android" || Platform.OS === "ios"

@@ -1,10 +1,8 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
+import { URL_ANDROID, URL_WEB } from '@env';
 
-// Use LAN IP on device (Android/iOS), localhost on web
-const URL_ANDROID = "http://192.168.1.81:8080/api";
-const URL_WEB = "http://localhost:8080/api";
 const BASE_URL =
     Platform.OS === "android" || Platform.OS === "ios" ? URL_ANDROID : URL_WEB;
 

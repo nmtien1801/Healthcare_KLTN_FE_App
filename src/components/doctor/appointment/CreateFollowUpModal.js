@@ -21,6 +21,7 @@ import {
   getBalanceService,
   withdrawService,
 } from "../../../apis/paymentService";
+import { BOOKING_FEE} from '@env';
 
 const CreateFollowUpModal = ({ visible, onClose, patient, onSave }) => {
   const user = useSelector((state) => state.auth.userInfo);
@@ -43,7 +44,6 @@ const CreateFollowUpModal = ({ visible, onClose, patient, onSave }) => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const BOOKING_FEE = 200000;
 
   // Lưu response để gọi lại onSave sau khi người dùng bấm Đóng
   const [successResponse, setSuccessResponse] = useState(null);
