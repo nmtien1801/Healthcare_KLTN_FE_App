@@ -1,0 +1,29 @@
+pluginManagement { 
+    includeBuild("../node_modules/@react-native/gradle-plugin")
+    includeBuild("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin")
+}
+
+plugins { 
+    id("com.facebook.react.settings")
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)  // Đổi từ FAIL_ON_PROJECT_REPOS
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://www.jitpack.io") }
+    }
+}
+
+rootProject.name = 'diateach_app'
+
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> 
+    ex.autolinkLibrariesFromCommand() 
+}
+
+apply from: new File(["node", "--print", "require.resolve('expo/package.json')"].execute(null, rootDir).text.trim(), "../scripts/autolinking.gradle")
+useExpoModules()
+
+include ':app'
+includeBuild('../node_modules/@react-native/gradle-plugin')
