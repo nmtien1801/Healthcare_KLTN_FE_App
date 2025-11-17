@@ -1,4 +1,4 @@
-package com.khangodra.snackde4abce27deb44a78255b299a9869928
+package com.nmtien1801.snackde4abce27deb44a78255b299a9869928
 
 import android.app.Application
 import android.content.res.Configuration
