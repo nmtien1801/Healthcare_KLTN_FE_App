@@ -21,7 +21,7 @@ import {
   getBalanceService,
   withdrawService,
 } from "../../../apis/paymentService";
-import { BOOKING_FEE} from '@env';
+import { EXPO_PUBLIC_BOOKING_FEE} from '@env';
 
 const CreateFollowUpModal = ({ visible, onClose, patient, onSave }) => {
   const user = useSelector((state) => state.auth.userInfo);

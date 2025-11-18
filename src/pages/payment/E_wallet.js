@@ -18,7 +18,7 @@ import { useSelector, useDispatch } from "react-redux";
 const { width } = Dimensions.get("window");
 import { getBalance, deposit } from "../../redux/paymentSlice";
 import ApiDoctor from "../../apis/ApiDoctor";
-import { BOOKING_FEE} from '@env';
+import { EXPO_PUBLIC_BOOKING_FEE} from '@env';
 
 const transactionHistory = [
   {
@@ -259,7 +259,7 @@ export default function WalletPaymentFlow({ navigation }) {
             const timeout = setTimeout(async () => {
               try {
                 await dispatch(
-                  deposit({ userId: user.userId, amount: BOOKING_FEE })
+                  deposit({ userId: user.userId, amount: EXPO_PUBLIC_BOOKING_FEE })
                 );
                 await ApiDoctor.updateAppointmentStatus(appointment._id, {
                   status: "completed",
@@ -272,7 +272,7 @@ export default function WalletPaymentFlow({ navigation }) {
           } else {
             // Nếu đã qua 30 phút thì thực hiện ngay
             try {
-              await dispatch(deposit({ userId: user.userId, amount: BOOKING_FEE }));
+              await dispatch(deposit({ userId: user.userId, amount: EXPO_PUBLIC_BOOKING_FEE }));
               await ApiDoctor.updateAppointmentStatus(appointment._id, {
                 status: "completed",
               });

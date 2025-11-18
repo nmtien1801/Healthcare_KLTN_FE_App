@@ -28,6 +28,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="diateach_app"/>
+        <data android:scheme="exp+snack-de4abce2-7deb-44a7-8255-b299a9869928"/>
       </intent-filter>
     </activity>
   </application>

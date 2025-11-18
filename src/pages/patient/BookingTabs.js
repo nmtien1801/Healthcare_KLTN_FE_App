@@ -38,7 +38,7 @@ import {
 } from "../../apis/paymentService";
 import { useNavigation } from "@react-navigation/native";
 import ApiNotification from "../../apis/ApiNotification";
-import { BOOKING_FEE} from '@env';
+import { EXPO_PUBLIC_BOOKING_FEE} from '@env';
 
 const styles = StyleSheet.create({
   container: {
@@ -741,7 +741,7 @@ const UpcomingAppointment = ({
     try {
       setIsCanceling(true);
       await ApiBooking.cancelBooking(appointmentToCancel);
-      await withdrawService(user.userId || user.uid, BOOKING_FEE);
+      await withdrawService(user.userId || user.uid, EXPO_PUBLIC_BOOKING_FEE);
 
       setAppointments((prev) =>
         prev.filter((appt) => appt._id !== appointmentToCancel)
@@ -1491,7 +1491,7 @@ const BookingNew = ({ handleSubmit }) => {
       const balanceResponse = await getBalanceService(user.userId || user.uid);
       const balance = balanceResponse?.DT?.balance || 0;
 
-      if (balance < BOOKING_FEE) {
+      if (balance < EXPO_PUBLIC_BOOKING_FEE) {
         setShowInsufficientBalanceModal(true);
         return;
       }
@@ -1508,7 +1508,7 @@ const BookingNew = ({ handleSubmit }) => {
       };
 
       const response = await ApiBooking.bookAppointment(payload);
-      await withdrawService(user.userId || user.uid, BOOKING_FEE);
+      await withdrawService(user.userId || user.uid, EXPO_PUBLIC_BOOKING_FEE);
 
       const newAppointment = {
         _id: response._id || response.id || Date.now().toString(),

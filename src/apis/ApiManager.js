@@ -1,10 +1,10 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
-import { URL_ANDROID, URL_WEB } from '@env';
+import { EXPO_PUBLIC_URL_ANDROID, EXPO_PUBLIC_URL_WEB } from '@env';
 
 const BASE_URL =
-    Platform.OS === "android" || Platform.OS === "ios" ? URL_ANDROID : URL_WEB;
+    Platform.OS === "android" || Platform.OS === "ios" ? EXPO_PUBLIC_URL_ANDROID : EXPO_PUBLIC_URL_WEB;
 
 const api = axios.create({
     baseURL: BASE_URL,

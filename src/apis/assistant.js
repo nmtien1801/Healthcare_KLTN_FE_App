@@ -1,9 +1,9 @@
 import axios from "axios";
 import { Platform } from "react-native";
-import { URL_ANDROID, URL_WEB } from '@env';
+import { EXPO_PUBLIC_URL_ANDROID, EXPO_PUBLIC_URL_WEB } from '@env';
 
 const BASE_URL =
-    Platform.OS === "android" || Platform.OS === "ios" ? URL_ANDROID : URL_WEB;
+    Platform.OS === "android" || Platform.OS === "ios" ? EXPO_PUBLIC_URL_ANDROID : EXPO_PUBLIC_URL_WEB;
 
 export const api = axios.create({
     baseURL: "http://10.0.2.2:8000", //local

@@ -2,12 +2,12 @@ import axios from "axios";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
-import { URL_ANDROID, URL_WEB } from '@env';
+import { EXPO_PUBLIC_URL_ANDROID, EXPO_PUBLIC_URL_WEB } from '@env';
 
 const baseUrl =
   Platform.OS === "android" || Platform.OS === "ios"
-    ? URL_ANDROID // URL cho Android và iOS
-    : URL_WEB; // URL cho web hoặc môi trường khác
+    ? EXPO_PUBLIC_URL_ANDROID // URL cho Android và iOS
+    : EXPO_PUBLIC_URL_WEB; // URL cho web hoặc môi trường khác
 
 // Set config defaults when creating the instance
 const instance = axios.create({
