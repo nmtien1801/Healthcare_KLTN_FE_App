@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import { Check, MessageCircle } from "lucide-react-native";
 import ApiBooking from "../../apis/ApiBooking";
 import {
   fetchMedicines,
@@ -224,7 +224,7 @@ const Home = () => {
                 <Text style={styles.medicationButtonText}>
                   {med.status ? "" : "Đánh dấu"}
                 </Text>
-                {med.status && <Icon name="check" size={16} color="#FFF" />}
+                {med.status && <Check size={16} color="#FFF" strokeWidth={3} />}
               </TouchableOpacity>
             </View>
           ))
@@ -243,7 +243,7 @@ const Home = () => {
           style={styles.chatButton}
           onPress={() => navigation.navigate("Trợ lý AI")}
         >
-          <Icon name="chat" size={16} color="#3B82F6" />
+          <MessageCircle size={16} color="#3B82F6" />
           <Text style={styles.chatButtonText}>Chat ngay</Text>
         </TouchableOpacity>
       </View>

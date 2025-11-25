@@ -10,7 +10,6 @@ import {
   RefreshControl,
 } from "react-native";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import Icon from "react-native-vector-icons/Ionicons";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 import FoodTrackerApp from "./nutrition/FoodTrackerApp";
@@ -18,7 +17,7 @@ import SuggestedFood from "./nutrition/SuggestedFood";
 
 const TopTab = createMaterialTopTabNavigator();
 
-export default function NutritionTabs({ }) {
+export default function NutritionTabs({}) {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,21 +10,61 @@ import {
   StyleSheet,
   SafeAreaView,
   Dimensions,
-} from 'react-native';
+} from "react-native";
 import { Platform } from "react-native";
-import Icon from 'react-native-vector-icons/Feather';
-import { useDispatch, useSelector } from 'react-redux';
-import { deposit, createPaymentUrl } from "../../redux/paymentSlice"
+import {
+  ArrowLeft,
+  CreditCard,
+  Edit3,
+  Shield,
+  DollarSign,
+  Smartphone,
+  Check,
+  ArrowRight,
+  Send,
+} from "lucide-react-native";
+import { useDispatch, useSelector } from "react-redux";
+import { deposit, createPaymentUrl } from "../../redux/paymentSlice";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 const banks = [
-  { id: "mbbank", name: "MBBank", fullName: "Ngân hàng TMCP Quân Đội", color: "#dc3545" },
-  { id: "vietcombank", name: "Vietcombank", fullName: "Ngân hàng TMCP Ngoại thương Việt Nam", color: "#198754" },
-  { id: "techcombank", name: "Techcombank", fullName: "Ngân hàng TMCP Kỹ thương Việt Nam", color: "#dc3545" },
-  { id: "bidv", name: "BIDV", fullName: "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam", color: "#0d6efd" },
-  { id: "vietinbank", name: "VietinBank", fullName: "Ngân hàng TMCP Công thương Việt Nam", color: "#0dcaf0" },
-  { id: "acb", name: "ACB", fullName: "Ngân hàng TMCP Á Châu", color: "#0d6efd" },
+  {
+    id: "mbbank",
+    name: "MBBank",
+    fullName: "Ngân hàng TMCP Quân Đội",
+    color: "#dc3545",
+  },
+  {
+    id: "vietcombank",
+    name: "Vietcombank",
+    fullName: "Ngân hàng TMCP Ngoại thương Việt Nam",
+    color: "#198754",
+  },
+  {
+    id: "techcombank",
+    name: "Techcombank",
+    fullName: "Ngân hàng TMCP Kỹ thương Việt Nam",
+    color: "#dc3545",
+  },
+  {
+    id: "bidv",
+    name: "BIDV",
+    fullName: "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam",
+    color: "#0d6efd",
+  },
+  {
+    id: "vietinbank",
+    name: "VietinBank",
+    fullName: "Ngân hàng TMCP Công thương Việt Nam",
+    color: "#0dcaf0",
+  },
+  {
+    id: "acb",
+    name: "ACB",
+    fullName: "Ngân hàng TMCP Á Châu",
+    color: "#0d6efd",
+  },
 ];
 
 const qrImages = {
@@ -33,7 +73,12 @@ const qrImages = {
 };
 
 const paymentMethods = [
-  { id: "bank", name: "Quét mã QR ngân hàng", icon: "smartphone", recommended: true },
+  {
+    id: "bank",
+    name: "Quét mã QR ngân hàng",
+    icon: "smartphone",
+    recommended: true,
+  },
   { id: "qr", name: "Quét mã QR momo", icon: "smartphone" },
 ];
 
@@ -58,7 +103,13 @@ export default function PaymentFlow({ onGoBack }) {
 
   const nextStep = () => {
     if (currentStep === 1 && !paymentData.paymentMethod) return;
-    if (currentStep === 2 && (!paymentData.amount || !paymentData.recipient || !paymentData.accountNumber)) return;
+    if (
+      currentStep === 2 &&
+      (!paymentData.amount ||
+        !paymentData.recipient ||
+        !paymentData.accountNumber)
+    )
+      return;
     if (currentStep < 3) setCurrentStep(currentStep + 1);
   };
 
@@ -74,28 +125,42 @@ export default function PaymentFlow({ onGoBack }) {
 
   const handleConfirm = async () => {
     if (Platform.OS === "web") {
-      if (window.confirm(`Bạn đã chuyển ${formatCurrency(paymentData.amount)} vào tài khoản ${paymentData.accountNumber} (${paymentData.recipient}) chưa?`)) {
-        await dispatch(deposit({ userId: user.userId, amount: paymentData.amount }))
+      if (
+        window.confirm(
+          `Bạn đã chuyển ${formatCurrency(paymentData.amount)} vào tài khoản ${
+            paymentData.accountNumber
+          } (${paymentData.recipient}) chưa?`
+        )
+      ) {
+        await dispatch(
+          deposit({ userId: user.userId, amount: paymentData.amount })
+        );
         window.alert("Thành công: Giao dịch đã được xác nhận!");
         if (onGoBack) onGoBack();
       }
     } else {
       Alert.alert(
         "Xác nhận giao dịch",
-        `Bạn đã chuyển ${formatCurrency(paymentData.amount)} vào tài khoản ${paymentData.accountNumber} (${paymentData.recipient}) chưa?`,
+        `Bạn đã chuyển ${formatCurrency(paymentData.amount)} vào tài khoản ${
+          paymentData.accountNumber
+        } (${paymentData.recipient}) chưa?`,
         [
           { text: "Hủy", style: "cancel" },
           {
             text: "Xác nhận",
             onPress: () => {
               (async () => {
-                let res = await dispatch(deposit({ userId: user.userId, amount: +paymentData.amount }));
+                let res = await dispatch(
+                  deposit({ userId: user.userId, amount: +paymentData.amount })
+                );
                 if (res.payload.EC === 0) {
-                  Alert.alert("Thành công", "Giao dịch đã được xác nhận!", [{ text: "OK", onPress: onGoBack }]);
+                  Alert.alert("Thành công", "Giao dịch đã được xác nhận!", [
+                    { text: "OK", onPress: onGoBack },
+                  ]);
                 }
               })();
-            }
-          }
+            },
+          },
         ]
       );
     }
@@ -106,18 +171,22 @@ export default function PaymentFlow({ onGoBack }) {
       {steps.map((step, index) => (
         <View key={step.id} style={styles.stepContainer}>
           <View style={styles.stepItem}>
-            <View style={[
-              styles.stepCircle,
-              currentStep === step.id && styles.stepCircleActive,
-              currentStep > step.id && styles.stepCircleCompleted
-            ]}>
+            <View
+              style={[
+                styles.stepCircle,
+                currentStep === step.id && styles.stepCircleActive,
+                currentStep > step.id && styles.stepCircleCompleted,
+              ]}
+            >
               {currentStep > step.id ? (
-                <Icon name="check" size={16} color="#fff" />
+                <Check size={16} color="#fff" strokeWidth={3} />
               ) : (
-                <Text style={[
-                  styles.stepNumber,
-                  currentStep === step.id && styles.stepNumberActive
-                ]}>
+                <Text
+                  style={[
+                    styles.stepNumber,
+                    currentStep === step.id && styles.stepNumberActive,
+                  ]}
+                >
                   {step.id}
                 </Text>
               )}
@@ -137,11 +206,15 @@ export default function PaymentFlow({ onGoBack }) {
     <View style={styles.stepContent}>
       <View style={styles.stepHeader}>
         <View style={styles.iconContainer}>
-          <Icon name="credit-card" size={20} color="#007bff" />
+          <CreditCard size={20} color="#007bff" />
         </View>
         <View>
-          <Text style={styles.stepHeaderTitle}>Bước 1: Phương thức thanh toán</Text>
-          <Text style={styles.stepHeaderSubtitle}>Chọn nguồn tiền để thực hiện giao dịch</Text>
+          <Text style={styles.stepHeaderTitle}>
+            Bước 1: Phương thức thanh toán
+          </Text>
+          <Text style={styles.stepHeaderSubtitle}>
+            Chọn nguồn tiền để thực hiện giao dịch
+          </Text>
         </View>
       </View>
 
@@ -150,16 +223,19 @@ export default function PaymentFlow({ onGoBack }) {
           key={method.id}
           style={[
             styles.paymentMethodItem,
-            paymentData.paymentMethod === method.id && styles.paymentMethodItemActive
+            paymentData.paymentMethod === method.id &&
+              styles.paymentMethodItemActive,
           ]}
-          onPress={() => setPaymentData({ ...paymentData, paymentMethod: method.id })}
+          onPress={() =>
+            setPaymentData({ ...paymentData, paymentMethod: method.id })
+          }
         >
           <View style={styles.radioButton}>
             {paymentData.paymentMethod === method.id && (
               <View style={styles.radioButtonSelected} />
             )}
           </View>
-          <Icon name={method.icon} size={24} color="#007bff" style={styles.methodIcon} />
+          <Smartphone size={24} color="#007bff" style={styles.methodIcon} />
           <View style={styles.methodInfo}>
             <Text style={styles.methodName}>{method.name}</Text>
             {method.recommended && (
@@ -169,7 +245,7 @@ export default function PaymentFlow({ onGoBack }) {
             )}
           </View>
           {paymentData.paymentMethod === method.id && (
-            <Icon name="check" size={16} color="#007bff" />
+            <Check size={16} color="#007bff" />
           )}
         </TouchableOpacity>
       ))}
@@ -180,11 +256,15 @@ export default function PaymentFlow({ onGoBack }) {
     <View style={styles.stepContent}>
       <View style={styles.stepHeader}>
         <View style={styles.iconContainer}>
-          <Icon name="edit-3" size={20} color="#007bff" />
+          <Edit3 size={20} color="#007bff" />
         </View>
         <View>
-          <Text style={styles.stepHeaderTitle}>Bước 2: Thông tin chuyển tiền</Text>
-          <Text style={styles.stepHeaderSubtitle}>Nhập thông tin người nhận và số tiền</Text>
+          <Text style={styles.stepHeaderTitle}>
+            Bước 2: Thông tin chuyển tiền
+          </Text>
+          <Text style={styles.stepHeaderSubtitle}>
+            Nhập thông tin người nhận và số tiền
+          </Text>
         </View>
       </View>
 
@@ -215,7 +295,9 @@ export default function PaymentFlow({ onGoBack }) {
             <TextInput
               style={[styles.textInput, styles.amountInput]}
               value={paymentData.amount}
-              onChangeText={(text) => setPaymentData({ ...paymentData, amount: text })}
+              onChangeText={(text) =>
+                setPaymentData({ ...paymentData, amount: text })
+              }
               placeholder="Nhập số tiền"
               keyboardType="numeric"
             />
@@ -228,7 +310,9 @@ export default function PaymentFlow({ onGoBack }) {
           <TextInput
             style={[styles.textInput, styles.textArea]}
             value={paymentData.message}
-            onChangeText={(text) => setPaymentData({ ...paymentData, message: text })}
+            onChangeText={(text) =>
+              setPaymentData({ ...paymentData, message: text })
+            }
             placeholder="Nhập lời nhắn (tùy chọn)"
             multiline
             numberOfLines={3}
@@ -242,11 +326,13 @@ export default function PaymentFlow({ onGoBack }) {
     <View style={styles.stepContent}>
       <View style={styles.stepHeader}>
         <View style={styles.iconContainer}>
-          <Icon name="shield" size={20} color="#007bff" />
+          <Shield size={20} color="#007bff" />
         </View>
         <View>
           <Text style={styles.stepHeaderTitle}>Bước 3: Xác nhận giao dịch</Text>
-          <Text style={styles.stepHeaderSubtitle}>Kiểm tra thông tin trước khi xác nhận</Text>
+          <Text style={styles.stepHeaderSubtitle}>
+            Kiểm tra thông tin trước khi xác nhận
+          </Text>
         </View>
       </View>
 
@@ -260,7 +346,9 @@ export default function PaymentFlow({ onGoBack }) {
 
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Ngân hàng:</Text>
-          <Text style={styles.detailValue}>{banks.find(b => b.id === paymentData.bank)?.name}</Text>
+          <Text style={styles.detailValue}>
+            {banks.find((b) => b.id === paymentData.bank)?.name}
+          </Text>
         </View>
 
         <View style={styles.detailRow}>
@@ -271,13 +359,18 @@ export default function PaymentFlow({ onGoBack }) {
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Phương thức TT:</Text>
           <Text style={styles.detailValue}>
-            {paymentMethods.find(m => m.id === paymentData.paymentMethod)?.name}
+            {
+              paymentMethods.find((m) => m.id === paymentData.paymentMethod)
+                ?.name
+            }
           </Text>
         </View>
 
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Số tiền:</Text>
-          <Text style={[styles.detailValue, styles.amountValue]}>{formatCurrency(paymentData.amount)}</Text>
+          <Text style={[styles.detailValue, styles.amountValue]}>
+            {formatCurrency(paymentData.amount)}
+          </Text>
         </View>
 
         {paymentData.message && (
@@ -289,7 +382,7 @@ export default function PaymentFlow({ onGoBack }) {
       </View>
 
       <View style={styles.securityBadge}>
-        <Icon name="shield" size={16} color="#28a745" />
+        <Shield size={16} color="#28a745" />
         <Text style={styles.securityText}>Giao dịch được bảo mật</Text>
       </View>
     </View>
@@ -301,13 +394,15 @@ export default function PaymentFlow({ onGoBack }) {
     return (
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeader}>
-          <Icon name="dollar-sign" size={20} color="#007bff" />
+          <DollarSign size={20} color="#007bff" />
           <Text style={styles.summaryTitle}>Tóm tắt giao dịch</Text>
         </View>
 
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Số tiền chuyển:</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(paymentData.amount)}</Text>
+          <Text style={styles.summaryValue}>
+            {formatCurrency(paymentData.amount)}
+          </Text>
         </View>
 
         <View style={styles.summaryRow}>
@@ -319,12 +414,14 @@ export default function PaymentFlow({ onGoBack }) {
 
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Tổng cộng:</Text>
-          <Text style={styles.totalValue}>{formatCurrency(paymentData.amount)}</Text>
+          <Text style={styles.totalValue}>
+            {formatCurrency(paymentData.amount)}
+          </Text>
         </View>
 
         <View style={styles.qrContainer}>
           <View style={styles.qrHeader}>
-            <Icon name="smartphone" size={16} color="#007bff" />
+            <Smartphone size={16} color="#007bff" />
             <Text style={styles.qrTitle}>Mã QR thanh toán</Text>
           </View>
           <View style={styles.qrImageContainer}>
@@ -344,20 +441,24 @@ export default function PaymentFlow({ onGoBack }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity
               style={styles.backButtonHeader}
               onPress={onGoBack}
             >
-              <Icon name="arrow-left" size={24} color="#007bff" />
+              <ArrowLeft size={24} color="#007bff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>CHUYỂN TIỀN VÀO VÍ NỘI BỘ</Text>
             <View style={styles.headerSpacer} />
           </View>
           <Text style={styles.headerSubtitle}>
-            Giao dịch nhanh 24/7, an toàn tuyệt đối với công nghệ bảo mật tiên tiến.
+            Giao dịch nhanh 24/7, an toàn tuyệt đối với công nghệ bảo mật tiên
+            tiến.
           </Text>
         </View>
 
@@ -374,25 +475,45 @@ export default function PaymentFlow({ onGoBack }) {
 
       <View style={styles.navigationContainer}>
         <TouchableOpacity
-          style={[styles.navButton, styles.backButton, currentStep === 1 && styles.disabledButton]}
+          style={[
+            styles.navButton,
+            styles.backButton,
+            currentStep === 1 && styles.disabledButton,
+          ]}
           onPress={prevStep}
           disabled={currentStep === 1}
         >
-          <Icon name="arrow-left" size={16} color={currentStep === 1 ? "#ccc" : "#6c757d"} />
-          <Text style={[styles.navButtonText, styles.backButtonText, currentStep === 1 && styles.disabledButtonText]}>
+          <ArrowLeft size={16} color={currentStep === 1 ? "#ccc" : "#6c757d"} />
+          <Text
+            style={[
+              styles.navButtonText,
+              styles.backButtonText,
+              currentStep === 1 && styles.disabledButtonText,
+            ]}
+          >
             Quay lại
           </Text>
         </TouchableOpacity>
 
         {currentStep < 3 ? (
-          <TouchableOpacity style={[styles.navButton, styles.nextButton]} onPress={nextStep}>
-            <Text style={[styles.navButtonText, styles.nextButtonText]}>Tiếp tục</Text>
-            <Icon name="arrow-right" size={16} color="#fff" />
+          <TouchableOpacity
+            style={[styles.navButton, styles.nextButton]}
+            onPress={nextStep}
+          >
+            <Text style={[styles.navButtonText, styles.nextButtonText]}>
+              Tiếp tục
+            </Text>
+            <ArrowRight size={16} color="#fff" />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={[styles.navButton, styles.confirmButton]} onPress={handleConfirm}>
-            <Icon name="send" size={16} color="#fff" />
-            <Text style={[styles.navButtonText, styles.confirmButtonText]}>Xác nhận chuyển tiền</Text>
+          <TouchableOpacity
+            style={[styles.navButton, styles.confirmButton]}
+            onPress={handleConfirm}
+          >
+            <Send size={16} color="#fff" />
+            <Text style={[styles.navButtonText, styles.confirmButtonText]}>
+              Xác nhận chuyển tiền
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -403,7 +524,7 @@ export default function PaymentFlow({ onGoBack }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     marginTop: 36,
   },
   scrollView: {
@@ -411,170 +532,170 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: "#e9ecef",
   },
   headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   backButtonHeader: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
   },
   headerSpacer: {
     width: 40,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#007bff',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#007bff",
+    textAlign: "center",
     flex: 1,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#6c757d',
-    textAlign: 'center',
+    color: "#6c757d",
+    textAlign: "center",
     lineHeight: 20,
   },
   progressContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   stepContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   stepItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   stepCircle: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 2,
-    borderColor: '#dee2e6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#dee2e6",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
   stepCircleActive: {
-    backgroundColor: '#007bff',
-    borderColor: '#007bff',
+    backgroundColor: "#007bff",
+    borderColor: "#007bff",
   },
   stepCircleCompleted: {
-    backgroundColor: '#28a745',
-    borderColor: '#28a745',
+    backgroundColor: "#28a745",
+    borderColor: "#28a745",
   },
   stepNumber: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#6c757d',
+    fontWeight: "bold",
+    color: "#6c757d",
   },
   stepNumberActive: {
-    color: '#fff',
+    color: "#fff",
   },
   stepTextContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   stepTitle: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#495057',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#495057",
+    textAlign: "center",
   },
   stepDescription: {
     fontSize: 10,
-    color: '#6c757d',
-    textAlign: 'center',
+    color: "#6c757d",
+    textAlign: "center",
     marginTop: 2,
   },
   stepConnector: {
-    position: 'absolute',
+    position: "absolute",
     top: 16,
-    left: '50%',
+    left: "50%",
     right: -width / 6,
     height: 2,
-    backgroundColor: '#dee2e6',
+    backgroundColor: "#dee2e6",
     zIndex: -1,
   },
   content: {
     padding: 16,
   },
   stepContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
   stepHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 20,
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#e3f2fd',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#e3f2fd",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   stepHeaderTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#212529',
+    fontWeight: "600",
+    color: "#212529",
     marginBottom: 4,
   },
   stepHeaderSubtitle: {
     fontSize: 14,
-    color: '#6c757d',
+    color: "#6c757d",
   },
   paymentMethodItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 16,
     marginBottom: 12,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: "#e9ecef",
   },
   paymentMethodItemActive: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#007bff',
+    backgroundColor: "#e3f2fd",
+    borderColor: "#007bff",
   },
   radioButton: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#dee2e6',
+    borderColor: "#dee2e6",
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   radioButtonSelected: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
   },
   methodIcon: {
     marginRight: 12,
@@ -584,21 +705,21 @@ const styles = StyleSheet.create({
   },
   methodName: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#212529',
+    fontWeight: "500",
+    color: "#212529",
   },
   recommendedBadge: {
-    backgroundColor: '#6c757d',
+    backgroundColor: "#6c757d",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
     marginTop: 4,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   recommendedText: {
     fontSize: 10,
-    color: '#fff',
-    fontWeight: '500',
+    color: "#fff",
+    fontWeight: "500",
   },
   formContainer: {
     gap: 16,
@@ -608,26 +729,26 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#495057',
+    fontWeight: "500",
+    color: "#495057",
     marginBottom: 8,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ced4da',
+    borderColor: "#ced4da",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 14,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   disabledInput: {
-    backgroundColor: '#f8f9fa',
-    color: '#6c757d',
+    backgroundColor: "#f8f9fa",
+    color: "#6c757d",
   },
   amountInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   amountInput: {
     flex: 1,
@@ -635,153 +756,153 @@ const styles = StyleSheet.create({
   },
   currencySymbol: {
     fontSize: 14,
-    color: '#6c757d',
-    fontWeight: '500',
+    color: "#6c757d",
+    fontWeight: "500",
   },
   textArea: {
     height: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   confirmationContainer: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: "#e9ecef",
   },
   confirmationTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#495057',
+    fontWeight: "600",
+    color: "#495057",
     marginBottom: 12,
   },
   detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 8,
   },
   detailLabel: {
     fontSize: 12,
-    color: '#6c757d',
+    color: "#6c757d",
     flex: 1,
   },
   detailValue: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#212529',
+    fontWeight: "500",
+    color: "#212529",
     flex: 1,
-    textAlign: 'right',
+    textAlign: "right",
   },
   amountValue: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#007bff',
+    fontWeight: "600",
+    color: "#007bff",
   },
   messageRow: {
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    borderTopColor: "#e9ecef",
   },
   securityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#d4edda',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#d4edda",
     padding: 12,
     borderRadius: 8,
     marginTop: 16,
   },
   securityText: {
     fontSize: 12,
-    color: '#28a745',
-    fontWeight: '500',
+    color: "#28a745",
+    fontWeight: "500",
     marginLeft: 8,
   },
   summaryCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
   summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#212529',
+    fontWeight: "600",
+    color: "#212529",
     marginLeft: 8,
   },
   summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#6c757d',
+    color: "#6c757d",
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#212529',
+    fontWeight: "500",
+    color: "#212529",
   },
   freeText: {
-    color: '#28a745',
+    color: "#28a745",
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#e9ecef',
+    backgroundColor: "#e9ecef",
     marginVertical: 12,
   },
   totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212529',
+    fontWeight: "bold",
+    color: "#212529",
   },
   totalValue: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007bff',
+    fontWeight: "bold",
+    color: "#007bff",
   },
   qrContainer: {
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
     padding: 16,
     borderRadius: 8,
     marginTop: 16,
   },
   qrHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   qrTitle: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#212529',
+    fontWeight: "500",
+    color: "#212529",
     marginLeft: 8,
   },
   qrImageContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: "#e9ecef",
   },
   qrImage: {
     width: 100,
@@ -789,58 +910,58 @@ const styles = StyleSheet.create({
   },
   qrDescription: {
     fontSize: 12,
-    color: '#6c757d',
-    textAlign: 'center',
+    color: "#6c757d",
+    textAlign: "center",
     marginTop: 8,
   },
   navigationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    borderTopColor: "#e9ecef",
   },
   navButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
   },
   backButton: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: '#6c757d',
+    borderColor: "#6c757d",
   },
   nextButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
   },
   confirmButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginLeft: 12,
   },
   disabledButton: {
-    borderColor: '#ccc',
+    borderColor: "#ccc",
   },
   navButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginHorizontal: 8,
   },
   backButtonText: {
-    color: '#6c757d',
+    color: "#6c757d",
   },
   nextButtonText: {
-    color: '#fff',
+    color: "#fff",
   },
   confirmButtonText: {
-    color: '#fff',
+    color: "#fff",
   },
   disabledButtonText: {
-    color: '#ccc',
+    color: "#ccc",
   },
 });

@@ -12,7 +12,18 @@ import {
   Dimensions,
   FlatList,
 } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
+import {
+  CreditCard,
+  EyeOff,
+  Eye,
+  Download,
+  Wallet,
+  Clock,
+  ChevronRight,
+  ArrowLeft,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react-native";
 import FlowPayment from "./FlowPayment";
 import { useSelector, useDispatch } from "react-redux";
 const { width } = Dimensions.get("window");
@@ -120,11 +131,11 @@ export default function WalletPaymentFlow({ navigation }) {
             { backgroundColor: item.type === "income" ? "#d4edda" : "#f8d7da" },
           ]}
         >
-          <Icon
-            name={item.type === "income" ? "trending-up" : "trending-down"}
-            size={16}
-            color={item.type === "income" ? "#28a745" : "#dc3545"}
-          />
+          {item.type === "income" ? (
+            <TrendingUp size={16} color={"#28a745"} />
+          ) : (
+            <TrendingDown size={16} color={"#dc3545"} />
+          )}
         </View>
         <View style={styles.transactionInfo}>
           <Text style={styles.transactionDescription} numberOfLines={1}>
@@ -149,7 +160,7 @@ export default function WalletPaymentFlow({ navigation }) {
       {/* Balance Card */}
       <View style={styles.balanceCard}>
         <View style={styles.balanceHeader}>
-          <Icon name="credit-card" size={20} color="#fff" />
+          <CreditCard size={20} color="#fff" />
           <Text style={styles.balanceTitle}>Số dư khả dụng</Text>
         </View>
         <View style={styles.balanceContent}>
@@ -160,11 +171,11 @@ export default function WalletPaymentFlow({ navigation }) {
             style={styles.eyeButton}
             onPress={toggleBalanceVisibility}
           >
-            <Icon
-              name={balanceVisible ? "eye-off" : "eye"}
-              size={20}
-              color="#fff"
-            />
+            {balanceVisible ? (
+              <EyeOff size={20} color="#fff" />
+            ) : (
+              <Eye size={20} color="#fff" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -177,14 +188,14 @@ export default function WalletPaymentFlow({ navigation }) {
             style={styles.quickActionDeposit}
             onPress={handleDepositPress}
           >
-            <Icon name="download" size={28} color="#28a745" />
+            <Download size={28} color="#28a745" />
             <Text style={styles.quickActionTextDeposit}>NẠP TIỀN</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionWithdraw}
             onPress={handleWithdrawPress}
           >
-            <Icon name="file-text" size={28} color="#dc3545" />
+            <Wallet size={28} color="#dc3545" />
             <Text style={styles.quickActionTextWithdraw}>RÚT TIỀN</Text>
           </TouchableOpacity>
         </View>
@@ -193,7 +204,7 @@ export default function WalletPaymentFlow({ navigation }) {
       {/* Transaction History */}
       <View style={styles.transactionCard}>
         <View style={styles.transactionHeader}>
-          <Icon name="clock" size={20} color="#6c757d" />
+          <Clock size={20} color="#6c757d" />
           <Text style={styles.transactionTitle}>Giao dịch gần đây</Text>
         </View>
         <FlatList
@@ -205,7 +216,7 @@ export default function WalletPaymentFlow({ navigation }) {
         />
         <TouchableOpacity style={styles.viewAllButton}>
           <Text style={styles.viewAllText}>Xem tất cả giao dịch</Text>
-          <Icon name="chevron-right" size={16} color="#007bff" />
+          <ChevronRight size={16} color="#007bff" />
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -301,7 +312,7 @@ export default function WalletPaymentFlow({ navigation }) {
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
-        <Icon name="arrow-left" size={24} color="#007bff" />
+        <ArrowLeft size={24} color="#007bff" />
       </TouchableOpacity>
       {renderWalletOverview()}
     </SafeAreaView>
@@ -494,7 +505,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginRight: 4,
   },
-  // Payment Flow Header
   paymentHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -510,7 +520,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#212529",
   },
-  // Original Payment Flow Styles
   scrollView: {
     flex: 1,
     backgroundColor: "#f8f9fa",

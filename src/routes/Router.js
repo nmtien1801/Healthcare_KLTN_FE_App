@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import Icon from "react-native-vector-icons/Ionicons";
 import { useSelector, useDispatch } from "react-redux";
 import { setUser, clearUser } from "../redux/authSlice";
 import HealthTabs from "../pages/patient/HealthTabs";
@@ -33,7 +32,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Diagnosis from "../pages/patient/assistant/diagnosis";
 import { auth } from "../../firebase";
 import E_wallet from "../pages/payment/E_wallet";
-
+import {
+  MessageCircle,
+  CreditCard,
+  Sparkles,
+  CheckCircle2,
+  User,
+  Home as HomeIcon,
+  Activity,
+  UtensilsCrossed,
+  Calendar,
+  MessageSquare,
+} from "lucide-react-native";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -45,19 +55,23 @@ const DoctorTab = ({ route, handleStartCall }) => {
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarIcon: ({ focused, color, size }) => {
-            const icons = {
-              "Tổng quan": focused
-                ? "chatbubble-ellipses"
-                : "chatbubble-ellipses-outline",
-              "Bệnh nhân": focused ? "id-card" : "id-card-outline",
-              "Lịch hẹn": focused ? "sparkles" : "sparkles-outline",
-              "Chấm công": focused
-                ? "checkmark-done-circle"
-                : "checkmark-done-circle-outline",
-              "Thông tin": focused ? "person" : "person-outline",
-              "Cài đặt": focused ? "person" : "person-outline",
-            };
-            return <Icon name={icons[route.name]} size={size} color={color} />;
+            const iconProps = { size, color, strokeWidth: focused ? 2.5 : 2 };
+
+            switch (route.name) {
+              case "Tổng quan":
+                return <MessageCircle {...iconProps} />;
+              case "Bệnh nhân":
+                return <CreditCard {...iconProps} />;
+              case "Lịch hẹn":
+                return <Sparkles {...iconProps} />;
+              case "Chấm công":
+                return <CheckCircle2 {...iconProps} />;
+              case "Thông tin":
+              case "Cài đặt":
+                return <User {...iconProps} />;
+              default:
+                return null;
+            }
           },
           tabBarActiveTintColor: "#2196F3",
           tabBarInactiveTintColor: "gray",
@@ -84,14 +98,22 @@ const PatientTabs = ({ route, handleStartCall }) => {
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarIcon: ({ focused, color, size }) => {
-            const icons = {
-              "Trang chủ": focused ? "home" : "home-outline", // Changed icon
-              "Sức khỏe": focused ? "fitness" : "fitness-outline", // Changed icon
-              "Dinh dưỡng": focused ? "restaurant" : "restaurant-outline", // Changed icon
-              "Đặt lịch": focused ? "calendar" : "calendar-outline", // Changed icon
-              "Trợ lý AI": focused ? "chatbubble" : "chatbubble-outline",
-            };
-            return <Icon name={icons[route.name]} size={size} color={color} />;
+            const iconProps = { size, color, strokeWidth: focused ? 2.5 : 2 };
+
+            switch (route.name) {
+              case "Trang chủ":
+                return <HomeIcon {...iconProps} />;
+              case "Sức khỏe":
+                return <Activity {...iconProps} />;
+              case "Dinh dưỡng":
+                return <UtensilsCrossed {...iconProps} />;
+              case "Đặt lịch":
+                return <Calendar {...iconProps} />;
+              case "Trợ lý AI":
+                return <MessageSquare {...iconProps} />;
+              default:
+                return null;
+            }
           },
           tabBarActiveTintColor: "#2196F3",
           tabBarInactiveTintColor: "gray",
@@ -111,7 +133,7 @@ const PatientTabs = ({ route, handleStartCall }) => {
   );
 };
 
-export default function Router({route, handleStartCall}) {
+export default function Router({ route, handleStartCall }) {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [isLoading, setIsLoading] = useState(true);
