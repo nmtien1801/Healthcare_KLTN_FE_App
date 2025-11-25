@@ -12,7 +12,7 @@ import {
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
-import Icon from "react-native-vector-icons/FontAwesome";
+import { Heart } from "lucide-react-native";
 import { getAuth, signOut } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotificationDropdown from "../components/notifications/NotificationDropdown";
@@ -68,7 +68,7 @@ const Header = () => {
     <View style={styles.container}>
       {/* Logo & Title */}
       <View style={styles.left}>
-        <Icon name="heartbeat" size={24} color="#007bff" style={styles.icon} />
+        <Heart size={24} color="#007bff" fill="#007bff" style={styles.icon} />
         <Text style={styles.title}>HealthCare AI</Text>
       </View>
 

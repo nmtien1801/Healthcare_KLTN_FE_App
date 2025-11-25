@@ -12,7 +12,18 @@ import {
   Dimensions,
   FlatList,
 } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
+import {
+  CreditCard,
+  EyeOff,
+  Eye,
+  Download,
+  Wallet,
+  Clock,
+  ChevronRight,
+  ArrowLeft,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react-native";
 import FlowPayment from "./FlowPayment";
 import { useSelector, useDispatch } from "react-redux";
 const { width } = Dimensions.get("window");
@@ -120,11 +131,11 @@ export default function WalletPaymentFlow({ navigation }) {
             { backgroundColor: item.type === "income" ? "#d4edda" : "#f8d7da" },
           ]}
         >
-          <Icon
-            name={item.type === "income" ? "trending-up" : "trending-down"}
-            size={16}
-            color={item.type === "income" ? "#28a745" : "#dc3545"}
-          />
+          {item.type === "income" ? (
+            <TrendingUp size={16} color={"#28a745"} />
+          ) : (
+            <TrendingDown size={16} color={"#dc3545"} />
+          )}
         </View>
         <View style={styles.transactionInfo}>
           <Text style={styles.transactionDescription} numberOfLines={1}>
@@ -149,7 +160,7 @@ export default function WalletPaymentFlow({ navigation }) {
       {/* Balance Card */}
       <View style={styles.balanceCard}>
         <View style={styles.balanceHeader}>
-          <Icon name="credit-card" size={20} color="#fff" />
+          <CreditCard size={20} color="#fff" />
           <Text style={styles.balanceTitle}>Số dư khả dụng</Text>
         </View>
         <View style={styles.balanceContent}>
@@ -160,11 +171,11 @@ export default function WalletPaymentFlow({ navigation }) {
             style={styles.eyeButton}
             onPress={toggleBalanceVisibility}
           >
-            <Icon
-              name={balanceVisible ? "eye-off" : "eye"}
-              size={20}
-              color="#fff"
-            />
+            {balanceVisible ? (
+              <EyeOff size={20} color="#fff" />
+            ) : (
+              <Eye size={20} color="#fff" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -177,14 +188,14 @@ export default function WalletPaymentFlow({ navigation }) {
             style={styles.quickActionDeposit}
             onPress={handleDepositPress}
           >
-            <Icon name="download" size={28} color="#28a745" />
+            <Download size={28} color="#28a745" />
             <Text style={styles.quickActionTextDeposit}>NẠP TIỀN</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionWithdraw}
             onPress={handleWithdrawPress}
           >
-            <Icon name="file-text" size={28} color="#dc3545" />
+            <Wallet size={28} color="#dc3545" />
             <Text style={styles.quickActionTextWithdraw}>RÚT TIỀN</Text>
           </TouchableOpacity>
         </View>
@@ -193,7 +204,7 @@ export default function WalletPaymentFlow({ navigation }) {
       {/* Transaction History */}
       <View style={styles.transactionCard}>
         <View style={styles.transactionHeader}>
-          <Icon name="clock" size={20} color="#6c757d" />
+          <Clock size={20} color="#6c757d" />
           <Text style={styles.transactionTitle}>Giao dịch gần đây</Text>
         </View>
         <FlatList
@@ -205,7 +216,7 @@ export default function WalletPaymentFlow({ navigation }) {
         />
         <TouchableOpacity style={styles.viewAllButton}>
           <Text style={styles.viewAllText}>Xem tất cả giao dịch</Text>
-          <Icon name="chevron-right" size={16} color="#007bff" />
+          <ChevronRight size={16} color="#007bff" />
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -214,85 +225,6 @@ export default function WalletPaymentFlow({ navigation }) {
   if (showPaymentFlow) {
     return <FlowPayment onGoBack={() => setShowPaymentFlow(false)} />;
   }
-
-  // ví bác sĩ
-  useEffect(() => {
-    let timeouts = [];
-
-    const fetchAppointments = async () => {
-      try {
-        const resToday = await ApiDoctor.getAppointmentsToday();
-        // ✅ Chỉ lấy các lịch hẹn có status = "confirmed"
-        const confirmedAppointments = resToday.filter(
-          (appointment) => appointment.status === "confirmed"
-        );
-
-        const now = new Date();
-        for (const appointment of confirmedAppointments) {
-          const baseDate = new Date(appointment.date);
-          const [hours, minutes] = appointment.time.split(":").map(Number);
-
-          // Tạo thời điểm lịch hẹn đầy đủ (theo giờ địa phương)
-          const appointmentTime = new Date(
-            baseDate.getFullYear(),
-            baseDate.getMonth(),
-            baseDate.getDate(),
-            hours,
-            minutes,
-            0
-          );
-
-          // +30 phút
-          const alertTime = new Date(
-            appointmentTime.getTime() + 30 * 60 * 1000
-          );
-          const msUntilAlert = alertTime - now;
-
-          console.log(
-            `Lịch hẹn ${
-              appointment._id || ""
-            } (confirmed) sẽ chạy sau ${Math.round(msUntilAlert / 60000)} phút`
-          );
-
-          if (msUntilAlert > 0) {
-            // Hẹn dispatch đúng thời điểm
-            const timeout = setTimeout(async () => {
-              try {
-                await dispatch(
-                  deposit({ userId: user.userId, amount: 200000 })
-                );
-                await ApiDoctor.updateAppointmentStatus(appointment._id, {
-                  status: "completed",
-                });
-              } catch (err) {
-                console.error("Lỗi dispatch deposit:", err);
-              }
-            }, msUntilAlert);
-            timeouts.push(timeout);
-          } else {
-            // Nếu đã qua 30 phút thì thực hiện ngay
-            try {
-              await dispatch(deposit({ userId: user.userId, amount: 200000 }));
-              await ApiDoctor.updateAppointmentStatus(appointment._id, {
-                status: "completed",
-              });
-            } catch (err) {
-              console.error("Lỗi dispatch deposit:", err);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Lỗi lấy appointments:", err);
-      }
-    };
-
-    fetchAppointments();
-
-    return () => {
-      timeouts.forEach(clearTimeout);
-      timeouts = [];
-    };
-  }, [dispatch, user.userId]);
 
   // ví bác sĩ
   useEffect(() => {
@@ -379,7 +311,7 @@ export default function WalletPaymentFlow({ navigation }) {
       timeouts.forEach(clearTimeout);
       timeouts = [];
     };
-  }, [dispatch, user.userId]);
+  }, [dispatch, user.userId, user.role]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -388,7 +320,7 @@ export default function WalletPaymentFlow({ navigation }) {
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
-        <Icon name="arrow-left" size={24} color="#007bff" />
+        <ArrowLeft size={24} color="#007bff" />
       </TouchableOpacity>
       {renderWalletOverview()}
     </SafeAreaView>
@@ -581,7 +513,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginRight: 4,
   },
-  // Payment Flow Header
   paymentHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -597,7 +528,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#212529",
   },
-  // Original Payment Flow Styles
   scrollView: {
     flex: 1,
     backgroundColor: "#f8f9fa",

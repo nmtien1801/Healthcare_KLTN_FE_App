@@ -12,7 +12,17 @@ import {
   Dimensions,
 } from 'react-native';
 import { Platform } from "react-native";
-import Icon from 'react-native-vector-icons/Feather';
+import {
+  ArrowLeft,
+  CreditCard,
+  Edit3,
+  Shield,
+  DollarSign,
+  Smartphone,
+  Check,
+  ArrowRight,
+  Send,
+} from 'lucide-react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { deposit, createPaymentUrl } from "../../redux/paymentSlice"
 
@@ -112,7 +122,7 @@ export default function PaymentFlow({ onGoBack }) {
               currentStep > step.id && styles.stepCircleCompleted
             ]}>
               {currentStep > step.id ? (
-                <Icon name="check" size={16} color="#fff" />
+                <Check size={16} color="#fff" strokeWidth={3} />
               ) : (
                 <Text style={[
                   styles.stepNumber,
@@ -137,7 +147,7 @@ export default function PaymentFlow({ onGoBack }) {
     <View style={styles.stepContent}>
       <View style={styles.stepHeader}>
         <View style={styles.iconContainer}>
-          <Icon name="credit-card" size={20} color="#007bff" />
+          <CreditCard size={20} color="#007bff" />
         </View>
         <View>
           <Text style={styles.stepHeaderTitle}>Bước 1: Phương thức thanh toán</Text>
@@ -159,7 +169,7 @@ export default function PaymentFlow({ onGoBack }) {
               <View style={styles.radioButtonSelected} />
             )}
           </View>
-          <Icon name={method.icon} size={24} color="#007bff" style={styles.methodIcon} />
+          <Smartphone size={24} color="#007bff" style={styles.methodIcon} />
           <View style={styles.methodInfo}>
             <Text style={styles.methodName}>{method.name}</Text>
             {method.recommended && (
@@ -169,7 +179,7 @@ export default function PaymentFlow({ onGoBack }) {
             )}
           </View>
           {paymentData.paymentMethod === method.id && (
-            <Icon name="check" size={16} color="#007bff" />
+            <Check size={16} color="#007bff" />
           )}
         </TouchableOpacity>
       ))}
@@ -180,7 +190,7 @@ export default function PaymentFlow({ onGoBack }) {
     <View style={styles.stepContent}>
       <View style={styles.stepHeader}>
         <View style={styles.iconContainer}>
-          <Icon name="edit-3" size={20} color="#007bff" />
+          <Edit3 size={20} color="#007bff" />
         </View>
         <View>
           <Text style={styles.stepHeaderTitle}>Bước 2: Thông tin chuyển tiền</Text>
@@ -242,7 +252,7 @@ export default function PaymentFlow({ onGoBack }) {
     <View style={styles.stepContent}>
       <View style={styles.stepHeader}>
         <View style={styles.iconContainer}>
-          <Icon name="shield" size={20} color="#007bff" />
+          <Shield size={20} color="#007bff" />
         </View>
         <View>
           <Text style={styles.stepHeaderTitle}>Bước 3: Xác nhận giao dịch</Text>
@@ -289,7 +299,7 @@ export default function PaymentFlow({ onGoBack }) {
       </View>
 
       <View style={styles.securityBadge}>
-        <Icon name="shield" size={16} color="#28a745" />
+        <Shield size={16} color="#28a745" />
         <Text style={styles.securityText}>Giao dịch được bảo mật</Text>
       </View>
     </View>
@@ -301,7 +311,7 @@ export default function PaymentFlow({ onGoBack }) {
     return (
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeader}>
-          <Icon name="dollar-sign" size={20} color="#007bff" />
+          <DollarSign size={20} color="#007bff" />
           <Text style={styles.summaryTitle}>Tóm tắt giao dịch</Text>
         </View>
 
@@ -324,7 +334,7 @@ export default function PaymentFlow({ onGoBack }) {
 
         <View style={styles.qrContainer}>
           <View style={styles.qrHeader}>
-            <Icon name="smartphone" size={16} color="#007bff" />
+            <Smartphone size={16} color="#007bff" />
             <Text style={styles.qrTitle}>Mã QR thanh toán</Text>
           </View>
           <View style={styles.qrImageContainer}>
@@ -351,7 +361,7 @@ export default function PaymentFlow({ onGoBack }) {
               style={styles.backButtonHeader}
               onPress={onGoBack}
             >
-              <Icon name="arrow-left" size={24} color="#007bff" />
+              <ArrowLeft size={24} color="#007bff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>CHUYỂN TIỀN VÀO VÍ NỘI BỘ</Text>
             <View style={styles.headerSpacer} />
@@ -378,7 +388,7 @@ export default function PaymentFlow({ onGoBack }) {
           onPress={prevStep}
           disabled={currentStep === 1}
         >
-          <Icon name="arrow-left" size={16} color={currentStep === 1 ? "#ccc" : "#6c757d"} />
+          <ArrowLeft size={16} color={currentStep === 1 ? "#ccc" : "#6c757d"} />
           <Text style={[styles.navButtonText, styles.backButtonText, currentStep === 1 && styles.disabledButtonText]}>
             Quay lại
           </Text>
@@ -387,11 +397,11 @@ export default function PaymentFlow({ onGoBack }) {
         {currentStep < 3 ? (
           <TouchableOpacity style={[styles.navButton, styles.nextButton]} onPress={nextStep}>
             <Text style={[styles.navButtonText, styles.nextButtonText]}>Tiếp tục</Text>
-            <Icon name="arrow-right" size={16} color="#fff" />
+            <ArrowRight size={16} color="#fff" />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={[styles.navButton, styles.confirmButton]} onPress={handleConfirm}>
-            <Icon name="send" size={16} color="#fff" />
+            <Send size={16} color="#fff" />
             <Text style={[styles.navButtonText, styles.confirmButtonText]}>Xác nhận chuyển tiền</Text>
           </TouchableOpacity>
         )}

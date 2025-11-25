@@ -13,7 +13,21 @@ import {
     SafeAreaView,
 } from 'react-native';
 import { useSelector } from "react-redux";
-import Icon from 'react-native-vector-icons/Feather';
+import {
+    Pencil,
+    X, 
+    Calendar, 
+    Clock,
+    List, 
+    Info, 
+    LogIn, 
+    LogOut, 
+    PlusCircle, 
+    Trash2, 
+    Shield, 
+    Award, 
+} from 'lucide-react-native';
+// 
 import ApiWorkShift from "../../apis/ApiWorkShift";
 import ApiDoctor from "../../apis/ApiDoctor";
 import { formatDate } from "../../utils/formatDate";
@@ -79,12 +93,12 @@ const ScheduleFormModal = ({
         <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                    <Icon name="edit" size={24} color="#007bff" />
+                    <Pencil size={24} color="#007bff" />
                     <Text style={styles.modalTitle}>
                         {isEditing ? 'Cập nhật lịch làm việc' : 'Đăng ký lịch làm việc'}
                     </Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <Icon name="x" size={24} color="#6b7280" />
+                        <X size={24} color="#6b7280" />
                     </TouchableOpacity>
                 </View>
                 <ScrollView
@@ -104,7 +118,7 @@ const ScheduleFormModal = ({
                             keyboardType="numeric"
                         />
                         <TouchableOpacity style={styles.currentWeekButton} onPress={handleSelectCurrentWeek}>
-                            <Icon name="calendar" size={20} color="#fff" />
+                            <Calendar size={20} color="#fff" />
                             <Text style={styles.buttonText}>Tuần hiện tại</Text>
                         </TouchableOpacity>
                     </View>
@@ -219,7 +233,7 @@ const InfoModal = ({ show, title, message, onClose }) => (
         <View style={styles.modalOverlay}>
             <View style={styles.modalContentNotifications}>
                 <View style={styles.modalHeader}>
-                    <Icon name="info" size={24} color="#007bff" />
+                    <Info size={24} color="#007bff" />
                     <Text style={styles.modalTitle}>{title}</Text>
                 </View>
                 <Text style={styles.modalBodyText}>{message}</Text>
@@ -248,10 +262,10 @@ const SavedSchedulesModal = ({
         <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                    <Icon name="list" size={24} color="#007bff" />
+                    <List size={24} color="#007bff" />
                     <Text style={styles.modalTitle}>Lịch làm việc đã lưu</Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <Icon name="x" size={24} color="#6b7280" />
+                        <X size={24} color="#6b7280" />
                     </TouchableOpacity>
                 </View>
                 <ScrollView style={styles.modalBody}>
@@ -293,13 +307,13 @@ const SavedSchedulesModal = ({
                                                 handleEditSchedule(item);
                                             }}
                                         >
-                                            <Icon name="edit" size={16} color="#007bff" />
+                                            <Pencil size={16} color="#007bff" />
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             style={styles.deleteButton}
                                             onPress={() => handleDeleteSchedule(item.weekStartDate)}
                                         >
-                                            <Icon name="trash-2" size={16} color="#dc3545" />
+                                            <Trash2 size={16} color="#dc3545" />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -320,7 +334,7 @@ const CurrentSchedule = ({ currentShift, doctorInfo, loadingDoctor }) => {
     return (
         <View style={styles.card}>
             <View style={styles.header}>
-                <Icon name="calendar" size={24} color="#007bff" />
+                <Calendar size={24} color="#007bff" />
                 <Text style={styles.headerTitle}>Lịch làm việc hiện tại</Text>
             </View>
             <View style={styles.cardBody}>
@@ -343,14 +357,14 @@ const CurrentSchedule = ({ currentShift, doctorInfo, loadingDoctor }) => {
                 )}
                 <View style={styles.scheduleDetails}>
                     <View style={styles.detailItem}>
-                        <Icon name="calendar" size={18} color="#007bff" />
+                        <Calendar size={18} color="#007bff" />
                         <Text style={styles.detailText}>
                             {currentShift ? formatDate(currentShift.date) : "Không có ca làm việc hôm nay"}
                         </Text>
                     </View>
                     {currentShift && (
                         <View style={styles.detailItem}>
-                            <Icon name="clock" size={18} color="#007bff" />
+                            <Clock size={18} color="#007bff" />
                             <Text style={styles.detailText}>{`${currentShift.start} - ${currentShift.end}`}</Text>
                         </View>
                     )}
@@ -358,19 +372,19 @@ const CurrentSchedule = ({ currentShift, doctorInfo, loadingDoctor }) => {
                 <View style={styles.features}>
                     <View style={styles.featureItem}>
                         <View style={[styles.featureIcon, { backgroundColor: '#e8f5e8' }]}>
-                            <Icon name="shield" size={20} color="#28a745" />
+                            <Shield size={20} color="#28a745" />
                         </View>
                         <Text style={styles.featureText}>Bảo mật 100%</Text>
                     </View>
                     <View style={styles.featureItem}>
                         <View style={[styles.featureIcon, { backgroundColor: '#fff3cd' }]}>
-                            <Icon name="award" size={20} color="#ffc107" />
+                            <Award size={20} color="#ffc107" />
                         </View>
                         <Text style={styles.featureText}>Bác sĩ chuyên nghiệp</Text>
                     </View>
                     <View style={styles.featureItem}>
                         <View style={[styles.featureIcon, { backgroundColor: '#cce7ff' }]}>
-                            <Icon name="clock" size={20} color="#007bff" />
+                            <Clock size={20} color="#007bff" />
                         </View>
                         <Text style={styles.featureText}>Hỗ trợ 24/7</Text>
                     </View>
@@ -938,7 +952,7 @@ const AttendanceTab = () => {
                     <Text style={styles.sectionSubtitle}>Quản lý thời gian làm việc của bạn</Text>
 
                     <View style={styles.timeContainer}>
-                        <Icon name="clock" size={24} color="#007bff" />
+                        <Clock size={24} color="#007bff" />
                         <Text style={styles.currentTime}>
                             {currentTime.toLocaleTimeString("vi-VN", {
                                 hour: "2-digit",
@@ -954,7 +968,7 @@ const AttendanceTab = () => {
                             onPress={handleCheckIn}
                             disabled={checkInTime && !checkOutTime}
                         >
-                            <Icon name="log-in" size={12} color="#fff" />
+                            <LogIn size={12} color="#fff" />
                             <Text style={styles.buttonText}>Chấm vào</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -962,21 +976,21 @@ const AttendanceTab = () => {
                             onPress={handleCheckOut}
                             disabled={!checkInTime || checkOutTime}
                         >
-                            <Icon name="log-out" size={12} color="#fff" />
+                            <LogOut size={12} color="#fff" />
                             <Text style={styles.buttonText}>Chấm ra</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.actionButton}
                             onPress={() => setShowScheduleFormModal(true)}
                         >
-                            <Icon name="plus-circle" size={12} color="#fff" />
+                            <PlusCircle size={12} color="#fff" />
                             <Text style={styles.buttonText}>Đăng ký lịch</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.actionButton, { backgroundColor: '#17a2b8', marginLeft: 3 }]}
                             onPress={() => setShowSavedSchedulesModal(true)}
                         >
-                            <Icon name="list" size={12} color="#fff" />
+                            <List size={12} color="#fff" />
                             <Text style={styles.buttonText}>Lịch đã lưu</Text>
                         </TouchableOpacity>
                     </View>
@@ -988,6 +1002,7 @@ const AttendanceTab = () => {
                                 value={filterType}
                                 onChangeText={setFilterType}
                                 placeholder="Loại lọc (week/month)"
+                                placeholderTextColor="#9ca3af"
                             />
                             <TextInput
                                 style={styles.filterDate}
@@ -995,6 +1010,7 @@ const AttendanceTab = () => {
                                 onChangeText={setFilterDate}
                                 placeholder="YYYY-MM-DD"
                                 keyboardType="numeric"
+                                placeholderTextColor="#9ca3af"
                             />
                         </View>
                         {filteredHistory.length === 0 ? (

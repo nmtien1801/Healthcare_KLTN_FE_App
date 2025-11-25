@@ -11,7 +11,16 @@ import {
   ActivityIndicator,
   TouchableWithoutFeedback,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import {
+  Heart,
+  User,
+  AlertTriangle,
+  CalendarCheck,
+  Clock,
+  LineChart,
+  ChevronDown,
+  Info,
+} from "lucide-react-native";
 import { api, get_advice } from "../../apis/assistant";
 import { useSelector, useDispatch } from "react-redux";
 import { suggestFoodsByAi, GetCaloFood } from "../../redux/foodAiSlice";
@@ -29,7 +38,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
   const bloodSugar = useSelector((state) => state.patient.bloodSugar);
   const latestReading =
     Array.isArray(bloodSugar?.DT?.bloodSugarData) &&
-      bloodSugar.DT.bloodSugarData.length > 0
+    bloodSugar.DT.bloodSugarData.length > 0
       ? bloodSugar.DT.bloodSugarData[0].value
       : 0;
   const safeWarning = Array.isArray(warning) ? warning : [];
@@ -47,7 +56,6 @@ const Following = ({ user, nearestAppointment, warning }) => {
 
   useEffect(() => {
     if (warningCount > 1) {
-
       const fetchWarning = async () => {
         try {
           let a = await ApiNotification.createNotification({
@@ -96,7 +104,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
                 { backgroundColor: readingStatus.bgColor },
               ]}
             >
-              <Icon name="favorite" size={20} color={readingStatus.color} />
+              <Heart size={20} color={readingStatus.color} />
             </View>
           </View>
         </View>
@@ -107,7 +115,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
         <View style={styles.infoCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIconContainer}>
-              <Icon name="person" size={18} color="#007bff" />
+              <User name="person" size={18} color="#007bff" />
             </View>
             <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
           </View>
@@ -155,7 +163,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
         <View style={styles.infoCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIconContainer}>
-              <Icon name="warning" size={18} color="#007bff" />
+              <AlertTriangle size={18} color="#007bff" />
             </View>
             <Text style={styles.cardTitle}>Tình trạng hiện tại</Text>
           </View>
@@ -174,7 +182,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
         <View style={styles.appointmentCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardIconContainer}>
-              <Icon name="calendar-today" size={18} color="#34c759" />
+              <CalendarCheck size={18} color="#34c759" />
             </View>
             <Text style={styles.cardTitle}>Lịch hẹn tiếp theo</Text>
           </View>
@@ -207,7 +215,7 @@ const Following = ({ user, nearestAppointment, warning }) => {
                   : "Trực tuyến"}
               </Text>
               <View style={styles.reminderContainer}>
-                <Icon name="schedule" size={14} color="#dc3545" />
+                <Clock size={14} color="#dc3545" />
                 <Text style={styles.reminderText}>
                   Nhớ chuẩn bị trước 30 phút
                 </Text>
@@ -307,7 +315,8 @@ const checkHighThreshold = (dailyBloodSugar, setWarning) => {
   }
 
   // 4. Hiển thị alert nếu có cảnh báo
-  if (warnings.length > 0) {
+  if (warnings.length > 1) {
+    // Sử dụng > 1 vì warnings.push(Ngày...) đã có 1 phần tử
     setWarning(warnings);
   } else {
     setWarning([]);
@@ -350,7 +359,7 @@ const Chart = ({ bloodSugar, setWarning }) => {
   const yMin = yVals.length
     ? Math.max(0, Math.floor((Math.min(...yVals) - 0.6) * 10) / 10)
     : 3.5;
-  const yMax = 13
+  const yMax = 13;
 
   const option = {
     tooltip: {
@@ -457,7 +466,7 @@ const Chart = ({ bloodSugar, setWarning }) => {
     <View style={styles.chartCard}>
       <View style={styles.chartHeader}>
         <View style={styles.chartIconContainer}>
-          <Icon name="show-chart" size={20} color="#6366f1" />
+          <LineChart size={20} color="#6366f1" />
         </View>
         <Text style={styles.chartTitle}>Biểu đồ theo dõi</Text>
       </View>
@@ -744,7 +753,7 @@ const HealthTabs = () => {
       Alert.alert("Thành công", "Đã lưu chỉ số đường huyết thành công!");
 
       // Refresh blood sugar data
-      await fetchData()
+      await fetchData();
     } catch (error) {
       console.error("API error:", error);
       Alert.alert("Lỗi", "Có lỗi xảy ra khi lưu dữ liệu. Vui lòng thử lại!");
@@ -791,7 +800,7 @@ const HealthTabs = () => {
                 <Text style={styles.pickerText}>
                   {measurementType === "before" ? "Trước ăn" : "Sau ăn"}
                 </Text>
-                <Icon name="keyboard-arrow-down" size={20} color="#666" />
+                <ChevronDown size={20} color="#666" />
               </TouchableOpacity>
             </View>
             <TextInput
@@ -822,7 +831,7 @@ const HealthTabs = () => {
             </TouchableOpacity>
           </View>
           <View style={styles.infoContainer}>
-            <Icon name="info" size={14} color="#6c757d" />
+            <Info size={14} color="#6c757d" />
             <Text style={styles.infoText}>
               Nhập chỉ số đường huyết theo đơn vị mmol/L
             </Text>
