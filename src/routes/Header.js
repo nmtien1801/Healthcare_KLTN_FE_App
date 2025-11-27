@@ -69,7 +69,7 @@ const Header = () => {
       {/* Logo & Title */}
       <View style={styles.left}>
         <Heart size={24} color="#007bff" fill="#007bff" style={styles.icon} />
-        <Text style={styles.title}>HealthCare AI</Text>
+        <Text style={styles.title}>DiaTech</Text>
       </View>
 
       {/* Notifications & Info */}

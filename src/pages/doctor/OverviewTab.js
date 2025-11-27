@@ -1,59 +1,53 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
   Dimensions,
-  Platform,
+  ActivityIndicator,
 } from "react-native";
-import { BarChart } from "react-native-chart-kit";
 import { ECharts } from "react-native-echarts-wrapper";
 import ApiDoctor from "../../apis/ApiDoctor";
 
-// Dữ liệu mẫu fallback
-const fallbackRevenueData = {
-  week: {
-    xAxisData: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
-    data: [5.2, 8.9, 7.0, 9.3, 12.5, 4.8, 2.1].map((v) => v * 1000000),
-  },
-  month: {
-    xAxisData: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6"],
-    data: [50, 60, 55, 70, 65, 80].map((v) => v * 1000000),
-  },
-  year: {
-    xAxisData: ["2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09"],
-    data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1500000],
-  },
+const { width } = Dimensions.get("window");
+
+const classifyBloodSugar = (value, type) => {
+  if (value == null) return "N/A";
+  if (type === "fasting") {
+    if (value < 3.9) return "<3,9";
+    if (value <= 5.6) return "3,9 – 5,6 (Bình thường)";
+    if (value <= 6.9) return "5,7 – 6,9 (Tiền TĐ)";
+    return ">=7 (Tiểu đường)";
+  } else {
+    if (value < 3.9) return "<3,9";
+    if (value <= 7.7) return "3,9 – 7,7 (Bình thường)";
+    if (value <= 11) return "7,8 – 11 (Tiền TĐ)";
+    return ">11 (Tiểu đường)";
+  }
 };
 
-const fallbackHealthData = {
-  xAxisData: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
-  bloodPressureData: [160, 162, 158, 165, 160, 163, 159],
-  heartRateData: [92, 90, 93, 89, 91, 92, 90],
-  bloodSugarData: [6.8, 7.0, 6.7, 7.2, 6.9, 7.1, 6.8],
+const getDaysFromPeriod = (period) => {
+  if (period === "week") return 7;
+  if (period === "month") return 30;
+  if (period === "year") return 365;
+  return 7;
 };
 
-// Hàm xử lý dữ liệu cho biểu đồ
-const processHealthData = ({ healthData }) => {
-  const labels = healthData.xAxisData || ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-  const bloodPressureData = healthData.bloodPressureData || [160, 162, 158, 165, 160, 163, 159];
-  const heartRateData = healthData.heartRateData || [92, 90, 93, 89, 91, 92, 90];
-  const bloodSugarData = healthData.bloodSugarData || [6.8, 7.0, 6.7, 7.2, 6.9, 7.1, 6.8];
-
-  return { labels, bloodPressureData, heartRateData, bloodSugarData };
+const periodToVietnamese = (period) => {
+  if (period === "week") return "7 ngày gần nhất";
+  if (period === "month") return "30 ngày gần nhất";
+  if (period === "year") return "1 năm gần nhất";
+  return "";
 };
 
 export default function OverviewTab() {
-  const [revenuePeriod, setRevenuePeriod] = useState("week");
+  const [revenuePeriod] = useState("week");
   const [healthPeriod, setHealthPeriod] = useState("week");
-  const [showRevenueDropdown, setShowRevenueDropdown] = useState(false);
-  const [showHealthDropdown, setShowHealthDropdown] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patients, setPatients] = useState([]);
+  const [showAllPatients, setShowAllPatients] = useState(false);
   const [summary, setSummary] = useState({
     newPatients: 0,
     newPatientsChange: "",
@@ -62,874 +56,432 @@ export default function OverviewTab() {
     monthlyRevenue: "0 đ",
     monthlyRevenueChange: "",
   });
-  const [revenueData, setRevenueData] = useState({ week: {}, month: {}, year: {} });
+  const [revenueData, setRevenueData] = useState({ xAxisData: [], seriesData: [], totalRevenue: 0 });
   const [healthData, setHealthData] = useState({});
+  const [bloodSugarRaw, setBloodSugarRaw] = useState([]);
+
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const patientsPerPage = 3;
-  const chartRef = useRef(null);
-
-  // Fetch summary
   useEffect(() => {
-    const fetchSummary = async () => {
+    const fetchAll = async () => {
       try {
-        const res = await ApiDoctor.getSummary();
-        if (
-          res &&
-          typeof res === "object" &&
-          "newPatients" in res &&
-          "appointmentsToday" in res &&
-          "upcomingAppointments" in res &&
-          "monthlyRevenue" in res
-        ) {
-          setSummary(res);
-        } else {
-          console.error("Response summary không hợp lệ:", res);
-        }
-      } catch (err) {
-        console.error("Lỗi fetch summary:", err);
-      }
-    };
-    fetchSummary();
-  }, []);
-
-  // Fetch patients
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const res = await ApiDoctor.getPatientsAttention();
-        const patientsData = Array.isArray(res) ? res : [];
-        setPatients(patientsData);
-        setSelectedPatient(patientsData.length > 0 ? patientsData[0] : null);
-      } catch (err) {
-        console.error("Lỗi fetch patients:", err);
-        setPatients([]);
-      }
-    };
-    fetchPatients();
-  }, []);
-
-  // Fetch revenue
-  useEffect(() => {
-    const fetchRevenue = async () => {
-      try {
-        const [weekRes, monthRes, yearRes] = await Promise.all([
-          ApiDoctor.getRevenue("week"),
-          ApiDoctor.getRevenue("month"),
-          ApiDoctor.getRevenue("year"),
+        const [summaryRes, patientsRes, revenueRes] = await Promise.all([
+          ApiDoctor.getSummary(),
+          ApiDoctor.getPatientsAttention(),
+          ApiDoctor.getRevenueWallet(revenuePeriod),
         ]);
 
-        const newRevenueData = {
-          week: weekRes && Array.isArray(weekRes.xAxisData) && Array.isArray(weekRes.data)
-            ? weekRes
-            : fallbackRevenueData.week,
-          month: monthRes && Array.isArray(monthRes.xAxisData) && Array.isArray(monthRes.data)
-            ? monthRes
-            : fallbackRevenueData.month,
-          year: yearRes && Array.isArray(yearRes.xAxisData) && Array.isArray(yearRes.data)
-            ? yearRes
-            : fallbackRevenueData.year,
-        };
-
-        setRevenueData(newRevenueData);
+        setSummary(summaryRes || summary);
+        const patientsData = Array.isArray(patientsRes) ? patientsRes : [];
+        setPatients(patientsData);
+        if (patientsData.length > 0 && !selectedPatient) {
+          setSelectedPatient(patientsData[0]);
+        }
+        setRevenueData(revenueRes || { xAxisData: [], seriesData: [], totalRevenue: 0 });
       } catch (err) {
-        console.error("Lỗi fetch revenue:", err);
-        setRevenueData(fallbackRevenueData);
+        console.error("Lỗi fetch tổng quan:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchRevenue();
-  }, []);
+    fetchAll();
+  }, [revenuePeriod]);
 
-  // Fetch health data
   useEffect(() => {
-    if (selectedPatient) {
-      const fetchHealth = async () => {
-        try {
-          const res = await ApiDoctor.getPatientHealth(selectedPatient._id || selectedPatient.id, healthPeriod);
-          setHealthData(res || fallbackHealthData);
-        } catch (err) {
-          console.error("Lỗi fetch health:", err);
-          setHealthData(fallbackHealthData);
-        }
-      };
-      fetchHealth();
-    }
+    if (!selectedPatient?._id) return;
+    const fetchHealth = async () => {
+      try {
+        const res = await ApiDoctor.getPatientHealth(selectedPatient._id, healthPeriod);
+        setHealthData(res || {});
+      } catch (err) {
+        console.error("Lỗi fetch health:", err);
+        setHealthData({});
+      }
+    };
+    fetchHealth();
   }, [selectedPatient, healthPeriod]);
 
-  // Logic phân trang
-  const totalPages = Math.ceil(patients.length / patientsPerPage);
-  const startIndex = (currentPage - 1) * patientsPerPage;
-  const endIndex = startIndex + patientsPerPage;
-  const displayedPatients = patients.slice(startIndex, endIndex);
-
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+  useEffect(() => {
+    if (!selectedPatient?.userId) {
+      setBloodSugarRaw([]);
+      return;
     }
-  };
-
-  // Custom Dropdown Component
-  const CustomDropdown = ({
-    options,
-    selectedValue,
-    onSelect,
-    isVisible,
-    onToggle,
-    placeholder = "Chọn khoảng thời gian"
-  }) => {
-    const getDisplayText = (value) => {
-      const option = options.find(opt => opt.value === value);
-      return option ? option.label : placeholder;
-    };
-
-    return (
-      <View style={styles.dropdownWrapper}>
-        <TouchableOpacity
-          style={styles.dropdownButton}
-          onPress={onToggle}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.dropdownButtonText}>{getDisplayText(selectedValue)}</Text>
-          <Text style={styles.dropdownArrow}>{isVisible ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
-
-        {isVisible && (
-          <View style={styles.dropdownMenu}>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.dropdownItem,
-                  selectedValue === option.value && styles.dropdownItemSelected
-                ]}
-                onPress={() => {
-                  onSelect(option.value);
-                  onToggle();
-                }}
-              >
-                <Text style={[
-                  styles.dropdownItemText,
-                  selectedValue === option.value && styles.dropdownItemTextSelected
-                ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  // Get chart data for revenue
-  const getRevenueChartData = (period) => {
-    const data = revenueData[period] || { xAxisData: [], data: [] };
-    const chartData = data.data && data.data.length > 0 ? data.data : [1000000, 2000000, 1500000, 3000000, 2500000, 1800000, 2200000];
-    let chartLabels = data.xAxisData && data.xAxisData.length > 0 ? data.xAxisData : ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-
-    chartLabels = chartLabels.map(label => {
-      if (typeof label === 'string' && label.length > 8) {
-        return label.substring(0, 6) + '...';
+    const fetchBloodSugar = async () => {
+      try {
+        const days = getDaysFromPeriod(healthPeriod);
+        const [fastingRes, postMealRes] = await Promise.all([
+          ApiDoctor.fetchPatientBloodSugar(selectedPatient.userId, "fasting", days),
+          ApiDoctor.fetchPatientBloodSugar(selectedPatient.userId, "postMeal", days),
+        ]);
+        const fasting = fastingRes?.DT?.bloodSugarData || [];
+        const postMeal = postMealRes?.DT?.bloodSugarData || [];
+        const processedFasting = Array.isArray(fasting) ? fasting.map(item => ({ ...item, type: 'fasting' })) : [];
+        const processedPostMeal = Array.isArray(postMeal) ? postMeal.map(item => ({ ...item, type: 'postMeal' })) : [];
+        setBloodSugarRaw([...processedFasting, ...processedPostMeal]);
+      } catch (err) {
+        console.error("Lỗi fetch blood sugar:", err);
+        setBloodSugarRaw([]);
       }
-      return label;
+    };
+    fetchBloodSugar();
+  }, [selectedPatient, healthPeriod]);
+  const processBloodSugarForChart = (data) => {
+    const daily = {};
+    data.forEach(({ value, type, time }) => {
+      if (!time || typeof value !== "number") return;
+      const dateKey = new Date(time).toISOString().split("T")[0];
+      if (!daily[dateKey]) daily[dateKey] = { fasting: [], postMeal: [] };
+      if (type === "fasting") daily[dateKey].fasting.push(value);
+      else if (type === "postMeal") daily[dateKey].postMeal.push(value);
     });
 
+    const sortedKeys = Object.keys(daily).sort();
+    const dates = sortedKeys.map((k) => {
+      const d = new Date(k);
+      return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}`;
+    });
+
+    const avg = (arr) => (arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : null);
+
     return {
-      labels: chartLabels,
-      data: chartData
+      dates,
+      fastingData: sortedKeys.map((k) => avg(daily[k].fasting)),
+      postMealData: sortedKeys.map((k) => avg(daily[k].postMeal)),
     };
   };
 
-  // Cấu hình biểu đồ ECharts cho chỉ số sức khỏe (không có markLine)
-  const getHealthChartOption = () => {
-    const { labels, bloodPressureData, heartRateData, bloodSugarData } = processHealthData({ healthData });
+  const { dates = [], fastingData = [], postMealData = [] } = processBloodSugarForChart(bloodSugarRaw);
+  const periodVietnamese = periodToVietnamese(healthPeriod);
 
-    // Tính toán min/max cho trục y dựa trên tất cả dữ liệu
-    const yVals = [...bloodPressureData, ...heartRateData, ...bloodSugarData].filter(
-      (v) => typeof v === 'number' && !isNaN(v)
-    );
-    const yMin = yVals.length ? Math.max(0, Math.floor((Math.min(...yVals) - 10) / 10) * 10) : 0;
-    const yMax = yVals.length ? Math.ceil((Math.max(...yVals) + 10) / 10) * 10 : 200;
-
-    return {
-      tooltip: {
-        trigger: "axis",
-        formatter: function (params) {
-          let result = params[0].axisValue + '<br/>';
-          params.forEach(param => {
-            if (param.value !== null) {
-              result += param.marker + ' ' + param.seriesName + ': ' + Number(param.value?.toFixed(1)) +
-                (param.seriesName === 'Huyết áp' ? ' mmHg' : param.seriesName === 'Nhịp tim' ? ' bpm' : ' mmol/L') + '<br/>';
-            }
-          });
-          return result;
-        }
-      },
-      legend: {
-        top: 8,
-        icon: 'circle',
-        data: ["Huyết áp", "Nhịp tim", "Đường huyết"],
-        textStyle: { color: '#6b7280' },
-      },
-      xAxis: {
-        type: "category",
-        boundaryGap: false,
-        data: labels,
-        axisLine: { lineStyle: { color: '#e5e7eb' } },
-        axisLabel: {
-          color: '#6b7280',
-          fontSize: 10,
-          rotate: labels.length > 7 ? 45 : 0, // Xoay nhãn nếu quá dài
-        },
-      },
-      yAxis: {
-        type: "value",
-        min: yMin,
-        max: yMax,
-        axisLine: { show: false },
-        splitLine: { lineStyle: { color: '#e5e7eb', type: 'dashed' } },
-        axisLabel: { color: '#6b7280', fontSize: 10, formatter: '{value}' },
-      },
-      series: [
-        {
-          name: "Huyết áp",
-          data: bloodPressureData,
-          type: "line",
-          smooth: true,
-          showSymbol: true,
-          symbolSize: 6,
-          lineStyle: { color: "#dc2626", width: 2 }, // Đỏ cho huyết áp
-          itemStyle: { color: "#dc2626" },
-          areaStyle: { opacity: 0.06 },
-          connectNulls: true,
-        },
-        {
-          name: "Nhịp tim",
-          data: heartRateData,
-          type: "line",
-          smooth: true,
-          showSymbol: true,
-          symbolSize: 6,
-          lineStyle: { color: "#3b82f6", width: 2 }, // Xanh dương cho nhịp tim
-          itemStyle: { color: "#3b82f6" },
-          areaStyle: { opacity: 0.06 },
-          connectNulls: true,
-        },
-        {
-          name: "Đường huyết",
-          data: bloodSugarData,
-          type: "line",
-          smooth: true,
-          showSymbol: true,
-          symbolSize: 6,
-          lineStyle: { color: "#16b981", width: 2 }, // Xanh lá cho đường huyết
-          itemStyle: { color: "#16b981" },
-          areaStyle: { opacity: 0.06 },
-          connectNulls: true,
-        },
-      ],
-      grid: { left: 28, right: 16, top: 40, bottom: 28, containLabel: true },
-    };
-  };
+  const yVals = [...fastingData, ...postMealData].filter((v) => v !== null);
+  const yMin = yVals.length ? Math.max(0, Math.floor((Math.min(...yVals) - 0.6) * 10) / 10) : 3.0;
+  const yMax = yVals.length ? Math.max(13, Math.ceil((Math.max(...yVals) + 0.6) * 10) / 10) : 13;
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.loading}>
         <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Đang tải...</Text>
+        <Text style={{ marginTop: 12, color: "#6b7280" }}>Đang tải dữ liệu...</Text>
       </View>
     );
   }
+  const healthChartOption = {
+    tooltip: { trigger: "axis" },
+    legend: { top: 30, data: ["Huyết áp", "Nhịp tim", "Đường huyết"], icon: "circle" },
+    xAxis: {
+      type: "category",
+      data: healthData?.xAxisData || [],
+      axisLabel: { interval: healthPeriod === 'week' ? 0 : 7, rotate: 30, color: "#6b7280", fontSize: 10 }
+    },
+    yAxis: { type: "value", splitLine: { lineStyle: { type: 'dashed' } } },
+    series: [
+      { name: "Huyết áp", type: "line", smooth: true, data: healthData?.bloodPressureData || [], itemStyle: { color: "#ef4444" } },
+      { name: "Nhịp tim", type: "line", smooth: true, data: healthData?.heartRateData || [], itemStyle: { color: "#3b82f6" } },
+      { name: "Đường huyết", type: "line", smooth: true, data: healthData?.bloodSugarData || [], itemStyle: { color: "#10b981" } },
+    ],
+    grid: { left: 10, right: 50, top: 80, bottom: 60, containLabel: true },
+  };
+  const bloodSugarChartOption = {
+    title: {
+      text: `Đường huyết (${periodVietnamese}, mmol/L)`,
+      left: "center",
+      textStyle: { fontSize: 13, fontWeight: '500' }
+    },
+    tooltip: {
+      trigger: "axis",
+      formatter: (params) => {
+        let result = params[0].axisValue + "<br/>";
+        params.forEach((p) => {
+          if (p.value !== null) {
+            const type = p.seriesName === "Lúc đói" ? "fasting" : "postMeal";
+            const level = classifyBloodSugar(p.value, type);
+            const isWarning = level.includes("Tiểu đường") || level.includes("Tiền TĐ");
+            const levelColor = isWarning ? '#ef4444' : '#10b981';
+            result += `${p.marker} ${p.seriesName}: <b>${p.value} mmol/L</b> → <span style="color:${levelColor}; font-weight: 600">${level}</span><br/>`;
+          }
+        });
+        return result;
+      },
+    },
+    legend: { top: 30, data: ["Lúc đói", "Sau ăn"], icon: "circle", textStyle: { color: "#6b7280" } },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: dates,
+      axisLine: { lineStyle: { color: "#e5e7eb" } },
+      axisLabel: { interval: healthPeriod === 'week' ? 0 : 7, rotate: 30, color: "#6b7280", fontSize: 10 }
+    },
+    yAxis: {
+      type: "value",
+      min: yMin,
+      max: yMax,
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: "#e5e7eb", type: "dashed" } },
+      axisLabel: {
+        color: "#6b7280",
+        fontSize: 12,
+        formatter: "{value} mmol/L",
+      },
+    },
+    series: [
+      {
+        name: "Lúc đói",
+        data: fastingData,
+        type: "line",
+        smooth: true,
+        showSymbol: true,
+        symbolSize: 4,
+        lineStyle: { color: "#3b82f6", width: 2 },
+        itemStyle: { color: "#3b82f6" },
+        connectNulls: true,
+        markLine: {
+          data: [
+            { yAxis: 5.6, name: "Bình thường (Đói)", lineStyle: { color: "#10b981", type: 'dashed' }, label: { formatter: "BT(Đói)" } },
+            { yAxis: 7.0, name: "Tiểu đường (Đói)", lineStyle: { color: "#ef4444", type: 'dashed' }, label: { formatter: "TĐ(Đói)" } },
+          ],
+          silent: true
+        },
+        areaStyle: { opacity: 0.08, color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(59, 130, 246, 0.2)' }, { offset: 1, color: 'rgba(59, 130, 246, 0)' }] } },
+      },
+      {
+        name: "Sau ăn",
+        data: postMealData,
+        type: "line",
+        smooth: true,
+        showSymbol: true,
+        symbolSize: 4,
+        lineStyle: { color: "#f59e0b", width: 2 },
+        itemStyle: { color: "#f59e0b" },
+        connectNulls: true,
+
+        markLine: {
+          data: [
+            { yAxis: 7.8, name: "Bình thường (Sau ăn)", lineStyle: { color: "#10b981", type: 'dashed' }, label: { formatter: "BT(Sau ăn)" } },
+            { yAxis: 11.0, name: "Tiểu đường (Sau ăn)", lineStyle: { color: "#ef4444", type: 'dashed' }, label: { formatter: "TĐ(Sau ăn)" } },
+          ],
+          silent: true
+        },
+        areaStyle: { opacity: 0.08, color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(245, 158, 11, 0.2)' }, { offset: 1, color: 'rgba(245, 158, 11, 0)' }] } },
+      },
+    ],
+
+    grid: { left: 10, right: 50, top: 80, bottom: 60, containLabel: true },
+  };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-      onScrollBeginDrag={() => {
-        setShowRevenueDropdown(false);
-        setShowHealthDropdown(false);
-      }}
-    >
-      <Text style={styles.title}>Tổng quan</Text>
-
-      {/* Summary Cards */}
-      <View style={styles.summaryContainer}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <Text style={styles.pageTitle}>Tổng quan</Text>
+      <ScrollView horizontal={true} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.summaryRowContainer}>
         {[
-          { icon: "👤", title: "Bệnh nhân mới", value: summary.newPatients, change: summary.newPatientsChange, color: "#2563eb" },
-          { icon: "📅", title: "Cuộc hẹn hôm nay", value: summary.appointmentsToday, change: `${summary.upcomingAppointments} sắp tới`, color: "#d97706" },
-          { icon: "💰", title: "Doanh thu tháng", value: summary.monthlyRevenue, change: summary.monthlyRevenueChange, color: "#059669" },
-        ].map((item, index) => (
-          <View key={index} style={[styles.summaryCard, { borderLeftColor: item.color }]}>
-            <View style={[styles.iconContainer, { backgroundColor: `${item.color} 20` }]}>
-              <Text style={[styles.icon, { color: item.color }]}>{item.icon}</Text>
+          { title: "Bệnh nhân mới", value: summary.newPatients, change: summary.newPatientsChange, color: "#3b82f6", icon: "👤" },
+          { title: "Cuộc hẹn hôm nay", value: summary.appointmentsToday, change: `${summary.upcomingAppointments} sắp tới`, color: "#f59e0b", icon: "📅" },
+          { title: "Doanh thu tháng", value: summary.monthlyRevenue, change: summary.monthlyRevenueChange, color: "#10b981", icon: "💰" },
+        ].map((item, i) => (
+          <View key={i} style={styles.summaryCardWidth}>
+            <View style={styles.summaryCard}>
+              <View style={[styles.summaryIcon, { backgroundColor: item.color + "20" }]}>
+                <Text style={{ fontSize: 24 }}>{item.icon}</Text>
+              </View>
+              <View>
+                <Text style={styles.summaryTitle}>{item.title}</Text>
+                <Text style={styles.summaryValue}>{item.value}</Text>
+                <Text style={[styles.summaryChange, { color: item.color === '#10b981' ? '#059669' : '#4b5563' }]}>{item.change}</Text>
+              </View>
             </View>
-            <Text style={styles.summaryTitle}>{item.title}</Text>
-            <Text style={styles.summaryValue}>{item.value}</Text>
-            <Text style={styles.summaryChange}>{item.change}</Text>
           </View>
         ))}
-      </View>
+      </ScrollView>
 
-      {/* Revenue Chart */}
-      <View style={styles.card}>
-        <View style={styles.chartHeader}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.sectionTitle}>📊 Doanh thu</Text>
-            <Text style={styles.sectionSubtitle}>Theo khoảng thời gian</Text>
-          </View>
-          <CustomDropdown
-            options={[
-              { label: "Tuần này", value: "week" },
-              { label: "Tháng này", value: "month" },
-              { label: "Năm nay", value: "year" }
-            ]}
-            selectedValue={revenuePeriod}
-            onSelect={setRevenuePeriod}
-            isVisible={showRevenueDropdown}
-            onToggle={() => {
-              setShowRevenueDropdown(!showRevenueDropdown);
-              setShowHealthDropdown(false);
-            }}
-            placeholder="Chọn thời gian"
-          />
-        </View>
-        <View style={styles.chartContainer}>
-          {(() => {
-            const chartData = getRevenueChartData(revenuePeriod);
-            return (
-              <BarChart
-                data={{
-                  labels: chartData.labels,
-                  datasets: [
-                    {
-                      data: chartData.data.map(value => value / 1000000),
-                    }
-                  ]
-                }}
-                width={Dimensions.get("window").width - 64}
-                height={240}
-                yAxisLabel=""
-                yAxisSuffix="M"
-                chartConfig={{
-                  backgroundColor: "#ffffff",
-                  backgroundGradientFrom: "#ffffff",
-                  backgroundGradientTo: "#ffffff",
-                  decimalPlaces: 1,
-                  color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
-                  style: {
-                    borderRadius: 16
-                  },
-                  propsForDots: {
-                    r: "6",
-                    strokeWidth: "2",
-                    stroke: "#2563eb"
-                  },
-                  propsForLabels: {
-                    fontSize: 10,
-                    rotation: chartData.labels.length > 6 ? -45 : 0,
-                  }
-                }}
-                style={styles.chart}
-                fromZero
-                showValuesOnTopOfBars={false}
-                withInnerLines={true}
-                withVerticalLabels={true}
-                withHorizontalLabels={true}
-                segments={4}
-              />
-            );
-          })()}
-        </View>
-      </View>
 
-      {/* Health Chart and Patient List */}
-      <View style={styles.card}>
-        <View style={styles.chartHeader}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.sectionTitle}>❤️ Chỉ số sức khỏe</Text>
-            <Text style={styles.sectionSubtitle}>
-              {selectedPatient?.name || "Chưa chọn bệnh nhân"}
-            </Text>
-          </View>
-          <CustomDropdown
-            options={[
-              { label: "Tuần này", value: "week" },
-              { label: "Tháng này", value: "month" },
-              { label: "Năm nay", value: "year" }
-            ]}
-            selectedValue={healthPeriod}
-            onSelect={setHealthPeriod}
-            isVisible={showHealthDropdown}
-            onToggle={() => {
-              setShowHealthDropdown(!showHealthDropdown);
-              setShowRevenueDropdown(false);
-            }}
-            placeholder="Chọn thời gian"
-          />
-        </View>
-        <View style={styles.chartContainer}>
-          {healthData?.bloodPressureData?.length > 0 ? (
-            <View style={{ width: Dimensions.get("window").width - 64, height: 300 }}>
-              <ECharts
-                key={healthData.xAxisData?.join('|') || 'health-chart'}
-                option={getHealthChartOption()}
-                backgroundColor="transparent"
-                style={{ width: '100%', height: '100%', borderRadius: 16 }}
-              />
-            </View>
-          ) : (
-            <View style={styles.noDataContainer}>
-              <Text style={styles.noDataText}>Không có dữ liệu để hiển thị</Text>
-              <Text style={styles.noDataSubtext}>Vui lòng chọn bệnh nhân khác</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Patient List */}
-      <View style={styles.card}>
-        <View style={styles.chartHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>⚠️ Bệnh nhân cần chú ý</Text>
-            <Text style={styles.sectionSubtitle}>Tổng {patients.length} bệnh nhân</Text>
-          </View>
-          <TouchableOpacity style={styles.viewAllButton}>
-            <Text style={styles.viewAllText}>Xem tất cả</Text>
+      <View style={styles.tableCard}>
+        <View style={styles.tableHeader}>
+          <Text style={styles.tableTitle}>Bệnh nhân cần chú ý</Text>
+          <TouchableOpacity onPress={() => setShowAllPatients(!showAllPatients)}>
+            <Text style={styles.toggleText}>{showAllPatients ? "Thu gọn" : "Xem tất cả"}</Text>
           </TouchableOpacity>
         </View>
-
-        <View style={styles.patientListContainer}>
-          {displayedPatients.map((patient) => (
+        <View style={styles.table}>
+          <View style={styles.tableRowHeader}>
+            <Text style={[styles.th, { flex: 0.9 }]}>Bệnh nhân</Text>
+            <Text style={styles.th}>Chỉ số sức khỏe</Text>
+            <Text style={[styles.th, { textAlign: "center", flex: 0.8 }]}>Trạng thái</Text>
+          </View>
+          {(showAllPatients ? patients : patients.slice(0, 5)).map((p) => (
             <TouchableOpacity
-              key={patient._id || patient.id}
-              style={[styles.patientRow, patient.name === selectedPatient?.name ? styles.selectedPatient : null]}
-              onPress={() => setSelectedPatient(patient)}
+              key={p._id}
+              onPress={() => setSelectedPatient(p)}
+              style={[
+                styles.tableRow,
+                selectedPatient?._id === p._id && styles.tableRowSelected,
+              ]}
             >
-              <View style={styles.patientImageContainer}>
-                <Image source={{ uri: patient.image }} style={styles.patientImage} />
-                {patient.name === selectedPatient?.name && <View style={styles.selectedIndicator} />}
-              </View>
-              <View style={styles.patientInfo}>
-                <Text style={styles.patientName}>{patient.name}</Text>
-                <Text style={styles.patientAge}>{patient.age} tuổi</Text>
-                <View style={styles.healthMetrics}>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Huyết áp:</Text>
-                    <Text
-                      style={[
-                        styles.metricValue,
-                        patient.bloodPressure.includes("160") ||
-                          patient.bloodPressure.includes("150") ||
-                          patient.bloodPressure.includes("145") ||
-                          patient.bloodPressure.includes("140")
-                          ? styles.dangerText
-                          : patient.bloodPressure.includes("120")
-                            ? styles.goodText
-                            : styles.warningText,
-                      ]}
-                    >
-                      {patient.bloodPressure}
-                    </Text>
-                  </View>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Nhịp tim:</Text>
-                    <Text style={styles.metricValue}>{patient.heartRate} bpm</Text>
-                  </View>
-                </View>
-                <View style={[styles.statusContainer, { backgroundColor: `${patient.statusColor} 15` }]}>
-                  <View style={[styles.statusDot, { backgroundColor: patient.statusColor }]} />
-                  <Text style={[styles.statusText, { color: patient.statusColor }]}>{patient.warning || patient.status}</Text>
+              <Text style={[styles.tdName, { flex: 0.9 }]}>{p.name}</Text>
+              <Text style={styles.tdMetrics}>
+                <Text>NT: </Text><Text style={{ fontWeight: "600" }}>{p.heartRate || "-"}</Text>
+                <Text> | HA: </Text><Text style={{ fontWeight: "600" }}>{p.bloodPressure || "-"}</Text>
+              </Text>
+              <View style={[{ alignItems: "center", flex: 0.8 }]}>
+                <View style={[styles.badge, p.warning ? styles.badgeDanger : styles.badgeSuccess]}>
+                  <Text style={[styles.badgeText, p.warning ? { color: "#dc2626" } : { color: "#059669" }]}>
+                    {p.warning || "Bình thường"}
+                  </Text>
                 </View>
               </View>
             </TouchableOpacity>
           ))}
         </View>
+      </View>
+      <View style={styles.periodSelectorRow}>
+        <Text style={styles.selectorTitle}>Khoảng thời gian:</Text>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {["week", "month", "year"].map((p) => (
+            <TouchableOpacity
+              key={p}
+              onPress={() => setHealthPeriod(p)}
+              style={[styles.periodBtn, healthPeriod === p && styles.periodBtnActive]}
+            >
+              <Text style={[styles.periodBtnText, healthPeriod === p && styles.periodBtnTextActive]}>
+                {p === "week" ? "Tuần" : p === "month" ? "Tháng" : "Năm"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              style={[styles.paginationButton, currentPage === 1 && styles.disabledButton]}
-              onPress={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <Text style={[styles.paginationText, currentPage === 1 && styles.disabledText]}>‹</Text>
-            </TouchableOpacity>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <TouchableOpacity
-                key={page}
-                style={[styles.paginationButton, page === currentPage && styles.activePaginationButton]}
-                onPress={() => handlePageChange(page)}
-              >
-                <Text style={[styles.paginationText, page === currentPage && styles.activePaginationText]}>{page}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[styles.paginationButton, currentPage === totalPages && styles.disabledButton]}
-              onPress={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              <Text style={[styles.paginationText, currentPage === totalPages && styles.disabledText]}>›</Text>
-            </TouchableOpacity>
+
+      {/* Biểu đồ Chỉ số Sức khỏe (Health Chart) */}
+      <View style={styles.chartCard}>
+        <View style={styles.chartHeader}>
+          <Text style={styles.chartTitle}>
+            Chỉ số sức khỏe - {selectedPatient?.name || "Chưa chọn"}
+          </Text>
+        </View>
+        {healthData?.xAxisData?.length > 0 ? (
+          <View style={{ height: 320, width: '100%' }}>
+            <ECharts
+              key={'health-' + selectedPatient?._id + healthPeriod}
+              option={healthChartOption}
+              style={{ height: '100%', width: '100%' }}
+            />
+          </View>
+        ) : (
+          <View style={{ height: 320, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: '#6b7280' }}>Chưa có dữ liệu chỉ số sức khỏe để hiển thị trong {periodVietnamese}</Text>
           </View>
         )}
       </View>
+
+      <View style={styles.chartCard}>
+        <Text style={[styles.chartTitle, { marginBottom: 12 }]}>Biểu đồ Đường huyết</Text>
+        {dates.length > 0 ? (
+          <View style={{ height: 320, width: '100%' }}>
+            <ECharts
+              key={'bloodSugar-' + selectedPatient?._id + healthPeriod}
+              option={bloodSugarChartOption}
+              style={{ height: '100%', width: '100%' }}
+            />
+          </View>
+        ) : (
+          <View style={{ height: 320, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: '#6b7280' }}>Chưa có dữ liệu đường huyết để hiển thị trong {periodVietnamese}</Text>
+          </View>
+        )}
+      </View>
+
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    marginTop: 62,
-    backgroundColor: "#f3f4f6",
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1f2937",
-    marginBottom: 16,
-  },
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  summaryContainer: {
+  container: { flex: 1, backgroundColor: "#f9fafb" },
+  pageTitle: { fontSize: 24, fontWeight: "700", margin: 16, color: "#111827" },
+  loading: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f9fafb", height: Dimensions.get('window').height - 100 },
+
+  summaryRowContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 16,
+  },
+  summaryCardWidth: {
+    width: width * 0.45,
+    minWidth: 150,
   },
   summaryCard: {
-    flex: 1,
-    marginHorizontal: 6,
     backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    alignItems: "center",
+    padding: 16,
+    borderRadius: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 2,
-    borderLeftWidth: 4,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  icon: {
-    fontSize: 20,
-  },
-  summaryTitle: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#111827",
-    marginBottom: 2,
-  },
-  summaryChange: {
-    fontSize: 13,
-    color: "#1b9c28ff",
-  },
-  chartHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
-  },
-  titleContainer: {
-    flex: 1,
-    marginRight: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1f2937",
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: "#6b7280",
-    fontWeight: "500",
-  },
-  dropdownWrapper: {
-    position: "relative",
-    zIndex: 1000,
-  },
-  dropdownButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: "#e5e7eb",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    minWidth: 140,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 3,
+    height: '100%'
   },
-  dropdownButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1f2937",
-    flex: 1,
-  },
-  dropdownArrow: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginLeft: 8,
-  },
-  dropdownMenu: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e5e7eb",
-    marginTop: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 1001,
-  },
-  dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
-  },
-  dropdownItemSelected: {
-    backgroundColor: "#eff6ff",
-  },
-  dropdownItemText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  dropdownItemTextSelected: {
-    color: "#2563eb",
-    fontWeight: "600",
-  },
-  chartContainer: {
-    width: "100%",
-    height: 320,
-    position: "relative",
-    backgroundColor: "#ffffff",
-    borderRadius: 8,
-    overflow: "visible",
-    paddingBottom: 20,
-  },
-  chart: {
-    marginVertical: 8,
-    borderRadius: 16,
-  },
-  noDataContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  noDataText: {
-    color: "#6b7280",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  noDataSubtext: {
-    color: "#9ca3af",
-    fontSize: 14,
-    textAlign: "center",
-  },
-  patientRow: {
+  summaryIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center", marginBottom: 8 },
+  summaryTitle: { fontSize: 12, color: "#6b7280" },
+  summaryValue: { fontSize: 18, fontWeight: "700", color: "#111827" },
+  summaryChange: { fontSize: 11, color: "#059669", marginTop: 4, fontWeight: "500" },
+
+  periodSelectorRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 16,
     padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  selectedPatient: {
-    backgroundColor: "#eff6ff",
-  },
-  patientImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-  },
-  patientInfo: {
-    flex: 1,
-  },
-  patientName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1f2937",
-  },
-  patientAge: {
-    fontSize: 14,
-    color: "#6b7280",
-    marginBottom: 4,
-  },
-  healthMetrics: {
-    marginBottom: 8,
-  },
-  metricItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  metricLabel: {
-    fontSize: 13,
-    color: "#6b7280",
-    fontWeight: "500",
-    marginRight: 8,
-    minWidth: 70,
-  },
-  metricValue: {
-    fontSize: 13,
-    color: "#1f2937",
-    fontWeight: "600",
-  },
-  goodText: {
-    color: "#059669",
-    fontWeight: "600",
-  },
-  dangerText: {
-    color: "#dc2626",
-    fontWeight: "600",
-  },
-  warningText: {
-    color: "#d97706",
-    fontWeight: "600",
-  },
-  statusContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: "flex-start",
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  viewAllButton: {
-    padding: 8,
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: "#2563eb",
-    fontWeight: "600",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f3f4f6",
-  },
-  loadingText: {
-    marginTop: 8,
-    fontSize: 16,
-    color: "#4b5563",
-  },
-  patientListContainer: {
-    marginTop: 8,
-  },
-  patientImageContainer: {
-    position: "relative",
-    marginRight: 12,
-  },
-  selectedIndicator: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "#059669",
-    borderWidth: 2,
-    borderColor: "#ffffff",
-  },
-  paginationContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-  },
-  paginationButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 4,
-    borderRadius: 8,
-    backgroundColor: "#f3f4f6",
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-  },
-  activePaginationButton: {
-    backgroundColor: "#2563eb",
-    borderColor: "#2563eb",
-  },
-  disabledButton: {
-    backgroundColor: "#f9fafb",
-    borderColor: "#e5e7eb",
-  },
-  paginationText: {
+  selectorTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#374151",
+    color: "#111827"
   },
-  activePaginationText: {
-    color: "#ffffff",
+
+  chartCard: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3
   },
-  disabledText: {
-    color: "#9ca3af",
+  chartHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  chartTitle: { fontSize: 16, fontWeight: "600", color: "#111827", flex: 1 },
+  periodBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: "#f3f4f6" },
+  periodBtnActive: { backgroundColor: "#2563eb" },
+  periodBtnText: { fontSize: 12, color: "#374151", fontWeight: "500" },
+  periodBtnTextActive: { color: "#fff" },
+
+  tableCard: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginBottom: 32,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3
   },
+  tableHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  tableTitle: { fontSize: 16, fontWeight: "600" },
+  toggleText: { color: "#2563eb", fontWeight: "600", fontSize: 13 },
+  table: {},
+  tableRowHeader: { flexDirection: "row", paddingVertical: 12, borderBottomWidth: 1, borderColor: "#e5e7eb" },
+  th: { flex: 1, fontSize: 12, fontWeight: "700", color: "#6b7280" },
+  tableRow: { flexDirection: "row", paddingVertical: 14, paddingHorizontal: 8, borderRadius: 8, marginVertical: 4, alignItems: 'center' },
+  tableRowSelected: { backgroundColor: "#e8f0fe" },
+  tdName: { flex: 0.9, fontWeight: "600", color: "#111827", fontSize: 13 },
+  tdMetrics: { flex: 1.2, fontSize: 12, color: "#4b5563" },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  badgeSuccess: { backgroundColor: "#dcfce7" },
+  badgeDanger: { backgroundColor: "#fee2e2" },
+  badgeText: { fontSize: 12, fontWeight: "600" },
 });
