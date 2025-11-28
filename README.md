@@ -16,7 +16,8 @@ npx expo install --fix
 
 <!-- run -->
 adb install -r "C:\Healthcare_KLTN_FE_App\android\app\build\outputs\apk\debug\app-debug.apk"
+adb install -r "C:\Healthcare_KLTN_FE_App\android\app\build\outputs\apk\release\app-release.apk"
 npx react-native start
-
+npx expo start --clear
 
 

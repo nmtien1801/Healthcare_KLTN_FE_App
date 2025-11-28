@@ -1,10 +1,16 @@
 pluginManagement { 
+    repositories {
+        google() // <-- RẤT QUAN TRỌNG: Nơi plugin Google Services được lưu trữ
+        mavenCentral()
+        gradlePluginPortal() // Nơi tìm kiếm các plugin khác
+    }
     includeBuild("../node_modules/@react-native/gradle-plugin")
     includeBuild("../node_modules/expo-modules-autolinking/android/expo-gradle-plugin")
 }
 
 plugins { 
     id("com.facebook.react.settings")
+    id 'com.google.gms.google-services' version '4.4.4' apply false
 }
 
 dependencyResolutionManagement {

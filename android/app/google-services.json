@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "1099403948301",
+    "firebase_url": "https://test-chat-firebase-8ef22-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "test-chat-firebase-8ef22",
+    "storage_bucket": "test-chat-firebase-8ef22.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1099403948301:android:775d9b711e80acc9c44044",
+        "android_client_info": {
+          "package_name": "android.app.apk_diatech"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1099403948301-ci3sp6lauc7uequ93v294990ccq12h7u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPrZl5lBhpZ9R2lLrYHii2wmmNA3sE0gk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1099403948301-ci3sp6lauc7uequ93v294990ccq12h7u.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
