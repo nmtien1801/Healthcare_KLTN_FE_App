@@ -6,6 +6,7 @@ import {
   resetPasswordService,
   changePasswordService,
   verifyEmailService,
+  changePasswordFirebaseService,
 } from "../apis/authService";
 
 const initialState = {
@@ -52,13 +53,25 @@ export const resetPassword = createAsyncThunk(
 
 export const changePassword = createAsyncThunk(
   "auth/changePassword",
-  async ({ phone, currentPassword, newPassword }, thunkAPI) => {
-    const response = await changePasswordService(
-      phone,
+  async ({ email, currentPassword, newPassword }, thunkAPI) => {
+    // Gọi cả BE và Firebase
+    const beResponse = await changePasswordService(
+      email,
       currentPassword,
       newPassword
     );
-    return response;
+
+    // Nếu BE thành công, cập nhật Firebase
+    if (beResponse.EC === 0) {
+      const firebaseResponse = await changePasswordFirebaseService(
+        email,
+        currentPassword,
+        newPassword
+      );
+      return firebaseResponse;
+    }
+
+    return beResponse;
   }
 );
 

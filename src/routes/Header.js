@@ -16,12 +16,14 @@ import { Heart } from "lucide-react-native";
 import { getAuth, signOut } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotificationDropdown from "../components/notifications/NotificationDropdown";
+import ChangePassword from "../components/changePassword";
 
 const Header = () => {
   const auth = getAuth();
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const avatarRef = useRef(null);
+  const [isOpenChangePassword, setIsOpenChangePassword] = useState(false); // đổi mk
 
   const dispatch = useDispatch();
   const navigation = useNavigation();
@@ -39,7 +41,6 @@ const Header = () => {
       await signOut(auth); // Firebase sign out
       await dispatch(logout()); // Xóa Redux user
 
-
       await AsyncStorage.removeItem("access_Token");
       navigation.navigate("Login");
     } catch (error) {
@@ -49,7 +50,7 @@ const Header = () => {
   };
 
   const handleChangePassword = () => {
-    navigation.navigate("ForgotPassword");
+    setIsOpenChangePassword(true);
   };
 
   const handleE_wallet = () => {
@@ -143,6 +144,12 @@ const Header = () => {
           </View>
         </Pressable>
       </Modal>
+
+      {isOpenChangePassword && (
+        <ChangePassword
+          toggleModalChangePassword={() => setIsOpenChangePassword(false)}
+        />
+      )}
     </View>
   );
 };
