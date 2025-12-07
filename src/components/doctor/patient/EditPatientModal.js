@@ -10,7 +10,16 @@ import {
   Dimensions,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { X, Stethoscope, FileText, Plus, Trash2 } from "lucide-react-native";
+import {
+  X,
+  Stethoscope,
+  FileText,
+  Plus,
+  Trash2,
+  Heart,
+  Droplet,
+  Activity,
+} from "lucide-react-native"; // Thêm icon Heart, Droplet, Activity
 import ApiDoctor from "../../../apis/ApiDoctor";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -34,6 +43,10 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
     status: "Theo dõi",
     allergies: "",
     notes: "",
+    // Thêm các trường thông tin sức khỏe
+    bloodPressure: "",
+    heartRate: "",
+    bloodSugar: "",
   });
 
   // State thuốc
@@ -100,6 +113,10 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
         status: patient.status || "Theo dõi",
         allergies: patient.allergies || "",
         notes: patient.notes || "",
+        // Lấy dữ liệu mới cho thông tin sức khỏe
+        bloodPressure: patient.bloodPressure || "",
+        heartRate: patient.heartRate || "",
+        bloodSugar: patient.bloodSugar || "",
       });
     }
   }, [patient]);
@@ -239,6 +256,7 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
       try {
         await applyPrescriptionOneWeek();
 
+        // Gửi toàn bộ formData bao gồm cả thông tin sức khỏe mới
         await ApiDoctor.updatePatientHealthInfo(patient.id, formData);
 
         // Gửi tín hiệu realtime
@@ -296,6 +314,7 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.section}>
+              {/* Thông tin y tế chính */}
               <Text style={styles.sectionTitle}>Thông tin y tế</Text>
               <View style={styles.inputGroup}>
                 <View style={styles.labelContainer}>
@@ -362,8 +381,63 @@ const EditPatientModal = ({ show, onHide, patient, onSave }) => {
                   numberOfLines={3}
                 />
               </View>
+
+              {/* THÔNG TIN SỨC KHỎE MỚI ĐƯỢC THÊM VÀO */}
               <View style={styles.medicineSection}>
-                {/* Header */}
+                <Text style={styles.sectionTitle}>Thông tin sức khỏe</Text>
+                {/* Huyết áp */}
+                <View style={styles.inputGroup}>
+                  <View style={styles.labelContainer}>
+                    <Activity size={16} color="#4F46E5" />
+                    <Text style={styles.label}>Huyết áp (mmHg)</Text>
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.bloodPressure}
+                    onChangeText={(value) =>
+                      handleChange("bloodPressure", value)
+                    }
+                    placeholder="VD: 120/80"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+
+                {/* Nhịp tim */}
+                <View style={styles.inputGroup}>
+                  <View style={styles.labelContainer}>
+                    <Heart size={16} color="#4F46E5" />
+                    <Text style={styles.label}>Nhịp tim (lần/phút)</Text>
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.heartRate}
+                    onChangeText={(value) => handleChange("heartRate", value)}
+                    placeholder="VD: 75"
+                    keyboardType="numeric"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+
+                {/* Đường huyết */}
+                <View style={styles.inputGroup}>
+                  <View style={styles.labelContainer}>
+                    <Droplet size={16} color="#4F46E5" />
+                    <Text style={styles.label}>Đường huyết (mmol/L)</Text>
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.bloodSugar}
+                    onChangeText={(value) => handleChange("bloodSugar", value)}
+                    placeholder="VD: 5.8"
+                    keyboardType="numeric"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+              </View>
+              {/* KẾT THÚC THÔNG TIN SỨC KHỎE */}
+
+              <View style={styles.medicineSection}>
+                {/* Header Đơn thuốc */}
                 <Text style={styles.sectionTitle}>Đơn thuốc</Text>
 
                 {/* Render từng buổi: Sáng, Trưa, Tối */}
@@ -491,10 +565,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 12,
   },
+  // Bị trùng lặp, cần giữ lại 1 cái và chỉnh màu sắc nếu muốn
   sectionTitle: {
     fontSize: width * 0.045,
     fontWeight: "600",
-    color: "#1a3c6e",
+    color: "#1a3c6e", // Giữ lại màu mặc định cho phần Thông tin y tế và Đơn thuốc
     marginBottom: 8,
   },
   inputGroup: {
@@ -588,17 +663,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // thuốc
+  // thuốc (đã chỉnh lại màu sắc cho thống nhất, nếu muốn màu xanh tím, có thể thay đổi lại)
   medicineSection: {
     marginTop: 16,
     gap: 12,
   },
-  sectionTitle: {
-    fontSize: width * 0.045,
-    fontWeight: "600",
-    color: "#4F46E5",
-    marginBottom: 8,
-  },
+  // sectionTitle: { // Bị trùng lặp, đã xử lý ở trên
+  //   fontSize: width * 0.045,
+  //   fontWeight: "600",
+  //   color: "#4F46E5",
+  //   marginBottom: 8,
+  // },
   timeBlock: {
     backgroundColor: "#f8f9fa",
     borderRadius: 8,
@@ -664,9 +739,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e4e8",
   },
-  inputError: {
-    borderColor: "#dc3545",
-  },
+  // inputError: { // Bị trùng lặp, đã xử lý ở trên
+  //   borderColor: "#dc3545",
+  // },
   deleteButton: {
     padding: 8,
     borderRadius: 6,
@@ -676,12 +751,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  errorText: {
-    fontSize: width * 0.032,
-    color: "#dc3545",
-    marginLeft: 4,
-    marginTop: 2,
-  },
+  // errorText: { // Bị trùng lặp, đã xử lý ở trên
+  //   fontSize: width * 0.032,
+  //   color: "#dc3545",
+  //   marginLeft: 4,
+  //   marginTop: 2,
+  // },
 });
 
 export default EditPatientModal;

@@ -14,7 +14,11 @@ import { useDispatch } from "react-redux";
 import { Login, setUser } from "../../redux/authSlice";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { signInWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  signInWithCredential,
+  GoogleAuthProvider,
+} from "firebase/auth";
 import { auth } from "../../../firebase";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -33,9 +37,11 @@ export default function LoginForm() {
   // Cấu hình Google Sign-In với expo-auth-session
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: "1099403948301-YOUR_WEB_CLIENT_ID.apps.googleusercontent.com", // Lấy từ Firebase Console
-    expoClientId: "1099403948301-YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com", // Lấy từ Firebase Console (Web Client ID)
+    expoClientId:
+      "1099403948301-YOUR_EXPO_CLIENT_ID.apps.googleusercontent.com", // Lấy từ Firebase Console (Web Client ID)
     iosClientId: "1099403948301-YOUR_IOS_CLIENT_ID.apps.googleusercontent.com", // Lấy từ Google Cloud Console hoặc Firebase (nếu cần)
-    androidClientId: "1099403948301-YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com", // Lấy từ Google Cloud Console hoặc Firebase (nếu cần)
+    androidClientId:
+      "1099403948301-YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com", // Lấy từ Google Cloud Console hoặc Firebase (nếu cần)
   });
 
   // Xử lý Google Sign-In response
@@ -55,21 +61,24 @@ export default function LoginForm() {
   };
 
   const handleEmailAndPasswordLogin = async () => {
-    const result = await signInWithEmailAndPassword(
-      auth,
-      formData.email,
-      formData.password
-    );
-    const user = result.user;
-
     try {
+      const result = await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      const user = result.user;
+
       if (user) {
         const idToken = await user.getIdToken();
         const res = await dispatch(Login({ user }));
         if (res.payload.EC === 0) {
           // Lưu ID token để gọi BE (tránh dùng accessToken của Firebase)
           await AsyncStorage.setItem("access_Token", idToken);
-          await AsyncStorage.setItem("userInfo", JSON.stringify(res.payload.DT));
+          await AsyncStorage.setItem(
+            "userInfo",
+            JSON.stringify(res.payload.DT)
+          );
           dispatch(
             setUser({
               userId: res.payload.DT.userId,
@@ -90,14 +99,25 @@ export default function LoginForm() {
             navigation.navigate("PatientTabs", { screen: "Trang chủ" });
           }
         } else {
-          Alert.alert("Lỗi", "Lỗi từ server: " + res.payload.message);
+          Alert.alert(
+            "Lỗi",
+            "Lỗi từ server: " + (res.payload.EM || res.payload.message)
+          );
         }
       }
     } catch (error) {
-      console.error(`Đăng nhập thất bại: ${error.code} - ${error.message}`);
-      switch (error.code) {
+      console.error(`Đăng nhập thất bại: ${error?.code} - ${error?.message}`);
+      const code = error?.code || "";
+      switch (code) {
         case "auth/invalid-credential":
-          Alert.alert("Lỗi", "Email hoặc mật khẩu không đúng.");
+        case "auth/invalid-credential": // Xử lý lỗi bạn gặp phải
+        case "auth/user-not-found": // Lỗi này thường xuất hiện khi email không tồn tại
+        case "auth/wrong-password": // Lỗi này thường xuất hiện khi mật khẩu sai // Gộp cả 3 trường hợp này vào cùng một thông báo chung để tăng cường bảo mật
+          errorMessage =
+            "Email hoặc Mật khẩu không đúng. Vui lòng kiểm tra lại.";
+          break;
+        case "auth/invalid-email":
+          Alert.alert("Lỗi", "Email không hợp lệ hoặc credential lỗi.");
           break;
         case "auth/user-not-found":
           Alert.alert("Lỗi", "Không tìm thấy tài khoản. Vui lòng đăng ký.");
@@ -109,7 +129,7 @@ export default function LoginForm() {
           Alert.alert("Lỗi", "Lỗi mạng. Vui lòng kiểm tra kết nối internet.");
           break;
         default:
-          Alert.alert("Lỗi", `Lỗi không xác định: ${error.message}`);
+          Alert.alert("Lỗi", `Lỗi không xác định: ${error?.message || code}`);
       }
     }
   };
@@ -124,7 +144,10 @@ export default function LoginForm() {
 
         if (res.payload.EC === 0) {
           await AsyncStorage.setItem("access_Token", idToken);
-          await AsyncStorage.setItem("userInfo", JSON.stringify(res.payload.DT));
+          await AsyncStorage.setItem(
+            "userInfo",
+            JSON.stringify(res.payload.DT)
+          );
           dispatch(
             setUser({
               userId: res.payload.DT.userId,
@@ -158,7 +181,7 @@ export default function LoginForm() {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>DeaTech</Text>
+        <Text style={styles.title}>DiaTech</Text>
         <Text style={styles.subtitle}>Đăng nhập với mật khẩu</Text>
 
         <View style={styles.inputContainer}>
@@ -311,6 +334,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-
-
-

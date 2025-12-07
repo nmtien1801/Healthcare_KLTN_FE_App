@@ -16,12 +16,14 @@ import { Heart } from "lucide-react-native";
 import { getAuth, signOut } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotificationDropdown from "../components/notifications/NotificationDropdown";
+import ChangePassword from "../components/changePassword";
 
 const Header = () => {
   const auth = getAuth();
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const avatarRef = useRef(null);
+  const [isOpenChangePassword, setIsOpenChangePassword] = useState(false); // đổi mk
 
   const dispatch = useDispatch();
   const navigation = useNavigation();
@@ -48,7 +50,7 @@ const Header = () => {
   };
 
   const handleChangePassword = () => {
-    navigation.navigate("ForgotPassword");
+    setIsOpenChangePassword(true);
   };
 
   const handleE_wallet = () => {
@@ -68,7 +70,7 @@ const Header = () => {
       {/* Logo & Title */}
       <View style={styles.left}>
         <Heart size={24} color="#007bff" fill="#007bff" style={styles.icon} />
-        <Text style={styles.title}>HealthCare AI</Text>
+        <Text style={styles.title}>DiaTech</Text>
       </View>
 
       {/* Notifications & Info */}
@@ -142,6 +144,12 @@ const Header = () => {
           </View>
         </Pressable>
       </Modal>
+
+      {isOpenChangePassword && (
+        <ChangePassword
+          toggleModalChangePassword={() => setIsOpenChangePassword(false)}
+        />
+      )}
     </View>
   );
 };

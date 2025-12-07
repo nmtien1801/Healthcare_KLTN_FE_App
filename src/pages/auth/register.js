@@ -171,32 +171,64 @@ export default function LoginForm() {
     let currentTime = Date.now();
     if (currentTime - code.timestamp > 60000) {
       setErrorMessage("❌ Mã đã hết hạn sau 60s");
+      return;
     } else if (+formData.captcha !== +code.code) {
       setErrorMessage("❌ Mã không đúng");
+      return;
     } else {
-
-
       // Gửi thông tin đăng ký đi firebase
-      let result = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
+      try {
+        const result = await createUserWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
+        );
 
-      if (result.user) {
+        if (!result || !result.user) {
+          setErrorMessage(
+            "Đăng ký thất bại: Không nhận được thông tin người dùng từ Firebase."
+          );
+          return;
+        }
+
         // Gửi thông tin đăng ký đi mongo
-        // Chuyển đổi dob thành string trước khi gửi
-              const formDataToSend = {
-                ...formData,
-                dob: getDateString(formData.dob),
-                uid: result.user.uid
-              };
-        let res = await dispatch(register(formDataToSend));
-        if (res.payload.EC === 0) {
+        const formDataToSend = {
+          ...formData,
+          uid: result.user.uid,
+        };
+
+        const res = await dispatch(register(formDataToSend));
+
+        // Một số middleware trả về response trong res.payload
+        const payload = res && res.payload ? res.payload : res;
+
+        if (payload && payload.EC === 0) {
+          // Thành công: chuyển về trang đăng nhập
           navigation.navigate("Login");
         } else {
-          setErrorMessage(res.payload.EM);
+          // Hiển thị lỗi trả về từ BE
+          const message = (payload && payload.EM) || "Đăng ký thất bại";
+          setErrorMessage(message);
         }
+      } catch (err) {
+        // Bắt lỗi từ Firebase hoặc bất kỳ lỗi async nào
+        console.error("Register error:", err);
+        // Map một số mã lỗi Firebase phổ biến sang thông điệp người dùng
+        let message = "Đã xảy ra lỗi khi đăng ký";
+        if (err && err.code) {
+          if (err.code === "auth/email-already-in-use") {
+            message = "Email đã được sử dụng";
+          } else if (err.code === "auth/invalid-email") {
+            message = "Email không hợp lệ";
+          } else if (err.code === "auth/weak-password") {
+            message = "Mật khẩu quá yếu";
+          } else {
+            message = err.message || message;
+          }
+        } else if (err && err.message) {
+          message = err.message;
+        }
+        setErrorMessage(message);
       }
     }
   };

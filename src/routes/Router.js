@@ -32,6 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Diagnosis from "../pages/patient/assistant/diagnosis";
 import { auth } from "../../firebase";
 import E_wallet from "../pages/payment/E_wallet";
+import RevenueTab from "../pages/doctor/Revenue";
 import {
   MessageCircle,
   CreditCard,
@@ -61,12 +62,13 @@ const DoctorTab = ({ route, handleStartCall }) => {
               case "Tổng quan":
                 return <MessageCircle {...iconProps} />;
               case "Bệnh nhân":
-                return <CreditCard {...iconProps} />;
+                return <User {...iconProps} />;
               case "Lịch hẹn":
                 return <Sparkles {...iconProps} />;
               case "Chấm công":
                 return <CheckCircle2 {...iconProps} />;
-              case "Thông tin":
+              case "Doanh thu":
+                return <CreditCard {...iconProps} />;
               case "Cài đặt":
                 return <User {...iconProps} />;
               default:
@@ -85,7 +87,7 @@ const DoctorTab = ({ route, handleStartCall }) => {
         </Tab.Screen>
         <Tab.Screen name="Lịch hẹn" component={AppointmentTab} />
         <Tab.Screen name="Chấm công" component={AttendanceTab} />
-        <Tab.Screen name="Thông tin" component={InformationTab} />
+        <Tab.Screen name="Doanh thu" component={RevenueTab} />
       </Tab.Navigator>
     </View>
   );
