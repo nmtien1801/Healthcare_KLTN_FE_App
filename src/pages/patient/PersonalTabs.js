@@ -8,11 +8,11 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
-  Platform
+  Platform,
 } from "react-native";
 import { Camera, ChevronDown } from "lucide-react-native";
 import { useSelector, useDispatch } from "react-redux";
-import { getPatientById } from '../../redux/patientSlice';
+import { getPatientById, updatePatientInfo } from "../../redux/patientSlice";
 
 const PersonalTabs = () => {
   const dispatch = useDispatch();
@@ -45,6 +45,7 @@ const PersonalTabs = () => {
   useEffect(() => {
     if (user) {
       setFormData({
+        id: user.userId,
         username: user.username || "",
         dob: user.dob || "",
         gender: user.gender || "Nam",
@@ -56,48 +57,49 @@ const PersonalTabs = () => {
   }, [user]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleUpdateInfo = () => {
-    console.log("Cập nhật thông tin:", formData);
-    // Dispatch action to update user info
-    // dispatch(updateUserInfo(formData));
+  const handleUpdateInfo = async () => {
+    let res = await dispatch(updatePatientInfo(formData));
+    if (res.payload.EC === 0) {
+      Alert.alert("sửa thông tin thành công");
+    }
   };
 
   // Format date for display (DD/MM/YYYY)
   const formatDateForDisplay = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
 
   const selectGender = (gender) => {
-    handleInputChange('gender', gender);
+    handleInputChange("gender", gender);
     setShowGenderPicker(false);
   };
 
   return (
-    <ScrollView 
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.content}>
-        
         {/* Hồ sơ cá nhân */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hồ sơ cá nhân</Text>
           <View style={styles.profileCard}>
             <Image
-              source={{ 
-                uri: user?.avatar || "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face" 
+              source={{
+                uri:
+                  user?.avatar ||
+                  "https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face",
               }}
               style={styles.avatar}
             />
-            <Text style={styles.username}>{user?.username || "Tên người dùng"}</Text>
+            <Text style={styles.username}>
+              {user?.username || "Tên người dùng"}
+            </Text>
             <TouchableOpacity style={styles.changePhotoButton}>
               <Camera size={16} color="#4F46E5" />
               <Text style={styles.changePhotoText}>Thay đổi ảnh</Text>
@@ -108,13 +110,13 @@ const PersonalTabs = () => {
         {/* Thông tin cá nhân */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Họ và tên</Text>
             <TextInput
               style={styles.input}
               value={formData.username}
-              onChangeText={(value) => handleInputChange('username', value)}
+              onChangeText={(value) => handleInputChange("username", value)}
               placeholder="Nhập họ và tên"
             />
           </View>
@@ -132,26 +134,29 @@ const PersonalTabs = () => {
 
             <View style={styles.halfWidth}>
               <Text style={styles.label}>Giới tính</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setShowGenderPicker(!showGenderPicker)}
               >
                 <Text style={styles.pickerText}>{formData.gender}</Text>
                 <ChevronDown size={16} color="#94A3B8" />
               </TouchableOpacity>
-              
+
               {showGenderPicker && (
                 <View style={styles.pickerOptions}>
-                  {['Nam', 'Nữ', 'Khác'].map((gender) => (
+                  {["Nam", "Nữ", "Khác"].map((gender) => (
                     <TouchableOpacity
                       key={gender}
                       style={styles.pickerOption}
                       onPress={() => selectGender(gender)}
                     >
-                      <Text style={[
-                        styles.pickerOptionText,
-                        formData.gender === gender && styles.pickerOptionTextActive
-                      ]}>
+                      <Text
+                        style={[
+                          styles.pickerOptionText,
+                          formData.gender === gender &&
+                            styles.pickerOptionTextActive,
+                        ]}
+                      >
                         {gender}
                       </Text>
                     </TouchableOpacity>
@@ -166,7 +171,7 @@ const PersonalTabs = () => {
             <TextInput
               style={styles.input}
               value={formData.phone}
-              onChangeText={(value) => handleInputChange('phone', value)}
+              onChangeText={(value) => handleInputChange("phone", value)}
               placeholder="Nhập số điện thoại"
               keyboardType="phone-pad"
             />
@@ -177,7 +182,7 @@ const PersonalTabs = () => {
             <TextInput
               style={styles.input}
               value={formData.email}
-              onChangeText={(value) => handleInputChange('email', value)}
+              onChangeText={(value) => handleInputChange("email", value)}
               placeholder="Nhập email"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -189,14 +194,14 @@ const PersonalTabs = () => {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.address}
-              onChangeText={(value) => handleInputChange('address', value)}
+              onChangeText={(value) => handleInputChange("address", value)}
               placeholder="Nhập địa chỉ"
               multiline
               numberOfLines={3}
             />
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.updateButton}
             onPress={handleUpdateInfo}
             activeOpacity={0.8}
@@ -208,14 +213,13 @@ const PersonalTabs = () => {
         {/* Thông tin bệnh án */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Thông tin bệnh án</Text>
-          
+
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#4F46E5" />
             </View>
           ) : patient ? (
             <View style={styles.medicalInfo}>
-              
               <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>Chẩn đoán</Text>
@@ -244,7 +248,6 @@ const PersonalTabs = () => {
                   {patient.notes || "Không có ghi chú"}
                 </Text>
               </View>
-
             </View>
           ) : (
             <View style={styles.emptyContainer}>
@@ -252,7 +255,6 @@ const PersonalTabs = () => {
             </View>
           )}
         </View>
-
       </View>
     </ScrollView>
   );
@@ -272,7 +274,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: "#4F46E5",
     marginBottom: 8,
   },
@@ -280,7 +282,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -294,20 +296,20 @@ const styles = StyleSheet.create({
   },
   username: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 12,
     color: "#1F2937",
   },
   changePhotoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 8,
     gap: 4,
   },
   changePhotoText: {
     color: "#4F46E5",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginLeft: 4,
   },
   card: {
@@ -323,7 +325,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: "#4F46E5",
     marginBottom: 16,
   },
@@ -332,7 +334,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
     color: "#374151",
     marginBottom: 6,
   },
@@ -347,10 +349,10 @@ const styles = StyleSheet.create({
   },
   textArea: {
     height: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginBottom: 16,
   },
@@ -361,9 +363,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9FAFB",
     borderRadius: 8,
     padding: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
@@ -394,30 +396,30 @@ const styles = StyleSheet.create({
   },
   pickerOptionTextActive: {
     color: "#4F46E5",
-    fontWeight: '600',
+    fontWeight: "600",
   },
   updateButton: {
     backgroundColor: "#4F46E5",
     borderRadius: 8,
     padding: 14,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   updateButtonText: {
     color: "#FFFFFF",
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   loadingContainer: {
     paddingVertical: 40,
-    alignItems: 'center',
+    alignItems: "center",
   },
   medicalInfo: {
     gap: 12,
   },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     backgroundColor: "#F8FAFC",
     borderRadius: 8,
     padding: 12,
@@ -426,7 +428,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoItemRight: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   infoBox: {
     backgroundColor: "#F8FAFC",
@@ -440,12 +442,12 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     color: "#1F2937",
   },
   emptyContainer: {
     paddingVertical: 40,
-    alignItems: 'center',
+    alignItems: "center",
   },
   emptyText: {
     color: "#9CA3AF",

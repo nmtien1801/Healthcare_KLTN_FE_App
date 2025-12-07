@@ -9,7 +9,16 @@ const saveBloodSugarService = (userId, value, type) => {
 };
 
 const getPatientByIdService = (userID) => {
-  return customizeAxios.get(`/getPatientById/${userID}`, { userID});
+  return customizeAxios.get(`/getPatientById/${userID}`, { userID });
 };
 
-export { fetchBloodSugarService, saveBloodSugarService, getPatientByIdService };
+const updatePatientInfoService = (data) => {
+  return customizeAxios.post(`/updatePatientInfo`, data);
+};
+
+export {
+  fetchBloodSugarService,
+  saveBloodSugarService,
+  getPatientByIdService,
+  updatePatientInfoService,
+};

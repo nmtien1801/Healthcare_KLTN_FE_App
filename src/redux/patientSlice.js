@@ -3,6 +3,7 @@ import {
   fetchBloodSugarService,
   saveBloodSugarService,
   getPatientByIdService,
+  updatePatientInfoService,
 } from "../apis/patientService";
 
 const initialState = {
@@ -30,6 +31,14 @@ export const getPatientById = createAsyncThunk(
   "patient/getPatientById",
   async (userId, thunkAPI) => {
     const response = await getPatientByIdService(userId);
+    return response;
+  }
+);
+
+export const updatePatientInfo = createAsyncThunk(
+  "patient/updatePatientInfo",
+  async (data, thunkAPI) => {
+    const response = await updatePatientInfoService(data);
     return response;
   }
 );
@@ -62,6 +71,12 @@ const patientSlice = createSlice({
         state.patient = action.payload.DT.patient;
       })
       .addCase(getPatientById.rejected, (state, action) => {});
+
+    // updatePatientInfo
+    builder
+      .addCase(updatePatientInfo.pending, (state) => {})
+      .addCase(updatePatientInfo.fulfilled, (state, action) => {})
+      .addCase(updatePatientInfo.rejected, (state, action) => {});
   },
 });
 
