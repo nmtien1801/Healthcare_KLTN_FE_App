@@ -238,9 +238,6 @@ export default function LoginForm() {
         <TouchableOpacity onPress={() => navigation.navigate("ResetPassword")}>
           <Text style={styles.linkText}>Quên mật khẩu?</Text>
         </TouchableOpacity>
-        <TouchableOpacity>
-          <Text style={styles.linkText}>Đăng nhập qua mã QR</Text>
-        </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("Register")}>
           <Text style={styles.linkText}>Đăng ký</Text>
         </TouchableOpacity>
