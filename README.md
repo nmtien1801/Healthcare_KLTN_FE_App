@@ -22,7 +22,7 @@ npx react-native start
 npx expo start --clear
 
 
-<!-- cài chạy release -->
+<!-- config release -->
 keytool -genkeypair -v -storetype PKCS12 -keystore my-upload-key.keystore -alias NguyenMinhTien -keyalg RSA -keysize 2048 -validity 10000
 
 keytool -list -v -keystore android/app/my-upload-key.keystore -alias NguyenMinhTien

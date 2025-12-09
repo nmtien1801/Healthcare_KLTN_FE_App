@@ -45,7 +45,7 @@ const ChatBox = () => {
         setQuestion("");
 
         try {
-            const res = await api.post("/ask", { query: currentQuestion });
+            const res = await api.post("/ask", { query: currentQuestion }, { timeout: 30000 });
             const botMessage = {
                 sender: "bot",
                 text: res.data.answer || "Xin lỗi, tôi không thể trả lời câu hỏi này lúc này."

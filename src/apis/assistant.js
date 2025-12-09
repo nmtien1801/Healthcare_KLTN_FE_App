@@ -1,25 +1,21 @@
 import axios from "axios";
 import { Platform } from "react-native";
-import { EXPO_PUBLIC_URL_ANDROID, EXPO_PUBLIC_URL_WEB } from '@env';
-
-const BASE_URL =
-    Platform.OS === "android" || Platform.OS === "ios" ? EXPO_PUBLIC_URL_ANDROID : EXPO_PUBLIC_URL_WEB;
+import { EXPO_PUBLIC_URL_N8N, EXPO_PUBLIC_URL_ChatBot } from '@env';
 
 export const api = axios.create({
-    baseURL: "http://10.0.2.2:8000", //local
-    // baseURL: "https://3b9b19c0e64d.ngrok-free.app", // colab
+    baseURL: EXPO_PUBLIC_URL_ChatBot,
     timeout: 5000,
     headers: { "Content-Type": "application/json" },
 });
 
 export const book_appointment = axios.create({
-    baseURL: `${BASE_URL}/webhook`, //local
+    baseURL: `${EXPO_PUBLIC_URL_N8N}/webhook`, //local
     timeout: 5000,
     headers: { "Content-Type": "application/json" },
 });
 
 export const get_advice = axios.create({
-    baseURL: `${BASE_URL}/webhook`, //local
+    baseURL: `${EXPO_PUBLIC_URL_N8N}/webhook`, //local
     timeout: 5000,
     headers: { "Content-Type": "application/json" },
 });
