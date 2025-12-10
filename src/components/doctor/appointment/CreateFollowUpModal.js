@@ -117,7 +117,7 @@ const CreateFollowUpModal = ({ visible, onClose, patient, onSave }) => {
       });
 
       // trừ phí đặt lịch
-      await withdrawService(patient.userId, BOOKING_FEE);
+      await withdrawService(patient.userId, EXPO_PUBLIC_BOOKING_FEE);
       
       setSuccessMessage(
         `Đặt lịch tái khám thành công với bệnh nhân ${patient.name} vào ${formattedDate} lúc ${formattedTime}!`

@@ -526,11 +526,6 @@ export default function AppointmentTab() {
           </View>
         )}
       />
-      <AddAppointmentModal
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSave={handleAddAppointment}
-      />
       <ViewAppointmentModal
         visible={showViewModal}
         onClose={() => setShowViewModal(false)}
@@ -573,12 +568,6 @@ export default function AppointmentTab() {
                 onPress={() => setShowDeleteModal(false)}
               >
                 <Text style={styles.cancelButtonText}>Hủy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={confirmDeleteAppointment}
-              >
-                <Text style={styles.deleteButtonText}>Xóa</Text>
               </TouchableOpacity>
             </View>
           </View>
