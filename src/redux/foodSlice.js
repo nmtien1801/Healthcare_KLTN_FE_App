@@ -7,6 +7,7 @@ import {
 
 const initialState = {
   totalCalo: 0,
+  foods: [],
 };
 
 export const GetListFood = createAsyncThunk(
@@ -53,6 +54,7 @@ const foodSlice = createSlice({
           }, 0);
         }
         state.totalCalo = newTotalCalo;
+        state.foods = Array.isArray(currentFoodsArray) ? currentFoodsArray : [];
       })
       .addCase(GetListFood.rejected, (state, action) => {});
 
@@ -69,6 +71,7 @@ const foodSlice = createSlice({
           }, 0);
         }
         state.totalCalo = newTotalCalo;
+        state.foods = Array.isArray(currentFoodsArray) ? currentFoodsArray : [];
       })
       .addCase(InsertFoods.rejected, (state, action) => {});
 

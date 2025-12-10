@@ -494,7 +494,7 @@ const Chart = ({ bloodSugar, setWarning }) => {
 };
 
 const Plan = ({ aiPlan, user, bloodSugar }) => {
-  const [food, setFood] = useState(null);
+  const foods = useSelector((state) => state.food.foods || []);
   const totalCalo = useSelector((state) => state.food.totalCalo);
   const [showAllFood, setShowAllFood] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -509,7 +509,6 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
         // Fetch food
         const cached = await dispatch(GetListFood(user.userId));
         if (cached && cached?.payload?.DT && cached?.payload?.DT.length > 0) {
-          setFood(cached.payload.DT);
           setLoading(false);
           return;
         }
@@ -538,7 +537,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
                 data: response?.result.chosen,
               })
             );
-            setFood(response.result);
+            // foods will be available through the `foods` selector after InsertFoods
           }
         }
       } catch (error) {
@@ -577,14 +576,14 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
           {/* KẾ HOẠCH DINH DƯỠNG */}
           <View style={styles.nutritionCard}>
             <Text style={styles.nutritionTitle}>🥗 Kế hoạch dinh dưỡng</Text>
-            {food?.length > 0 ? (
+            {foods?.length > 0 ? (
               <View>
                 <Text style={styles.calorieInfo}>
                   <Text style={styles.boldText}>Calo/ngày:</Text> {totalCalo}{" "}
                   calo
                 </Text>
                 <View style={styles.foodList}>
-                  {food
+                  {foods
                     .slice(0, showAllFood ? undefined : 5)
                     .map((item, idx) => (
                       <Text key={idx} style={styles.foodItem}>
@@ -593,7 +592,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
                       </Text>
                     ))}
                 </View>
-                {food.length > 5 && (
+                {foods.length > 5 && (
                   <View style={styles.expandButtonContainer}>
                     <TouchableOpacity
                       style={styles.expandButton}
@@ -608,7 +607,7 @@ const Plan = ({ aiPlan, user, bloodSugar }) => {
                       <Text style={styles.expandButtonText}>
                         {showAllFood
                           ? "Thu gọn"
-                          : `Xem thêm (${food.length - 5} món)`}
+                          : `Xem thêm (${foods.length - 5} món)`}
                       </Text>
                     </TouchableOpacity>
                   </View>
