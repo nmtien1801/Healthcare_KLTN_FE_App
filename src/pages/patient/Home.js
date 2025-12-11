@@ -211,7 +211,7 @@ const Home = () => {
                   {med.name} {med.dosage}
                 </Text>
                 <Text style={styles.medicationTime}>
-                  {moment(med.time).format("HH:mm:ss")}
+                  {moment(med.time).utc().format("HH:mm:ss")}
                 </Text>
               </View>
               <TouchableOpacity
