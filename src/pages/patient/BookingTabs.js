@@ -741,7 +741,7 @@ const UpcomingAppointment = ({
     try {
       setIsCanceling(true);
       await ApiBooking.cancelBooking(appointmentToCancel);
-      await withdrawService(user.userId || user.uid, EXPO_PUBLIC_BOOKING_FEE);
+      await depositService(user.userId || user.uid, EXPO_PUBLIC_BOOKING_FEE);
 
       setAppointments((prev) =>
         prev.filter((appt) => appt._id !== appointmentToCancel)
