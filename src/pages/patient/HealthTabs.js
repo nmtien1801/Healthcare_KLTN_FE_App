@@ -749,7 +749,6 @@ const HealthTabs = () => {
 
       setAiPlan(res.data);
       setMessageInput("");
-      Alert.alert("Thành công", "Đã lưu chỉ số đường huyết thành công!");
 
       // Refresh blood sugar data
       await fetchData();
