@@ -22,6 +22,11 @@ export const STATUS_OPTIONS = [
     { value: APPOINTMENT_STATUS.COMPLETED, label: "Hoàn thành" },
 ]
 
+export const STATUS_OPTIONS_BS = [
+    { value: APPOINTMENT_STATUS.PENDING, label: "Chờ xác nhận" },
+    { value: APPOINTMENT_STATUS.CONFIRMED, label: "Đã xác nhận" },
+]
+
 // Badge màu
 export const STATUS_COLORS = {
     [APPOINTMENT_STATUS.PENDING]: { bg: "#ffc107", text: "#212529" }, // warning, dark

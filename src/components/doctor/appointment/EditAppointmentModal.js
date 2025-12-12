@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { User, Clock, CalendarDays, Stethoscope, FileText } from "lucide-react-native";
-import { TYPE_OPTIONS, STATUS_OPTIONS } from "../../../utils/appointmentConstants";
+import { TYPE_OPTIONS, STATUS_OPTIONS_BS } from "../../../utils/appointmentConstants";
 import { book_appointment } from "../../../apis/assistant";
 import { useSelector, useDispatch } from "react-redux";
 
@@ -374,7 +374,7 @@ const EditAppointmentModal = ({ visible, onClose, appointment, onSave }) => {
                                         onValueChange={(value) => handleChange("status", value)}
                                         style={styles.picker}
                                     >
-                                        {STATUS_OPTIONS.map((option) => (
+                                        {STATUS_OPTIONS_BS.map((option) => (
                                             <Picker.Item
                                                 key={option.value}
                                                 label={option.label}
