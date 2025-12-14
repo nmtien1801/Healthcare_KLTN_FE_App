@@ -69,7 +69,7 @@ const banks = [
 
 const qrImages = {
   bank: require("../../../assets/qrMb.png"),
-  // qr: "https://github.com/nmtien1801/Healthcare_KLTN_FE/blob/develop/public/qrMomo.png?raw=true",
+  qr: require("../../../assets/qrMb.png"),
 };
 
 const paymentMethods = [
