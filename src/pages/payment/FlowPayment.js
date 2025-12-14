@@ -426,7 +426,7 @@ export default function PaymentFlow({ onGoBack }) {
           </View>
           <View style={styles.qrImageContainer}>
             <Image
-              source={{ uri: qrImages[paymentData.paymentMethod] }}
+              source={qrImages[paymentData.paymentMethod]}
               style={styles.qrImage}
               resizeMode="contain"
             />
