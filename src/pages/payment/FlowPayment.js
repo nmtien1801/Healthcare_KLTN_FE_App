@@ -39,7 +39,7 @@ const banks = [
 
 const qrImages = {
   bank: require("../../../assets/qrMb.png"),
-  // qr: "https://github.com/nmtien1801/Healthcare_KLTN_FE/blob/develop/public/qrMomo.png?raw=true",
+  qr: require("../../../assets/qrMb.png"),
 };
 
 const paymentMethods = [
@@ -339,7 +339,7 @@ export default function PaymentFlow({ onGoBack }) {
           </View>
           <View style={styles.qrImageContainer}>
             <Image
-              source={{ uri: qrImages[paymentData.paymentMethod] }}
+              source={qrImages[paymentData.paymentMethod]}
               style={styles.qrImage}
               resizeMode="contain"
             />
