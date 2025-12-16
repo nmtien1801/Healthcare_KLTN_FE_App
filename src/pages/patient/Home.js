@@ -69,6 +69,35 @@ const Home = () => {
     fetchNearestAppointment();
   }, []);
 
+  useEffect(() => {
+    if (!bloodSugar || !bloodSugar.DT) {
+      console.log("Đang fetch lại dữ liệu đường huyết...");
+    }
+  }, [dispatch, bloodSugar, user.userId]);
+
+  // Hàm tìm dữ liệu đường huyết mới nhất
+  const getLatestBloodSugarData = (bloodSugar) => {
+    const bloodSugarData = bloodSugar?.DT?.bloodSugarData;
+    if (!bloodSugarData) return null;
+
+    // Chuyển đối tượng { key: { value: X, time: Y } } thành mảng các item
+    const dataArray = Object.values(bloodSugarData);
+
+    if (dataArray.length === 0) return null;
+
+    // Tìm item có time (thời gian) lớn nhất
+    const latestItem = dataArray.reduce((latest, current) => {
+      // Chuyển chuỗi thời gian thành đối tượng Date để so sánh
+      const timeLatest = new Date(latest.time).getTime();
+      const timeCurrent = new Date(current.time).getTime();
+
+      return timeCurrent > timeLatest ? current : latest;
+    });
+
+    return latestItem;
+  };
+  const latestBloodSugar = getLatestBloodSugarData(bloodSugar);
+
   // Handle user data with fallback values
   const userData = {
     name: user?.username || "Khách",
@@ -79,9 +108,8 @@ const Home = () => {
     nextAppointment: nearestAppointment?.date
       ? new Date(nearestAppointment.date).toLocaleDateString("vi-VN")
       : "13/09/2025",
-    bloodSugar: bloodSugar?.DT?.bloodSugarData
-      ? Object.values(bloodSugar.DT.bloodSugarData).map((item) => item.value)
-      : [],
+    latestValue: latestBloodSugar?.value,
+    latestTime: latestBloodSugar?.time,
   };
 
   const handleMedicationToggle = async (index) => {
@@ -188,15 +216,13 @@ const Home = () => {
         </View>
         <View style={styles.bloodSugarCard}>
           <Text style={styles.bloodSugarValue}>
-            {userData.bloodSugar.length > 0
-              ? userData.bloodSugar.slice(-1)[0]
-              : "N/A"}{" "}
-            mmol/L
+            {userData.latestValue ?? "--"} mmol/L
           </Text>
-          <Text style={styles.bloodSugarDate}>23/06/2025</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Cao hơn bình thường</Text>
-          </View>
+          <Text style={styles.bloodSugarDate}>
+            {userData.latestTime
+              ? moment(userData.latestTime).format("HH:mm - DD/MM/YYYY")
+              : "Không có dữ liệu"}
+          </Text>
         </View>
       </View>
 

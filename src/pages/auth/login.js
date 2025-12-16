@@ -96,7 +96,7 @@ export default function LoginForm() {
           if (res.payload.DT.role === "doctor") {
             navigation.navigate("DoctorTab", { screen: "Tổng quan" });
           } else if (res.payload.DT.role === "patient") {
-            navigation.navigate("PatientTabs", { screen: "Trang chủ" });
+            navigation.navigate("PatientTabs", { screen: "Sức khỏe" });
           }
         } else {
           Alert.alert(
@@ -237,9 +237,6 @@ export default function LoginForm() {
 
         <TouchableOpacity onPress={() => navigation.navigate("ResetPassword")}>
           <Text style={styles.linkText}>Quên mật khẩu?</Text>
-        </TouchableOpacity>
-        <TouchableOpacity>
-          <Text style={styles.linkText}>Đăng nhập qua mã QR</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("Register")}>
           <Text style={styles.linkText}>Đăng ký</Text>
