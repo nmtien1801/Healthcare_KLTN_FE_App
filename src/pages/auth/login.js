@@ -96,7 +96,7 @@ export default function LoginForm() {
           if (res.payload.DT.role === "doctor") {
             navigation.navigate("DoctorTab", { screen: "Tổng quan" });
           } else if (res.payload.DT.role === "patient") {
-            navigation.navigate("PatientTabs", { screen: "Trang chủ" });
+            navigation.navigate("PatientTabs", { screen: "Sức khỏe" });
           }
         } else {
           Alert.alert(

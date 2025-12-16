@@ -100,10 +100,6 @@ const PersonalTabs = () => {
             <Text style={styles.username}>
               {user?.username || "Tên người dùng"}
             </Text>
-            <TouchableOpacity style={styles.changePhotoButton}>
-              <Camera size={16} color="#4F46E5" />
-              <Text style={styles.changePhotoText}>Thay đổi ảnh</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
