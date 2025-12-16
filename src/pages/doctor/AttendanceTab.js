@@ -394,10 +394,7 @@ const CurrentSchedule = ({ currentShift, doctorInfo, loadingDoctor }) => {
 const AttendanceTab = () => {
     const [savedSchedules, setSavedSchedules] = useState([]);
     const [currentShift, setCurrentShift] = useState(null);
-    const [checkInTime, setCheckInTime] = useState(null);
-    const [checkOutTime, setCheckOutTime] = useState(null);
     const [attendanceHistory, setAttendanceHistory] = useState([]);
-    const [currentTime, setCurrentTime] = useState(new Date());
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [infoModalMessage, setInfoModalMessage] = useState("");
     const [infoModalTitle, setInfoModalTitle] = useState("");
@@ -806,114 +803,6 @@ const AttendanceTab = () => {
         setScheduleToDelete(null);
     };
 
-    const handleCheckIn = async () => {
-        try {
-            const now = new Date();
-            const checkInTimeStr = now.toLocaleTimeString("vi-VN", {
-                hour: "2-digit",
-                minute: "2-digit",
-            });
-            await ApiWorkShift.checkInWorkShift("webcam");
-            sendStatus(senderId, receiverId, "checkInWorkShift");
-
-            setCheckInTime(checkInTimeStr);
-            setAttendanceHistory((prev) => {
-                const todayDate = now.toISOString().split("T")[0];
-                const existingEntryIndex = prev.findIndex((entry) => entry.date === todayDate);
-                if (existingEntryIndex > -1) {
-                    const updatedHistory = [...prev];
-                    updatedHistory[existingEntryIndex] = {
-                        ...updatedHistory[existingEntryIndex],
-                        checkIn: checkInTimeStr,
-                        checkOut: null,
-                        status: "Đang làm việc",
-                    };
-                    return updatedHistory;
-                }
-                return [
-                    ...prev,
-                    { date: todayDate, checkIn: checkInTimeStr, checkOut: null, status: "Đang làm việc" },
-                ];
-            });
-
-            setInfoModalTitle("Chấm công");
-            setInfoModalMessage(`Bạn đã chấm công vào lúc: ${checkInTimeStr}`);
-            setShowInfoModal(true);
-            setCheckOutTime(null);
-
-            const updatedShifts = await ApiWorkShift.getTodayWorkShifts();
-            const current = updatedShifts.find(
-                (s) => !s.attendance.checkedIn || (s.attendance.checkedIn && !s.attendance.checkedOut)
-            );
-            setCurrentShift(current || null);
-        } catch (error) {
-            setInfoModalTitle("Thông báo");
-            setInfoModalMessage(`${error.response?.data?.message || error.message}`);
-            setShowInfoModal(true);
-        }
-    };
-
-    const handleCheckOut = async () => {
-        if (!checkInTime) {
-            setInfoModalTitle("Thông báo");
-            setInfoModalMessage("Bạn phải chấm công vào trước khi chấm công ra.");
-            setShowInfoModal(true);
-            return;
-        }
-
-        try {
-            const now = new Date();
-            const checkOutTimeStr = now.toLocaleTimeString("vi-VN", {
-                hour: "2-digit",
-                minute: "2-digit",
-            });
-            await ApiWorkShift.checkOutWorkShift("webcam");
-            sendStatus(senderId, receiverId, "checkOutWorkShift");
-
-            setCheckOutTime(checkOutTimeStr);
-            setAttendanceHistory((prev) => {
-                const todayDate = now.toISOString().split("T")[0];
-                const existingEntryIndex = prev.findIndex((entry) => entry.date === todayDate);
-                const existingCheckIn = prev[existingEntryIndex]?.checkIn;
-                let status = "-";
-                if (existingCheckIn) {
-                    const [inHour, inMinute] = existingCheckIn.split(":").map(Number);
-                    status = inHour < 8 || (inHour === 8 && inMinute === 0) ? "Đúng giờ" : "Đi trễ";
-                }
-
-                if (existingEntryIndex > -1) {
-                    const updatedHistory = [...prev];
-                    updatedHistory[existingEntryIndex] = {
-                        ...updatedHistory[existingEntryIndex],
-                        checkOut: checkOutTimeStr,
-                        status,
-                    };
-                    return updatedHistory;
-                }
-                return [
-                    ...prev,
-                    { date: todayDate, checkIn: checkInTime, checkOut: checkOutTimeStr, status },
-                ];
-            });
-
-            setInfoModalTitle("Chấm công");
-            setInfoModalMessage(`Bạn đã chấm công ra lúc: ${checkOutTimeStr}`);
-            setShowInfoModal(true);
-            setCheckInTime(null);
-            setCheckOutTime(null);
-
-            const updatedShifts = await ApiWorkShift.getTodayWorkShifts();
-            const current = updatedShifts.find(
-                (s) => !s.attendance.checkedIn || (s.attendance.checkedIn && !s.attendance.checkedOut)
-            );
-            setCurrentShift(current || null);
-        } catch (error) {
-            setInfoModalTitle("Thông báo");
-            setInfoModalMessage(`${error.response?.data?.message || error.message}`);
-            setShowInfoModal(true);
-        }
-    };
-
     const getFilteredHistory = () => {
         const selectedDate = new Date(filterDate);
         if (filterType === "week") {
@@ -944,19 +833,6 @@ const AttendanceTab = () => {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <CurrentSchedule currentShift={currentShift} doctorInfo={doctorInfo} loadingDoctor={loadingDoctor} />
                 <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>Chấm công</Text>
-                    <Text style={styles.sectionSubtitle}>Quản lý thời gian làm việc của bạn</Text>
-
-                    <View style={styles.timeContainer}>
-                        <Clock size={24} color="#007bff" />
-                        <Text style={styles.currentTime}>
-                            {currentTime.toLocaleTimeString("vi-VN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                            })}
-                        </Text>
-                    </View>
 
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
