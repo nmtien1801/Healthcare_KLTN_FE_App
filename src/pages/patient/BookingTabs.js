@@ -1207,15 +1207,15 @@ const UpcomingAppointment = ({
                     >
                       {msg.timestamp && msg.timestamp instanceof Date
                         ? msg.timestamp.toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
                         : msg.timestamp
-                        ? new Date(msg.timestamp).toLocaleTimeString("vi-VN", {
+                          ? new Date(msg.timestamp).toLocaleTimeString("vi-VN", {
                             hour: "2-digit",
                             minute: "2-digit",
                           })
-                        : ""}
+                          : ""}
                     </Text>
                   </View>
                 ))
@@ -1354,10 +1354,22 @@ const BookingNew = ({ handleSubmit }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const user = useSelector((state) => state.auth.user);
   const [receiverId, setReceiverId] = useState();
+  const [bookedAppointments, setBookedAppointments] = useState([]);
+  const [loadingTimes, setLoadingTimes] = useState(false);
   const [showInsufficientBalanceModal, setShowInsufficientBalanceModal] =
     useState(false);
   const BOOKING_FEE = 200000;
   const navigation = useNavigation();
+
+  const formatDate = (date) => {
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const selectedDateString = useMemo(
+    () => formatDate(selectedDate),
+    [selectedDate]
+  );
 
   // Fetch doctors by date
   useEffect(() => {
@@ -1389,6 +1401,66 @@ const BookingNew = ({ handleSubmit }) => {
 
     fetchDoctors();
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (!selectedDoctor || !selectedDateString) {
+      setBookedAppointments([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchBookedTimes = async () => {
+      try {
+        setLoadingTimes(true);
+        setBookedAppointments([]);
+
+        const res = await ApiBooking.getUpcomingAppointments();
+        const data = Array.isArray(res) ? res : res?.data || [];
+
+        const filtered = data.filter((b) =>
+          b.doctorId?._id === selectedDoctor &&
+          formatDate(b.date) === selectedDateString &&
+          (b.status === "pending" || b.status === "confirmed")
+        );
+
+        if (isMounted) setBookedAppointments(filtered);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (isMounted) setLoadingTimes(false);
+      }
+    };
+
+    fetchBookedTimes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedDoctor, selectedDateString]);
+
+  const bookedTimes = bookedAppointments
+    .filter(
+      (b) =>
+        b.doctorId?._id === selectedDoctor &&
+        formatDate(b.date) === selectedDateString &&
+        (b.status === "pending" || b.status === "confirmed")
+    )
+    .map((b) => b.time);
+
+  const isPastTime = (time) => {
+    if (!selectedDate) return false;
+
+    const now = new Date();
+    const selectedDateObj = new Date(selectedDate);
+    if (isNaN(selectedDateObj)) return false;
+
+    const [hour, minute] = time.split(":").map(Number);
+    const slotTime = new Date(selectedDateObj);
+    slotTime.setHours(hour, minute, 0, 0);
+
+    return slotTime < now;
+  };
 
   // Format ngày thành chuỗi YYYY-MM-DD
   const getDateString = (date) => {
@@ -1430,14 +1502,13 @@ const BookingNew = ({ handleSubmit }) => {
       const newDate = new Date(dateString);
       if (!isNaN(newDate)) {
         setSelectedDate(newDate);
-        setSelectedTime(""); // Reset time khi đổi ngày
+        setSelectedTime("");
       } else {
         console.error("Invalid web date input:", dateString);
       }
     }
   };
 
-  // SỬA LẠI: Toggle date picker
   const toggleDatePicker = () => {
     if (Platform.OS === "android" || Platform.OS === "ios") {
       setShowDatePicker(!showDatePicker);
@@ -1531,20 +1602,18 @@ const BookingNew = ({ handleSubmit }) => {
         status: response.status || "pending",
       };
 
-      const successMsg = `Đặt lịch khám thành công với bác sĩ ${
-        selectedDoctorData.name
-      } vào ${selectedTime} ngày ${new Date(selectedDate).toLocaleDateString(
-        "vi-VN"
-      )}!`;
+      const successMsg = `Đặt lịch khám thành công với bác sĩ ${selectedDoctorData.name
+        } vào ${selectedTime} ngày ${new Date(selectedDate).toLocaleDateString(
+          "vi-VN"
+        )}!`;
 
       await ApiNotification.createNotification({
         receiverId: selectedDoctorData.uid,
         title: "Bệnh nhân mới đặt lịch khám",
-        content: `Bệnh nhân ${
-          user.username || ""
-        } đã đặt lịch khám vào lúc ${selectedTime} ngày ${new Date(
-          selectedDate
-        ).toLocaleDateString("vi-VN")}.`,
+        content: `Bệnh nhân ${user.username || ""
+          } đã đặt lịch khám vào lúc ${selectedTime} ngày ${new Date(
+            selectedDate
+          ).toLocaleDateString("vi-VN")}.`,
         type: "system",
         metadata: {
           link: `/appointments/${response._id}`, // đường dẫn chi tiết lịch hẹn (nếu có)
@@ -1716,10 +1785,10 @@ const BookingNew = ({ handleSubmit }) => {
               <Text style={styles.datePickerText}>
                 {selectedDate && !isNaN(selectedDate)
                   ? selectedDate.toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })
                   : "Chọn ngày"}
               </Text>
             )}
@@ -1776,7 +1845,7 @@ const BookingNew = ({ handleSubmit }) => {
                     styles.datePickerContainer,
                     { marginBottom: 8 },
                     selectedDoctor ===
-                      (doctor.doctorId || doctor.id || doctor._id) && {
+                    (doctor.doctorId || doctor.id || doctor._id) && {
                       borderColor: "#007bff",
                       borderWidth: 2,
                     },
@@ -1830,12 +1899,12 @@ const BookingNew = ({ handleSubmit }) => {
                   </View>
                   {selectedDoctor ===
                     (doctor.doctorId || doctor.id || doctor._id) && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color="#007bff"
-                    />
-                  )}
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color="#007bff"
+                      />
+                    )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -1855,22 +1924,32 @@ const BookingNew = ({ handleSubmit }) => {
           </Text>
           <View style={styles.timeSlotContainer}>
             {generateTimeSlots().map((time) => {
-              const canSelect = selectedDoctor && isTimeInWorkingHours(time);
+              const isInWorkingHours = isTimeInWorkingHours(time);
+              const isBooked = bookedTimes.includes(time);
+              const isPast = isPastTime(time);
+
+              const canSelect =
+                selectedDoctor &&
+                isInWorkingHours &&
+                !isBooked &&
+                !isPast;
+
               const isSelected = selectedTime === time;
+              const isDisabled = !canSelect;
 
               return (
                 <TouchableOpacity
                   key={time}
+                  disabled={isDisabled}
+                  onPress={() => canSelect && setSelectedTime(time)}
                   style={[
                     styles.timeSlot,
-                    isSelected
-                      ? styles.timeSlotActive
-                      : canSelect
-                      ? styles.timeSlotInactive
-                      : styles.timeSlotDisabled,
+                    isDisabled
+                      ? styles.timeSlotDisabled
+                      : isSelected
+                        ? styles.timeSlotActive
+                        : styles.timeSlotInactive,
                   ]}
-                  onPress={() => canSelect && setSelectedTime(time)}
-                  disabled={!canSelect}
                 >
                   <Text
                     style={
@@ -1884,6 +1963,7 @@ const BookingNew = ({ handleSubmit }) => {
                 </TouchableOpacity>
               );
             })}
+
           </View>
         </View>
 

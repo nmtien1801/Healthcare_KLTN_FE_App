@@ -15,17 +15,15 @@ import {
 import { useSelector } from "react-redux";
 import {
     Pencil,
-    X, 
-    Calendar, 
+    X,
+    Calendar,
     Clock,
-    List, 
-    Info, 
-    LogIn, 
-    LogOut, 
-    PlusCircle, 
-    Trash2, 
-    Shield, 
-    Award, 
+    List,
+    Info,
+    PlusCircle,
+    Trash2,
+    Shield,
+    Award,
 } from 'lucide-react-native';
 // 
 import ApiWorkShift from "../../apis/ApiWorkShift";
@@ -36,7 +34,7 @@ import { listenStatusByReceiver, sendStatus } from "../../utils/SetupSignFireBas
 
 // Shift options
 const shiftOptions = [
-    { key: "morning", label: "Sáng (08:00 - 12:00)", start: "08:00", end: "12:00" },
+    { key: "morning", label: "Sáng (08:00 - 12:30)", start: "08:00", end: "12:30" },
     { key: "afternoon", label: "Chiều (13:00 - 17:00)", start: "13:00", end: "17:00" },
     { key: "evening", label: "Tối (18:00 - 21:00)", start: "18:00", end: "21:00" },
 ];
@@ -73,7 +71,6 @@ const ScheduleFormModal = ({
     show,
     onClose,
     weekStartDate,
-    setWeekStartDate,
     handleWeekStartChange,
     handleSelectCurrentWeek,
     weeklySchedule,
@@ -82,7 +79,6 @@ const ScheduleFormModal = ({
     resetScheduleForm,
     handleSaveOrUpdateSchedule,
     workType,
-    setWorkType,
     handleWorkTypeChange,
 }) => (
     <Modal
@@ -964,22 +960,6 @@ const AttendanceTab = () => {
 
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
-                            style={[styles.checkButton, checkInTime && !checkOutTime ? styles.disabledButton : styles.checkInButton]}
-                            onPress={handleCheckIn}
-                            disabled={checkInTime && !checkOutTime}
-                        >
-                            <LogIn size={12} color="#fff" />
-                            <Text style={styles.buttonText}>Chấm vào</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.checkButton, !checkInTime || checkOutTime ? styles.disabledButton : styles.checkOutButton]}
-                            onPress={handleCheckOut}
-                            disabled={!checkInTime || checkOutTime}
-                        >
-                            <LogOut size={12} color="#fff" />
-                            <Text style={styles.buttonText}>Chấm ra</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
                             style={styles.actionButton}
                             onPress={() => setShowScheduleFormModal(true)}
                         >
@@ -993,55 +973,6 @@ const AttendanceTab = () => {
                             <List size={12} color="#fff" />
                             <Text style={styles.buttonText}>Lịch đã lưu</Text>
                         </TouchableOpacity>
-                    </View>
-                    <View style={styles.historyContainer}>
-                        <Text style={styles.historyTitle}>Lịch sử chấm công</Text>
-                        <View style={styles.filterContainer}>
-                            <TextInput
-                                style={styles.filterSelect}
-                                value={filterType}
-                                onChangeText={setFilterType}
-                                placeholder="Loại lọc (week/month)"
-                                placeholderTextColor="#9ca3af"
-                            />
-                            <TextInput
-                                style={styles.filterDate}
-                                value={filterDate}
-                                onChangeText={setFilterDate}
-                                placeholder="YYYY-MM-DD"
-                                keyboardType="numeric"
-                                placeholderTextColor="#9ca3af"
-                            />
-                        </View>
-                        {filteredHistory.length === 0 ? (
-                            <View style={styles.alertInfo}>
-                                <Text style={styles.alertText}>Chưa có lịch sử chấm công trong khoảng thời gian này.</Text>
-                            </View>
-                        ) : (
-                            <FlatList
-                                data={filteredHistory}
-                                keyExtractor={(item, index) => index.toString()}
-                                renderItem={({ item }) => (
-                                    <View style={styles.historyItem}>
-                                        <Text style={styles.historyText}>Ngày: {formatDate(item.date)}</Text>
-                                        <Text style={styles.historyText}>Giờ vào: {item.checkIn || "-"}</Text>
-                                        <Text style={styles.historyText}>Giờ ra: {item.checkOut || "-"}</Text>
-                                        <Text
-                                            style={[
-                                                styles.historyStatus,
-                                                item.status === "Đúng giờ"
-                                                    ? styles.statusSuccess
-                                                    : item.status === "Đi trễ"
-                                                        ? styles.statusWarning
-                                                        : styles.statusInfo,
-                                            ]}
-                                        >
-                                            {item.status}
-                                        </Text>
-                                    </View>
-                                )}
-                            />
-                        )}
                     </View>
                 </View>
             </ScrollView>
