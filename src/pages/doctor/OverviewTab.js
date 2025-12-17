@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  SafeAreaView,
 } from "react-native";
 import { ECharts } from "react-native-echarts-wrapper";
 import ApiDoctor from "../../apis/ApiDoctor";
@@ -388,204 +389,212 @@ export default function OverviewTab() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.pageTitle}>Tổng quan</Text>
-      <ScrollView
-        horizontal={true}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.summaryRowContainer}
-      >
-        {[
-          {
-            title: "Bệnh nhân mới",
-            value: summary.newPatients,
-            change: summary.newPatientsChange,
-            color: "#3b82f6",
-            icon: "👤",
-          },
-          {
-            title: "Cuộc hẹn hôm nay",
-            value: summary.appointmentsToday,
-            change: `${summary.upcomingAppointments} sắp tới`,
-            color: "#f59e0b",
-            icon: "📅",
-          },
-          {
-            title: "Doanh thu tháng",
-            value: summary.monthlyRevenue,
-            change: summary.monthlyRevenueChange,
-            color: "#10b981",
-            icon: "💰",
-          },
-        ].map((item, i) => (
-          <View key={i} style={styles.summaryCardWidth}>
-            <View style={styles.summaryCard}>
-              <View
-                style={[
-                  styles.summaryIcon,
-                  { backgroundColor: item.color + "20" },
-                ]}
-              >
-                <Text style={{ fontSize: 24 }}>{item.icon}</Text>
-              </View>
-              <View>
-                <Text style={styles.summaryTitle}>{item.title}</Text>
-                <Text style={styles.summaryValue}>{item.value}</Text>
-                <Text
-                  style={[
-                    styles.summaryChange,
-                    { color: item.color === "#10b981" ? "#059669" : "#4b5563" },
-                  ]}
-                >
-                  {item.change}
-                </Text>
-              </View>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-
-      <View style={styles.tableCard}>
-        <View style={styles.tableHeader}>
-          <Text style={styles.tableTitle}>Bệnh nhân cần chú ý</Text>
-          <TouchableOpacity
-            onPress={() => setShowAllPatients(!showAllPatients)}
-          >
-            <Text style={styles.toggleText}>
-              {showAllPatients ? "Thu gọn" : "Xem tất cả"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.table}>
-          <View style={styles.tableRowHeader}>
-            <Text style={[styles.th, { flex: 0.9 }]}>Bệnh nhân</Text>
-            <Text style={styles.th}>Chỉ số sức khỏe</Text>
-            <Text style={[styles.th, { textAlign: "center", flex: 0.8 }]}>
-              Trạng thái
-            </Text>
-          </View>
-          {(showAllPatients ? patients : patients.slice(0, 5)).map((p) => (
-            <TouchableOpacity
-              key={p._id}
-              onPress={() => setSelectedPatient(p)}
-              style={[
-                styles.tableRow,
-                selectedPatient?._id === p._id && styles.tableRowSelected,
-              ]}
-            >
-              <Text style={[styles.tdName, { flex: 0.9 }]}>{p.name}</Text>
-              <Text style={styles.tdMetrics}>
-                <Text>NT: </Text>
-                <Text style={{ fontWeight: "600" }}>{p.heartRate || "-"}</Text>
-                <Text> | HA: </Text>
-                <Text style={{ fontWeight: "600" }}>
-                  {p.bloodPressure || "-"}
-                </Text>
-              </Text>
-              <View style={[{ alignItems: "center", flex: 0.8 }]}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#f5f7fa", marginTop: 63 }}
+    >
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <Text style={styles.pageTitle}>Tổng quan</Text>
+        <ScrollView
+          horizontal={true}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.summaryRowContainer}
+        >
+          {[
+            {
+              title: "Bệnh nhân mới",
+              value: summary.newPatients,
+              change: summary.newPatientsChange,
+              color: "#3b82f6",
+              icon: "👤",
+            },
+            {
+              title: "Cuộc hẹn hôm nay",
+              value: summary.appointmentsToday,
+              change: `${summary.upcomingAppointments} sắp tới`,
+              color: "#f59e0b",
+              icon: "📅",
+            },
+            {
+              title: "Doanh thu tháng",
+              value: summary.monthlyRevenue,
+              change: summary.monthlyRevenueChange,
+              color: "#10b981",
+              icon: "💰",
+            },
+          ].map((item, i) => (
+            <View key={i} style={styles.summaryCardWidth}>
+              <View style={styles.summaryCard}>
                 <View
                   style={[
-                    styles.badge,
-                    p.warning ? styles.badgeDanger : styles.badgeSuccess,
+                    styles.summaryIcon,
+                    { backgroundColor: item.color + "20" },
                   ]}
                 >
+                  <Text style={{ fontSize: 24 }}>{item.icon}</Text>
+                </View>
+                <View>
+                  <Text style={styles.summaryTitle}>{item.title}</Text>
+                  <Text style={styles.summaryValue}>{item.value}</Text>
                   <Text
                     style={[
-                      styles.badgeText,
-                      p.warning ? { color: "#dc2626" } : { color: "#059669" },
+                      styles.summaryChange,
+                      {
+                        color: item.color === "#10b981" ? "#059669" : "#4b5563",
+                      },
                     ]}
                   >
-                    {p.warning || "Bình thường"}
+                    {item.change}
                   </Text>
                 </View>
               </View>
-            </TouchableOpacity>
+            </View>
           ))}
-        </View>
-      </View>
-      <View style={styles.periodSelectorRow}>
-        <Text style={styles.selectorTitle}>Khoảng thời gian:</Text>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {["week", "month", "year"].map((p) => (
+        </ScrollView>
+
+        <View style={styles.tableCard}>
+          <View style={styles.tableHeader}>
+            <Text style={styles.tableTitle}>Bệnh nhân cần chú ý</Text>
             <TouchableOpacity
-              key={p}
-              onPress={() => setHealthPeriod(p)}
-              style={[
-                styles.periodBtn,
-                healthPeriod === p && styles.periodBtnActive,
-              ]}
+              onPress={() => setShowAllPatients(!showAllPatients)}
             >
-              <Text
-                style={[
-                  styles.periodBtnText,
-                  healthPeriod === p && styles.periodBtnTextActive,
-                ]}
-              >
-                {p === "week" ? "Tuần" : p === "month" ? "Tháng" : "Năm"}
+              <Text style={styles.toggleText}>
+                {showAllPatients ? "Thu gọn" : "Xem tất cả"}
               </Text>
             </TouchableOpacity>
-          ))}
+          </View>
+          <View style={styles.table}>
+            <View style={styles.tableRowHeader}>
+              <Text style={[styles.th, { flex: 0.9 }]}>Bệnh nhân</Text>
+              <Text style={styles.th}>Chỉ số sức khỏe</Text>
+              <Text style={[styles.th, { textAlign: "center", flex: 0.8 }]}>
+                Trạng thái
+              </Text>
+            </View>
+            {(showAllPatients ? patients : patients.slice(0, 5)).map((p) => (
+              <TouchableOpacity
+                key={p._id}
+                onPress={() => setSelectedPatient(p)}
+                style={[
+                  styles.tableRow,
+                  selectedPatient?._id === p._id && styles.tableRowSelected,
+                ]}
+              >
+                <Text style={[styles.tdName, { flex: 0.9 }]}>{p.name}</Text>
+                <Text style={styles.tdMetrics}>
+                  <Text>NT: </Text>
+                  <Text style={{ fontWeight: "600" }}>
+                    {p.heartRate || "-"}
+                  </Text>
+                  <Text> | HA: </Text>
+                  <Text style={{ fontWeight: "600" }}>
+                    {p.bloodPressure || "-"}
+                  </Text>
+                </Text>
+                <View style={[{ alignItems: "center", flex: 0.8 }]}>
+                  <View
+                    style={[
+                      styles.badge,
+                      p.warning ? styles.badgeDanger : styles.badgeSuccess,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        p.warning ? { color: "#dc2626" } : { color: "#059669" },
+                      ]}
+                    >
+                      {p.warning || "Bình thường"}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
+        <View style={styles.periodSelectorRow}>
+          <Text style={styles.selectorTitle}>Khoảng thời gian:</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {["week", "month", "year"].map((p) => (
+              <TouchableOpacity
+                key={p}
+                onPress={() => setHealthPeriod(p)}
+                style={[
+                  styles.periodBtn,
+                  healthPeriod === p && styles.periodBtnActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.periodBtnText,
+                    healthPeriod === p && styles.periodBtnTextActive,
+                  ]}
+                >
+                  {p === "week" ? "Tuần" : p === "month" ? "Tháng" : "Năm"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-      {/* Biểu đồ Chỉ số Sức khỏe (Health Chart) */}
-      <View style={styles.chartCard}>
-        <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>
-            Chỉ số sức khỏe - {selectedPatient?.name || "Chưa chọn"}
+        {/* Biểu đồ Chỉ số Sức khỏe (Health Chart) */}
+        <View style={styles.chartCard}>
+          <View style={styles.chartHeader}>
+            <Text style={styles.chartTitle}>
+              Chỉ số sức khỏe - {selectedPatient?.name || "Chưa chọn"}
+            </Text>
+          </View>
+          {healthData?.xAxisData?.length > 0 ? (
+            <View style={{ height: 320, width: "100%" }}>
+              <ECharts
+                key={"health-" + selectedPatient?._id + healthPeriod}
+                option={healthChartOption}
+                style={{ height: "100%", width: "100%" }}
+              />
+            </View>
+          ) : (
+            <View
+              style={{
+                height: 320,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#6b7280" }}>
+                Chưa có dữ liệu chỉ số sức khỏe để hiển thị trong{" "}
+                {periodVietnamese}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.chartCard}>
+          <Text style={[styles.chartTitle, { marginBottom: 12 }]}>
+            Biểu đồ Đường huyết
           </Text>
+          {dates.length > 0 ? (
+            <View style={{ height: 320, width: "100%" }}>
+              <ECharts
+                key={"bloodSugar-" + selectedPatient?._id + healthPeriod}
+                option={bloodSugarChartOption}
+                style={{ height: "100%", width: "100%" }}
+              />
+            </View>
+          ) : (
+            <View
+              style={{
+                height: 320,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#6b7280" }}>
+                Chưa có dữ liệu đường huyết để hiển thị trong {periodVietnamese}
+              </Text>
+            </View>
+          )}
         </View>
-        {healthData?.xAxisData?.length > 0 ? (
-          <View style={{ height: 320, width: "100%" }}>
-            <ECharts
-              key={"health-" + selectedPatient?._id + healthPeriod}
-              option={healthChartOption}
-              style={{ height: "100%", width: "100%" }}
-            />
-          </View>
-        ) : (
-          <View
-            style={{
-              height: 320,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#6b7280" }}>
-              Chưa có dữ liệu chỉ số sức khỏe để hiển thị trong{" "}
-              {periodVietnamese}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.chartCard}>
-        <Text style={[styles.chartTitle, { marginBottom: 12 }]}>
-          Biểu đồ Đường huyết
-        </Text>
-        {dates.length > 0 ? (
-          <View style={{ height: 320, width: "100%" }}>
-            <ECharts
-              key={"bloodSugar-" + selectedPatient?._id + healthPeriod}
-              option={bloodSugarChartOption}
-              style={{ height: "100%", width: "100%" }}
-            />
-          </View>
-        ) : (
-          <View
-            style={{
-              height: 320,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#6b7280" }}>
-              Chưa có dữ liệu đường huyết để hiển thị trong {periodVietnamese}
-            </Text>
-          </View>
-        )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
