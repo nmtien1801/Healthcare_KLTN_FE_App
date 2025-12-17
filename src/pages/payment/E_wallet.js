@@ -289,7 +289,7 @@ export default function WalletPaymentFlow({ navigation }) {
       </View>
 
       {/* Transaction History */}
-      <View style={styles.transactionCard}>
+      {/* <View style={styles.transactionCard}>
         <View style={styles.transactionHeader}>
           <Clock size={20} color="#6c757d" />
           <Text style={styles.transactionTitle}>Giao dịch gần đây</Text>
@@ -305,7 +305,7 @@ export default function WalletPaymentFlow({ navigation }) {
           <Text style={styles.viewAllText}>Xem tất cả giao dịch</Text>
           <ChevronRight size={16} color="#007bff" />
         </TouchableOpacity>
-      </View>
+      </View> */}
     </ScrollView>
   );
 
