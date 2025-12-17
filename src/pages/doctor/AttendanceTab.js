@@ -20,8 +20,6 @@ import {
   Clock,
   List,
   Info,
-  LogIn,
-  LogOut,
   PlusCircle,
   Trash2,
   Shield,
@@ -40,9 +38,9 @@ import {
 const shiftOptions = [
   {
     key: "morning",
-    label: "Sáng (08:00 - 12:00)",
+    label: "Sáng (08:00 - 12:30)",
     start: "08:00",
-    end: "12:00",
+    end: "12:30",
   },
   {
     key: "afternoon",
@@ -98,7 +96,6 @@ const ScheduleFormModal = ({
   show,
   onClose,
   weekStartDate,
-  setWeekStartDate,
   handleWeekStartChange,
   handleSelectCurrentWeek,
   weeklySchedule,
@@ -107,7 +104,6 @@ const ScheduleFormModal = ({
   resetScheduleForm,
   handleSaveOrUpdateSchedule,
   workType,
-  setWorkType,
   handleWorkTypeChange,
 }) => (
   <Modal visible={show} animationType="slide" transparent={true}>
@@ -450,10 +446,7 @@ const CurrentSchedule = ({ currentShift, doctorInfo, loadingDoctor }) => {
 const AttendanceTab = () => {
   const [savedSchedules, setSavedSchedules] = useState([]);
   const [currentShift, setCurrentShift] = useState(null);
-  const [checkInTime, setCheckInTime] = useState(null);
-  const [checkOutTime, setCheckOutTime] = useState(null);
   const [attendanceHistory, setAttendanceHistory] = useState([]);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [infoModalMessage, setInfoModalMessage] = useState("");
   const [infoModalTitle, setInfoModalTitle] = useState("");
@@ -894,135 +887,6 @@ const AttendanceTab = () => {
     setScheduleToDelete(null);
   };
 
-  const handleCheckIn = async () => {
-    try {
-      const now = new Date();
-      const checkInTimeStr = now.toLocaleTimeString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      await ApiWorkShift.checkInWorkShift("webcam");
-      sendStatus(senderId, receiverId, "checkInWorkShift");
-
-      setCheckInTime(checkInTimeStr);
-      setAttendanceHistory((prev) => {
-        const todayDate = now.toISOString().split("T")[0];
-        const existingEntryIndex = prev.findIndex(
-          (entry) => entry.date === todayDate
-        );
-        if (existingEntryIndex > -1) {
-          const updatedHistory = [...prev];
-          updatedHistory[existingEntryIndex] = {
-            ...updatedHistory[existingEntryIndex],
-            checkIn: checkInTimeStr,
-            checkOut: null,
-            status: "Đang làm việc",
-          };
-          return updatedHistory;
-        }
-        return [
-          ...prev,
-          {
-            date: todayDate,
-            checkIn: checkInTimeStr,
-            checkOut: null,
-            status: "Đang làm việc",
-          },
-        ];
-      });
-
-      setInfoModalTitle("Chấm công");
-      setInfoModalMessage(`Bạn đã chấm công vào lúc: ${checkInTimeStr}`);
-      setShowInfoModal(true);
-      setCheckOutTime(null);
-
-      const updatedShifts = await ApiWorkShift.getTodayWorkShifts();
-      const current = updatedShifts.find(
-        (s) =>
-          !s.attendance.checkedIn ||
-          (s.attendance.checkedIn && !s.attendance.checkedOut)
-      );
-      setCurrentShift(current || null);
-    } catch (error) {
-      setInfoModalTitle("Thông báo");
-      setInfoModalMessage(`${error.response?.data?.message || error.message}`);
-      setShowInfoModal(true);
-    }
-  };
-
-  const handleCheckOut = async () => {
-    if (!checkInTime) {
-      setInfoModalTitle("Thông báo");
-      setInfoModalMessage("Bạn phải chấm công vào trước khi chấm công ra.");
-      setShowInfoModal(true);
-      return;
-    }
-
-    try {
-      const now = new Date();
-      const checkOutTimeStr = now.toLocaleTimeString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      await ApiWorkShift.checkOutWorkShift("webcam");
-      sendStatus(senderId, receiverId, "checkOutWorkShift");
-
-      setCheckOutTime(checkOutTimeStr);
-      setAttendanceHistory((prev) => {
-        const todayDate = now.toISOString().split("T")[0];
-        const existingEntryIndex = prev.findIndex(
-          (entry) => entry.date === todayDate
-        );
-        const existingCheckIn = prev[existingEntryIndex]?.checkIn;
-        let status = "-";
-        if (existingCheckIn) {
-          const [inHour, inMinute] = existingCheckIn.split(":").map(Number);
-          status =
-            inHour < 8 || (inHour === 8 && inMinute === 0)
-              ? "Đúng giờ"
-              : "Đi trễ";
-        }
-
-        if (existingEntryIndex > -1) {
-          const updatedHistory = [...prev];
-          updatedHistory[existingEntryIndex] = {
-            ...updatedHistory[existingEntryIndex],
-            checkOut: checkOutTimeStr,
-            status,
-          };
-          return updatedHistory;
-        }
-        return [
-          ...prev,
-          {
-            date: todayDate,
-            checkIn: checkInTime,
-            checkOut: checkOutTimeStr,
-            status,
-          },
-        ];
-      });
-
-      setInfoModalTitle("Chấm công");
-      setInfoModalMessage(`Bạn đã chấm công ra lúc: ${checkOutTimeStr}`);
-      setShowInfoModal(true);
-      setCheckInTime(null);
-      setCheckOutTime(null);
-
-      const updatedShifts = await ApiWorkShift.getTodayWorkShifts();
-      const current = updatedShifts.find(
-        (s) =>
-          !s.attendance.checkedIn ||
-          (s.attendance.checkedIn && !s.attendance.checkedOut)
-      );
-      setCurrentShift(current || null);
-    } catch (error) {
-      setInfoModalTitle("Thông báo");
-      setInfoModalMessage(`${error.response?.data?.message || error.message}`);
-      setShowInfoModal(true);
-    }
-  };
-
   const getFilteredHistory = () => {
     const selectedDate = new Date(filterDate);
     if (filterType === "week") {
@@ -1065,49 +929,7 @@ const AttendanceTab = () => {
           loadingDoctor={loadingDoctor}
         />
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Chấm công</Text>
-          <Text style={styles.sectionSubtitle}>
-            Quản lý thời gian làm việc của bạn
-          </Text>
-
-          <View style={styles.timeContainer}>
-            <Clock size={24} color="#007bff" />
-            <Text style={styles.currentTime}>
-              {currentTime.toLocaleTimeString("vi-VN", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              })}
-            </Text>
-          </View>
-
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.checkButton,
-                checkInTime && !checkOutTime
-                  ? styles.disabledButton
-                  : styles.checkInButton,
-              ]}
-              onPress={handleCheckIn}
-              disabled={checkInTime && !checkOutTime}
-            >
-              <LogIn size={12} color="#fff" />
-              <Text style={styles.buttonText}>Chấm vào</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.checkButton,
-                !checkInTime || checkOutTime
-                  ? styles.disabledButton
-                  : styles.checkOutButton,
-              ]}
-              onPress={handleCheckOut}
-              disabled={!checkInTime || checkOutTime}
-            >
-              <LogOut size={12} color="#fff" />
-              <Text style={styles.buttonText}>Chấm ra</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => setShowScheduleFormModal(true)}
@@ -1125,63 +947,6 @@ const AttendanceTab = () => {
               <List size={12} color="#fff" />
               <Text style={styles.buttonText}>Lịch đã lưu</Text>
             </TouchableOpacity>
-          </View>
-          <View style={styles.historyContainer}>
-            <Text style={styles.historyTitle}>Lịch sử chấm công</Text>
-            <View style={styles.filterContainer}>
-              <TextInput
-                style={styles.filterSelect}
-                value={filterType}
-                onChangeText={setFilterType}
-                placeholder="Loại lọc (week/month)"
-                placeholderTextColor="#9ca3af"
-              />
-              <TextInput
-                style={styles.filterDate}
-                value={filterDate}
-                onChangeText={setFilterDate}
-                placeholder="YYYY-MM-DD"
-                keyboardType="numeric"
-                placeholderTextColor="#9ca3af"
-              />
-            </View>
-            {filteredHistory.length === 0 ? (
-              <View style={styles.alertInfo}>
-                <Text style={styles.alertText}>
-                  Chưa có lịch sử chấm công trong khoảng thời gian này.
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={filteredHistory}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({ item }) => (
-                  <View style={styles.historyItem}>
-                    <Text style={styles.historyText}>
-                      Ngày: {formatDate(item.date)}
-                    </Text>
-                    <Text style={styles.historyText}>
-                      Giờ vào: {item.checkIn || "-"}
-                    </Text>
-                    <Text style={styles.historyText}>
-                      Giờ ra: {item.checkOut || "-"}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.historyStatus,
-                        item.status === "Đúng giờ"
-                          ? styles.statusSuccess
-                          : item.status === "Đi trễ"
-                          ? styles.statusWarning
-                          : styles.statusInfo,
-                      ]}
-                    >
-                      {item.status}
-                    </Text>
-                  </View>
-                )}
-              />
-            )}
           </View>
         </View>
       </ScrollView>

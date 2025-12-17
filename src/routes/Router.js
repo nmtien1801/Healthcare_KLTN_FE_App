@@ -65,7 +65,7 @@ const DoctorTab = ({ route, handleStartCall }) => {
                 return <User {...iconProps} />;
               case "Lịch hẹn":
                 return <Sparkles {...iconProps} />;
-              case "Chấm công":
+              case "Lịch làm việc":
                 return <CheckCircle2 {...iconProps} />;
               case "Doanh thu":
                 return <CreditCard {...iconProps} />;
@@ -86,7 +86,7 @@ const DoctorTab = ({ route, handleStartCall }) => {
           )}
         </Tab.Screen>
         <Tab.Screen name="Lịch hẹn" component={AppointmentTab} />
-        <Tab.Screen name="Chấm công" component={AttendanceTab} />
+        <Tab.Screen name="Lịch làm việc" component={AttendanceTab} />
         <Tab.Screen name="Doanh thu" component={RevenueTab} />
       </Tab.Navigator>
     </View>

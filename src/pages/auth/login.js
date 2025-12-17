@@ -235,9 +235,6 @@ export default function LoginForm() {
           <Text style={styles.buttonText}>Đăng nhập với Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate("ResetPassword")}>
-          <Text style={styles.linkText}>Quên mật khẩu?</Text>
-        </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("Register")}>
           <Text style={styles.linkText}>Đăng ký</Text>
         </TouchableOpacity>
