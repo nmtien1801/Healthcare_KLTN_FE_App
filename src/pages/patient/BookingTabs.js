@@ -953,7 +953,7 @@ const UpcomingAppointment = ({
                       <Text style={styles.doctorName}>
                         {appointment.doctorId?.userId?.username ||
                           appointment.doctorId?.name ||
-                          "Bác sĩ Trần Thị B"}
+                          ""}
                       </Text>
                       <Text style={styles.doctorSpecialty}>
                         {appointment.doctorId?.hospital ||
@@ -988,7 +988,7 @@ const UpcomingAppointment = ({
                               uid: "1HwseYsBwxby5YnsLUWYzvRtCw53",
                               name:
                                 appointment.doctorId?.name ||
-                                "Bác sĩ Trần Thị B",
+                                "",
                               role: "doctor",
                             },
                             "patient"

@@ -103,7 +103,7 @@ const Home = () => {
     name: user?.username || "Khách",
     age: user ? calculateAge(user) : "",
     gender: user?.gender || "N/A",
-    condition: "Tiểu đường type 2",
+    condition: "",
     doctor: nearestAppointment?.doctorId?.userId?.username || "Chưa có",
     nextAppointment: nearestAppointment?.date
       ? new Date(nearestAppointment.date).toLocaleDateString("vi-VN")
