@@ -145,12 +145,6 @@ const Following = ({ user, nearestAppointment, warning }) => {
               <Text style={styles.infoValue}>{user?.gender || "N/A"}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Tình trạng:</Text>
-              <Text style={[styles.infoValue, { color: "#dc3545" }]}>
-                Tiểu đường type 2
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Bác sĩ:</Text>
               <Text style={styles.infoValue}>
                 {nearestAppointment?.doctorId?.userId?.username ?? "Chưa có"}
