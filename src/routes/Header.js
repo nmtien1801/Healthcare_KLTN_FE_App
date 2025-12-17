@@ -190,6 +190,8 @@ const styles = StyleSheet.create({
   notificationContainer: {
     marginRight: 0,
     position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
   },
   badge: {
     position: "absolute",
@@ -205,7 +207,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   userInfo: {
-    marginRight: 16,
+    marginRight: 6,
+    maxWidth: 145,
   },
   userName: {
     fontWeight: "500",
