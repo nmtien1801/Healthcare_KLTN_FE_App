@@ -676,7 +676,7 @@ const UpcomingAppointment = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [receiverId, setReceiverId] = useState("");
   const senderId = user?.uid;
-  const BOOKING_FEE = 200000;
+  const scrollViewRef = React.useRef(null);
 
   // Fetch appointments from API
   const fetchAppointments = async () => {
@@ -788,6 +788,7 @@ const UpcomingAppointment = ({
 
   // Chat với bác sĩ
   const [showChatbot, setShowChatbot] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [messageInput, setMessageInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [chatMessages, setChatMessages] = useState([
@@ -975,7 +976,16 @@ const UpcomingAppointment = ({
                     <View style={styles.actionButtons}>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.primaryButton]}
-                        onPress={() => setShowChatbot(appointment)}
+                        onPress={() => {
+                          const doctorUid = appointment.doctorId?.userId?.uid;
+                          if (doctorUid) {
+                            setReceiverId(doctorUid);
+                            setSelectedAppointment(appointment);
+                            setShowChatbot(true);
+                          } else {
+                            Alert.alert("Lỗi", "Không tìm thấy mã bác sĩ");
+                          }
+                        }}
                       >
                         <Ionicons name="chatbubble" size={12} color="#fff" />
                       </TouchableOpacity>
@@ -1127,10 +1137,13 @@ const UpcomingAppointment = ({
 
         {/* Chat Modal */}
         <Modal
-          visible={showChatbot}
+          visible={!!showChatbot}
           animationType="slide"
           transparent={false}
-          onRequestClose={() => setShowChatbot(false)}
+          onRequestClose={() => {
+            setShowChatbot(false);
+            setSelectedAppointment(null);
+          }}
         >
           <View style={{ flex: 1, backgroundColor: "#fff" }}>
             <View style={styles.chatHeader}>
@@ -1143,18 +1156,21 @@ const UpcomingAppointment = ({
                 />
                 <Text style={styles.chatHeaderText}>Chat với bác sĩ</Text>
               </View>
-              <TouchableOpacity onPress={() => setShowChatbot(false)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowChatbot(false);
+                  setSelectedAppointment(null);
+                }}
+              >
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
 
             <ScrollView
               style={styles.chatMessages}
-              ref={(scrollViewRef) => {
-                this.scrollView = scrollViewRef;
-              }}
+              ref={scrollViewRef}
               onContentSizeChange={() =>
-                this.scrollView?.scrollToEnd({ animated: true })
+                scrollViewRef.current?.scrollToEnd({ animated: true })
               }
             >
               {chatMessages.length === 0 ? (
@@ -1207,15 +1223,15 @@ const UpcomingAppointment = ({
                     >
                       {msg.timestamp && msg.timestamp instanceof Date
                         ? msg.timestamp.toLocaleTimeString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                        : msg.timestamp
-                          ? new Date(msg.timestamp).toLocaleTimeString("vi-VN", {
                             hour: "2-digit",
                             minute: "2-digit",
                           })
-                          : ""}
+                        : msg.timestamp
+                        ? new Date(msg.timestamp).toLocaleTimeString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : ""}
                     </Text>
                   </View>
                 ))
@@ -1363,7 +1379,10 @@ const BookingNew = ({ handleSubmit }) => {
 
   const formatDate = (date) => {
     const d = new Date(date);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
   const selectedDateString = useMemo(
@@ -1418,10 +1437,11 @@ const BookingNew = ({ handleSubmit }) => {
         const res = await ApiBooking.getUpcomingAppointments();
         const data = Array.isArray(res) ? res : res?.data || [];
 
-        const filtered = data.filter((b) =>
-          b.doctorId?._id === selectedDoctor &&
-          formatDate(b.date) === selectedDateString &&
-          (b.status === "pending" || b.status === "confirmed")
+        const filtered = data.filter(
+          (b) =>
+            b.doctorId?._id === selectedDoctor &&
+            formatDate(b.date) === selectedDateString &&
+            (b.status === "pending" || b.status === "confirmed")
         );
 
         if (isMounted) setBookedAppointments(filtered);
@@ -1602,18 +1622,20 @@ const BookingNew = ({ handleSubmit }) => {
         status: response.status || "pending",
       };
 
-      const successMsg = `Đặt lịch khám thành công với bác sĩ ${selectedDoctorData.name
-        } vào ${selectedTime} ngày ${new Date(selectedDate).toLocaleDateString(
-          "vi-VN"
-        )}!`;
+      const successMsg = `Đặt lịch khám thành công với bác sĩ ${
+        selectedDoctorData.name
+      } vào ${selectedTime} ngày ${new Date(selectedDate).toLocaleDateString(
+        "vi-VN"
+      )}!`;
 
       await ApiNotification.createNotification({
         receiverId: selectedDoctorData.uid,
         title: "Bệnh nhân mới đặt lịch khám",
-        content: `Bệnh nhân ${user.username || ""
-          } đã đặt lịch khám vào lúc ${selectedTime} ngày ${new Date(
-            selectedDate
-          ).toLocaleDateString("vi-VN")}.`,
+        content: `Bệnh nhân ${
+          user.username || ""
+        } đã đặt lịch khám vào lúc ${selectedTime} ngày ${new Date(
+          selectedDate
+        ).toLocaleDateString("vi-VN")}.`,
         type: "system",
         metadata: {
           link: `/appointments/${response._id}`, // đường dẫn chi tiết lịch hẹn (nếu có)
@@ -1785,10 +1807,10 @@ const BookingNew = ({ handleSubmit }) => {
               <Text style={styles.datePickerText}>
                 {selectedDate && !isNaN(selectedDate)
                   ? selectedDate.toLocaleDateString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })
                   : "Chọn ngày"}
               </Text>
             )}
@@ -1845,7 +1867,7 @@ const BookingNew = ({ handleSubmit }) => {
                     styles.datePickerContainer,
                     { marginBottom: 8 },
                     selectedDoctor ===
-                    (doctor.doctorId || doctor.id || doctor._id) && {
+                      (doctor.doctorId || doctor.id || doctor._id) && {
                       borderColor: "#007bff",
                       borderWidth: 2,
                     },
@@ -1899,12 +1921,12 @@ const BookingNew = ({ handleSubmit }) => {
                   </View>
                   {selectedDoctor ===
                     (doctor.doctorId || doctor.id || doctor._id) && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color="#007bff"
-                      />
-                    )}
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color="#007bff"
+                    />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -1929,10 +1951,7 @@ const BookingNew = ({ handleSubmit }) => {
               const isPast = isPastTime(time);
 
               const canSelect =
-                selectedDoctor &&
-                isInWorkingHours &&
-                !isBooked &&
-                !isPast;
+                selectedDoctor && isInWorkingHours && !isBooked && !isPast;
 
               const isSelected = selectedTime === time;
               const isDisabled = !canSelect;
@@ -1947,8 +1966,8 @@ const BookingNew = ({ handleSubmit }) => {
                     isDisabled
                       ? styles.timeSlotDisabled
                       : isSelected
-                        ? styles.timeSlotActive
-                        : styles.timeSlotInactive,
+                      ? styles.timeSlotActive
+                      : styles.timeSlotInactive,
                   ]}
                 >
                   <Text
@@ -1963,7 +1982,6 @@ const BookingNew = ({ handleSubmit }) => {
                 </TouchableOpacity>
               );
             })}
-
           </View>
         </View>
 
