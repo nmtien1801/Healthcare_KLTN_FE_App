@@ -38,7 +38,7 @@ import {
 } from "../../apis/paymentService";
 import { useNavigation } from "@react-navigation/native";
 import ApiNotification from "../../apis/ApiNotification";
-import { EXPO_PUBLIC_BOOKING_FEE} from '@env';
+import { EXPO_PUBLIC_BOOKING_FEE } from "@env";
 
 const styles = StyleSheet.create({
   container: {
@@ -675,6 +675,7 @@ const UpcomingAppointment = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [receiverId, setReceiverId] = useState("");
   const senderId = user?.uid;
+  const scrollViewRef = React.useRef(null);
 
   // Fetch appointments from API
   const fetchAppointments = async () => {
@@ -786,6 +787,7 @@ const UpcomingAppointment = ({
 
   // Chat với bác sĩ
   const [showChatbot, setShowChatbot] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [messageInput, setMessageInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [chatMessages, setChatMessages] = useState([
@@ -973,7 +975,16 @@ const UpcomingAppointment = ({
                     <View style={styles.actionButtons}>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.primaryButton]}
-                        onPress={() => setShowChatbot(appointment)}
+                        onPress={() => {
+                          const doctorUid = appointment.doctorId?.userId?.uid;
+                          if (doctorUid) {
+                            setReceiverId(doctorUid);
+                            setSelectedAppointment(appointment);
+                            setShowChatbot(true);
+                          } else {
+                            Alert.alert("Lỗi", "Không tìm thấy mã bác sĩ");
+                          }
+                        }}
                       >
                         <Ionicons name="chatbubble" size={12} color="#fff" />
                       </TouchableOpacity>
@@ -1125,10 +1136,13 @@ const UpcomingAppointment = ({
 
         {/* Chat Modal */}
         <Modal
-          visible={showChatbot}
+          visible={!!showChatbot}
           animationType="slide"
           transparent={false}
-          onRequestClose={() => setShowChatbot(false)}
+          onRequestClose={() => {
+            setShowChatbot(false);
+            setSelectedAppointment(null);
+          }}
         >
           <View style={{ flex: 1, backgroundColor: "#fff" }}>
             <View style={styles.chatHeader}>
@@ -1141,18 +1155,21 @@ const UpcomingAppointment = ({
                 />
                 <Text style={styles.chatHeaderText}>Chat với bác sĩ</Text>
               </View>
-              <TouchableOpacity onPress={() => setShowChatbot(false)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowChatbot(false);
+                  setSelectedAppointment(null);
+                }}
+              >
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
 
             <ScrollView
               style={styles.chatMessages}
-              ref={(scrollViewRef) => {
-                this.scrollView = scrollViewRef;
-              }}
+              ref={scrollViewRef}
               onContentSizeChange={() =>
-                this.scrollView?.scrollToEnd({ animated: true })
+                scrollViewRef.current?.scrollToEnd({ animated: true })
               }
             >
               {chatMessages.length === 0 ? (
